@@ -17,8 +17,8 @@ export default async function BarberServicesPage({
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       <PageHeader
-        title="Meus servicos"
-        description="Consulte os servicos ativos na sua agenda. Cadastros e exclusividades agora ficam no admin."
+        title="Meus serviços"
+        description="Consulte os serviços ativos na sua agenda. Cadastros e exclusividades agora ficam no admin."
         actions={
           <Link
             href="/barber"

@@ -54,7 +54,7 @@ export default function NewProductForm() {
               message:
                 error instanceof Error
                   ? error.message
-                  : "Nao foi possivel criar o produto.",
+                  : "Não foi possível criar o produto.",
               tone: "error",
             });
           }
@@ -73,7 +73,7 @@ export default function NewProductForm() {
       />
       <textarea
         name="description"
-        placeholder="Descricao"
+        placeholder="Descrição"
         className="min-h-28 w-full rounded-xl bg-black px-4 py-3"
       />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -141,7 +141,7 @@ export default function NewProductForm() {
                 message:
                   error instanceof Error
                     ? error.message
-                    : "Nao foi possivel preparar a imagem.",
+                    : "Não foi possível preparar a imagem.",
                 tone: "error",
               });
             }
@@ -149,7 +149,7 @@ export default function NewProductForm() {
           className="w-full text-sm text-zinc-300 file:mr-4 file:rounded-lg file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:text-white"
         />
         <p className="mt-2 text-xs text-zinc-500">
-          JPG, PNG ou WEBP ate 2MB. O sistema remove bordas vazias, centraliza o produto
+          JPG, PNG ou WEBP até 2MB. O sistema remove bordas vazias, centraliza o produto
           e padroniza em 800x800 antes do envio.
         </p>
         {imageUpload ? (

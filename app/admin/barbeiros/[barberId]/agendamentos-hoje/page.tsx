@@ -73,7 +73,7 @@ export default async function BarberTodayAppointmentsPage({
       <PageHeader
         eyebrow={barber.name || "Barbeiro"}
         title="Agendamentos de hoje"
-        description="Somente os horarios deste barbeiro no dia."
+        description="Somente os horários deste barbeiro no dia."
         actions={
           <Link
             href={`/admin/barbeiros/${barber.id}`}
@@ -110,7 +110,7 @@ export default async function BarberTodayAppointmentsPage({
                       {appointment.customer.name || "Cliente"}
                     </p>
                     <p className="mt-1 text-sm text-zinc-400">
-                      {getAppointmentDisplayName(appointment.services) || "Servico"}
+                      {getAppointmentDisplayName(appointment.services) || "Serviço"}
                     </p>
                   </div>
                   <StatusBadge variant={appointmentStatusVariant(status)}>

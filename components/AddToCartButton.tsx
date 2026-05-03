@@ -45,7 +45,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
 
       {added ? (
         <p className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-center text-xs font-medium text-emerald-200">
-          Item salvo. Voce pode continuar comprando ou abrir o carrinho.
+          Item salvo. Vocé pode continuar comprando ou abrir o carrinho.
         </p>
       ) : null}
     </div>

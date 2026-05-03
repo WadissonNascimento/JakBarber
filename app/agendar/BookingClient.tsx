@@ -82,7 +82,7 @@ function getBarberSpecialty(index: number) {
   const specialties = [
     "Especialista em degrade e acabamento fino",
     "Barba alinhada e corte classico",
-    "Corte moderno e atendimento rapido",
+    "Corte moderno e atendimento rápido",
   ];
 
   return specialties[index % specialties.length];
@@ -228,7 +228,7 @@ export default function BookingClient({
         };
 
         if (!response.ok) {
-          throw new Error(data.message || "Nao foi possivel carregar os horarios.");
+          throw new Error(data.message || "Não foi possível carregar os horários.");
         }
 
         setIsDayAvailable(Boolean(data.isDayAvailable));
@@ -253,7 +253,7 @@ export default function BookingClient({
         setAvailabilityError(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar os horarios."
+            : "Não foi possível carregar os horários."
         );
       } finally {
         if (!signal?.aborted) {
@@ -353,7 +353,7 @@ export default function BookingClient({
       const data = (await response.json()) as { message?: string };
 
       if (!response.ok) {
-        throw new Error(data.message || "Nao foi possivel concluir o agendamento.");
+        throw new Error(data.message || "Não foi possível concluir o agendamento.");
       }
 
       setBookingSuccess(data.message || "Agendamento confirmado com sucesso.");
@@ -404,7 +404,7 @@ export default function BookingClient({
       setBookingError(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel concluir o agendamento."
+          : "Não foi possível concluir o agendamento."
       );
       void loadAvailability();
     } finally {
@@ -417,10 +417,10 @@ export default function BookingClient({
       <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">
-            Agendar horario
+            Agendar horário
           </h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-            Escolha o servico e toque em um horario disponivel.
+            Escolha o serviço e toque em um horário disponível.
           </p>
         </div>
 
@@ -510,12 +510,12 @@ export default function BookingClient({
 
             <div>
               <label className="mb-2 block text-sm font-semibold text-zinc-200">
-                Servicos
+                Serviços
               </label>
               <div className="grid min-w-0 gap-2 sm:grid-cols-2">
                 {visibleServices.length === 0 ? (
                   <p className="rounded-2xl border border-dashed border-white/10 px-4 py-4 text-sm text-zinc-500 sm:col-span-2">
-                    Escolha o barbeiro para liberar os servicos.
+                    Escolha o barbeiro para liberar os serviços.
                   </p>
                 ) : (
                   visibleServices.map((service) => {
@@ -582,7 +582,7 @@ export default function BookingClient({
 
               {(!selectedBarberId || selectedServiceIds.length === 0) && (
                 <p className="mt-3 text-xs text-zinc-500">
-                  Escolha barbeiro e servicos para liberar a agenda.
+                  Escolha barbeiro e serviços para liberar a agenda.
                 </p>
               )}
             </div>
@@ -593,10 +593,10 @@ export default function BookingClient({
       <section className="mt-3 surface-card max-w-full overflow-hidden rounded-[20px] p-3 sm:mt-4 sm:rounded-[24px] sm:p-5">
           <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h2 className="text-xl font-semibold">Horarios disponiveis</h2>
+              <h2 className="text-xl font-semibold">Horários disponíveis</h2>
               <p className="mt-1 text-sm text-zinc-400">
                 {selectedDate
-                  ? `Escolha um horario para ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR")}.`
+                  ? `Escolha um horário para ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR")}.`
                   : "Escolha um dia para continuar."}
               </p>
             </div>
@@ -618,15 +618,15 @@ export default function BookingClient({
 
           {!selectedBarberId || selectedServiceIds.length === 0 || !selectedDate ? (
             <div className="mt-6 rounded-[24px] border border-dashed border-white/10 px-4 py-6 text-sm text-zinc-400">
-              Escolha barbeiro, servico e data para ver os horarios livres.
+              Escolha barbeiro, serviço e data para ver os horários livres.
             </div>
           ) : availabilityLoading ? (
             <div className="mt-6 rounded-[24px] border border-white/10 bg-black/20 px-4 py-6 text-sm text-zinc-300">
-              Buscando os melhores horarios para esse atendimento...
+              Buscando os melhores horários para esse atendimento...
             </div>
           ) : !isDayAvailable ? (
             <div className="mt-6 rounded-[24px] border border-dashed border-white/10 px-4 py-6 text-sm text-zinc-400">
-              Esse barbeiro nao possui horario ativo nesse dia. Tente outra data.
+              Esse barbeiro não possui horário ativo nesse dia. Tente outra data.
             </div>
           ) : (
             <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-3">
@@ -700,7 +700,7 @@ export default function BookingClient({
         <BookingErrorDialog
           message={
             hasBookingConflict
-              ? "Esse horario acabou de ser reservado por outro cliente. Escolha outro horario livre para continuar."
+              ? "Esse horário acabou de ser reservado por outro cliente. Escolha outro horário livre para continuar."
               : bookingError
           }
           onReschedule={() => {
@@ -751,13 +751,13 @@ function TimeSection({
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-base font-semibold text-white sm:text-lg">{title}</h3>
         <span className="text-[11px] uppercase tracking-[0.12em] text-zinc-500 sm:tracking-[0.18em]">
-          {slots.length} disponiveis
+          {slots.length} disponíveis
         </span>
       </div>
 
       {slots.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 px-4 py-4 text-sm text-zinc-500">
-          Sem horarios livres nesse periodo. Tente outro periodo ou outro dia.
+          Sem horários livres nesse período. Tente outro período ou outro dia.
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 xl:grid-cols-4">
@@ -822,7 +822,7 @@ function BarberProfileStrip({
         </p>
         <p className="mt-1 truncate text-xs text-zinc-400">{specialty}</p>
         <p className="mt-2 text-xs text-[var(--brand-strong)]">
-          {servicesCount} servico(s) disponiveis
+          {servicesCount} serviço(s) disponíveis
         </p>
       </div>
     </div>
@@ -860,10 +860,10 @@ function BookingErrorDialog({
 
         <div className="mt-4 text-center">
           <p className="text-xs uppercase tracking-[0.22em] text-red-200">
-            Nao foi possivel agendar
+            Não foi possível agendar
           </p>
           <h2 id="booking-error-title" className="mt-2 text-2xl font-bold">
-            Horario indisponivel
+            Horário indisponível
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">{message}</p>
         </div>
@@ -874,7 +874,7 @@ function BookingErrorDialog({
             onClick={onReschedule}
             className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110"
           >
-            Reagendar em outro horario
+            Reagendar em outro horário
           </button>
           <Link
             href="/"
@@ -986,8 +986,8 @@ function BookingSummary({
       <div className="mt-3 space-y-2 text-sm">
         <ConfirmationRow label="Barbeiro" value={barberName} />
         <ConfirmationRow
-          label="Lista de servicos"
-          value={services.length ? services.join(", ") : "Nenhum servico"}
+          label="Lista de serviços"
+          value={services.length ? services.join(", ") : "Nenhum serviço"}
         />
         <ConfirmationRow
           label="Lista de extras"
@@ -998,9 +998,9 @@ function BookingSummary({
           }
         />
         <ConfirmationRow label="Data" value={formattedDate} />
-        <ConfirmationRow label="Duracao" value={duration ? `${duration} min` : "-"} />
+        <ConfirmationRow label="Duração" value={duration ? `${duration} min` : "-"} />
         <ConfirmationRow
-          label="Servicos"
+          label="Serviços"
           value={servicePrice ? formatCurrency(servicePrice) : "-"}
         />
         <ConfirmationRow
@@ -1012,8 +1012,8 @@ function BookingSummary({
           value={totalPrice ? formatCurrency(totalPrice) : "-"}
         />
         <ConfirmationRow
-          label="Horarios"
-          value={services.length ? `${totalSlots} disponiveis` : "Aguardando"}
+          label="Horários"
+          value={services.length ? `${totalSlots} disponíveis` : "Aguardando"}
         />
       </div>
     </div>
@@ -1068,18 +1068,18 @@ function BookingSuccessDialog({
             Agendamento confirmado
           </p>
           <h2 id="booking-success-title" className="mt-2 text-2xl font-bold">
-            Horario reservado
+            Horário reservado
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Chegue 5 minutos antes do horario para garantir um atendimento tranquilo.
+            Chegue 5 minutos antes do horário para garantir um atendimento tranquilo.
           </p>
         </div>
 
         <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
           <ConfirmationRow label="Data" value={formattedDate} />
-          <ConfirmationRow label="Horario" value={details.time} />
+          <ConfirmationRow label="Horário" value={details.time} />
           <ConfirmationRow label="Barbeiro" value={details.barberName} />
-          <ConfirmationRow label="Servicos" value={details.serviceNames.join(", ")} />
+          <ConfirmationRow label="Serviços" value={details.serviceNames.join(", ")} />
           <ConfirmationRow
             label="Extras"
             value={
@@ -1088,7 +1088,7 @@ function BookingSuccessDialog({
                 : "Nenhum extra"
             }
           />
-          <ConfirmationRow label="Servicos" value={formatCurrency(details.servicePrice)} />
+          <ConfirmationRow label="Serviços" value={formatCurrency(details.servicePrice)} />
           <ConfirmationRow label="Extras" value={formatCurrency(details.extrasPrice)} />
           <ConfirmationRow label="Total" value={formatCurrency(details.totalPrice)} />
         </div>
@@ -1115,7 +1115,7 @@ function BookingSuccessDialog({
             href="/"
             className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
           >
-            Pagina inicial
+            Página inicial
           </Link>
         </div>
       </div>
@@ -1177,7 +1177,7 @@ function BookingExtrasDialog({
         <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-4">
           {groupedExtras.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-white/10 px-4 py-4 text-sm text-zinc-500">
-              Nenhum extra disponivel no momento.
+              Nenhum extra disponível no momento.
             </p>
           ) : (
             <div className="max-h-[420px] space-y-3 overflow-y-auto overflow-x-hidden pr-1">
@@ -1226,7 +1226,7 @@ function BookingExtrasDialog({
                         ? "Geladas para retirada no atendimento."
                         : group.category === "SHELF"
                           ? "Somente para retirada no local."
-                          : "Itens adicionais disponiveis para esse horario."}
+                          : "Itens adicionais disponíveis para esse horário."}
                     </p>
                   </div>
 
@@ -1424,7 +1424,7 @@ function BookingConfirmationDialog({
           Esta tudo certo?
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Confira os dados antes de reservar esse horario.
+          Confira os dados antes de reservar esse horário.
         </p>
 
         <div className="mt-5 space-y-3 rounded-3xl border border-white/10 bg-black/20 p-4 text-sm">
@@ -1432,9 +1432,9 @@ function BookingConfirmationDialog({
             Resumo
           </p>
           <ConfirmationRow label="Data" value={formattedDate} />
-          <ConfirmationRow label="Horario" value={time} />
+          <ConfirmationRow label="Horário" value={time} />
           <ConfirmationRow label="Barbeiro" value={barberName} />
-          <ConfirmationRow label="Servicos" value={services.join(", ")} />
+          <ConfirmationRow label="Serviços" value={services.join(", ")} />
           <ConfirmationRow
             label="Extras"
             value={
@@ -1443,15 +1443,15 @@ function BookingConfirmationDialog({
                 : "Nenhum extra"
             }
           />
-          <ConfirmationRow label="Duracao" value={`${duration} min`} />
-          <ConfirmationRow label="Servicos" value={formatCurrency(servicePrice)} />
+          <ConfirmationRow label="Duração" value={`${duration} min`} />
+          <ConfirmationRow label="Serviços" value={formatCurrency(servicePrice)} />
           <ConfirmationRow label="Extras" value={formatCurrency(extrasPrice)} />
           <ConfirmationRow label="Total" value={formatCurrency(totalPrice)} />
         </div>
 
         <label className="mt-5 block">
           <span className="text-sm font-semibold text-white">
-            Observacao para o barbeiro
+            Observação para o barbeiro
           </span>
           <textarea
             value={notes}

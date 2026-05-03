@@ -39,7 +39,7 @@ export default function OrderActionPanel({
           message:
             error instanceof Error
               ? error.message
-              : "Nao foi possivel atualizar o pedido.",
+              : "Não foi possível atualizar o pedido.",
           tone: "error",
         });
       } finally {
@@ -87,7 +87,7 @@ export default function OrderActionPanel({
           runAction(
             "tracking",
             () => saveTrackingCode(orderId, code),
-            "Codigo de rastreio salvo com sucesso."
+            "Código de rastreio salvo com sucesso."
           );
         }}
       >
@@ -95,7 +95,7 @@ export default function OrderActionPanel({
           name="trackingCode"
           value={code}
           onChange={(event) => setCode(event.target.value)}
-          placeholder="Codigo de rastreio"
+          placeholder="Código de rastreio"
           className="min-w-[240px] rounded bg-black px-3 py-2 text-white outline-none"
         />
         <button

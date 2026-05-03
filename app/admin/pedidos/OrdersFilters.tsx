@@ -51,7 +51,7 @@ export default function OrdersFilters({
       <div>
         <PremiumDatePicker
           name="dateTo"
-          label="Ate"
+          label="Até"
           value={filters.dateTo}
           onChange={(value) => setFilters((current) => ({ ...current, dateTo: value }))}
         />

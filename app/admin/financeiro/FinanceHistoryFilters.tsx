@@ -66,7 +66,7 @@ export default function FinanceHistoryFilters({
       <div>
         <PremiumDatePicker
           name="historyEnd"
-          label="Ate"
+          label="Até"
           value={filters.historyEnd}
           onChange={(value) => {
             const next = {

@@ -95,7 +95,7 @@ export default async function AdminFinanceiroPage({
       />
 
       <SectionCard
-        title="Escolha o periodo"
+        title="Escolha o período"
         description="Selecione os dias que quer analisar antes de gerar ou pagar os repasses."
         className="mt-6"
       >
@@ -107,13 +107,13 @@ export default async function AdminFinanceiroPage({
       </SectionCard>
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <SectionCard title="Entrou no caixa" description="Total vendido em servicos no periodo.">
+        <SectionCard title="Entrou no caixa" description="Total vendido em serviços no período.">
           <p className="text-3xl font-semibold text-white">
             {formatCurrency(data.summary.grossRevenue)}
           </p>
         </SectionCard>
 
-        <SectionCard title="A pagar aos barbeiros" description="Soma dos repasses do periodo.">
+        <SectionCard title="A pagar aos barbeiros" description="Soma dos repasses do período.">
           <p className="text-3xl font-semibold text-amber-300">
             {formatCurrency(data.summary.commissionTotal)}
           </p>
@@ -125,7 +125,7 @@ export default async function AdminFinanceiroPage({
           </p>
         </SectionCard>
 
-        <SectionCard title="Atendimentos feitos" description="Servicos concluidos no periodo.">
+        <SectionCard title="Atendimentos feitos" description="Serviços concluídos no período.">
           <p className="text-3xl font-semibold text-white">
             {data.summary.appointmentsCount}
           </p>
@@ -137,7 +137,7 @@ export default async function AdminFinanceiroPage({
           title="Comparar periodos"
           description={`Comparando com ${new Date(
             `${data.comparison.previousRange.start}T00:00:00`
-          ).toLocaleDateString("pt-BR")} ate ${new Date(
+          ).toLocaleDateString("pt-BR")} até ${new Date(
             `${data.comparison.previousRange.end}T00:00:00`
           ).toLocaleDateString("pt-BR")}.`}
         >
@@ -156,13 +156,13 @@ export default async function AdminFinanceiroPage({
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-sm text-zinc-400">Total faturado</p>
               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Periodo atual
+                Período atual
               </p>
               <p className="mt-1 text-2xl font-semibold text-white">
                 {formatCurrency(data.comparison.current.grossRevenue)}
               </p>
               <p className="mt-2 text-sm text-zinc-500">
-                Periodo anterior: {formatCurrency(data.comparison.previous.grossRevenue)}
+                Período anterior: {formatCurrency(data.comparison.previous.grossRevenue)}
               </p>
               <p className={`mt-1 text-sm ${getDeltaTone(
                 data.comparison.current.grossRevenue,
@@ -178,13 +178,13 @@ export default async function AdminFinanceiroPage({
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-sm text-zinc-400">Fica para a barbearia</p>
               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Periodo atual
+                Período atual
               </p>
               <p className="mt-1 text-2xl font-semibold text-emerald-300">
                 {formatCurrency(data.comparison.current.shopNetRevenue)}
               </p>
               <p className="mt-2 text-sm text-zinc-500">
-                Periodo anterior: {formatCurrency(data.comparison.previous.shopNetRevenue)}
+                Período anterior: {formatCurrency(data.comparison.previous.shopNetRevenue)}
               </p>
               <p className={`mt-1 text-sm ${getDeltaTone(
                 data.comparison.current.shopNetRevenue,
@@ -200,13 +200,13 @@ export default async function AdminFinanceiroPage({
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-sm text-zinc-400">A pagar aos barbeiros</p>
               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Periodo atual
+                Período atual
               </p>
               <p className="mt-1 text-2xl font-semibold text-amber-300">
                 {formatCurrency(data.comparison.current.commissionTotal)}
               </p>
               <p className="mt-2 text-sm text-zinc-500">
-                Periodo anterior: {formatCurrency(data.comparison.previous.commissionTotal)}
+                Período anterior: {formatCurrency(data.comparison.previous.commissionTotal)}
               </p>
               <p className={`mt-1 text-sm ${getDeltaTone(
                 data.comparison.current.commissionTotal,
@@ -222,13 +222,13 @@ export default async function AdminFinanceiroPage({
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-sm text-zinc-400">Atendimentos feitos</p>
               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Periodo atual
+                Período atual
               </p>
               <p className="mt-1 text-2xl font-semibold text-white">
                 {data.comparison.current.appointmentsCount}
               </p>
               <p className="mt-2 text-sm text-zinc-500">
-                Periodo anterior: {data.comparison.previous.appointmentsCount}
+                Período anterior: {data.comparison.previous.appointmentsCount}
               </p>
               <p className={`mt-1 text-sm ${getDeltaTone(
                 data.comparison.current.appointmentsCount,
@@ -247,13 +247,13 @@ export default async function AdminFinanceiroPage({
 
       <div className="mt-8 grid gap-8">
         <SectionCard
-          title="Resumo rapido"
-          description="Principais pontos do periodo: ticket medio, melhor dia e movimento."
+          title="Resumo rápido"
+          description="Principais pontos do período: ticket médio, melhor dia e movimento."
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                Valor medio por atendimento
+                Valor médio por atendimento
               </p>
               <p className="mt-3 text-2xl font-semibold text-white">
                 {formatCurrency(data.summary.averageTicket)}
@@ -265,14 +265,14 @@ export default async function AdminFinanceiroPage({
 
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                Melhor dia do periodo
+                Melhor dia do período
               </p>
               <p className="mt-3 text-2xl font-semibold text-white">
                 {data.analytics.topDay?.label || "--"}
               </p>
               <p className="mt-2 text-sm text-zinc-400">
                 {data.analytics.topDay
-                  ? `${formatCurrency(data.analytics.topDay.grossRevenue)} em servicos`
+                  ? `${formatCurrency(data.analytics.topDay.grossRevenue)} em serviços`
                   : "Sem dados suficientes"}
               </p>
             </div>
@@ -287,7 +287,7 @@ export default async function AdminFinanceiroPage({
               <p className="mt-2 text-sm text-zinc-400">
                 {data.analytics.busiestDay
                   ? `${data.analytics.busiestDay.appointmentsCount} atendimentos`
-                  : "Sem atendimentos no periodo"}
+                  : "Sem atendimentos no período"}
               </p>
             </div>
 
@@ -301,7 +301,7 @@ export default async function AdminFinanceiroPage({
               <p className="mt-2 text-sm text-zinc-400">
                 {data.analytics.weekdayPerformance[0]
                   ? `${formatCurrency(data.analytics.weekdayPerformance[0].grossRevenue)} acumulados`
-                  : "Sem historico no filtro"}
+                  : "Sem histórico no filtro"}
               </p>
             </div>
           </div>
@@ -315,8 +315,8 @@ export default async function AdminFinanceiroPage({
         >
           {data.analytics.dailySeries.length === 0 ? (
             <EmptyState
-              title="Sem movimento no periodo"
-              description="Quando houver atendimentos concluidos, a serie diaria aparecera aqui."
+              title="Sem movimento no período"
+              description="Quando houver atendimentos concluídos, a série diária aparecerá aqui."
             />
           ) : (
             <div className="space-y-4">
@@ -357,7 +357,7 @@ export default async function AdminFinanceiroPage({
           {data.analytics.barberInsights.length === 0 ? (
             <EmptyState
               title="Sem comparativo por barbeiro"
-              description="O grafico aparece quando houver faturamento no periodo."
+              description="O gráfico aparece quando houver faturamento no período."
             />
           ) : (
             <div className="space-y-5">
@@ -399,13 +399,13 @@ export default async function AdminFinanceiroPage({
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
         <SectionCard
-          title="Servicos que mais venderam"
-          description="Lista dos servicos que mais geraram dinheiro no periodo."
+          title="Serviços que mais venderam"
+          description="Lista dos serviços que mais geraram dinheiro no período."
         >
           {data.analytics.topServices.length === 0 ? (
             <EmptyState
-              title="Sem servicos no periodo"
-              description="Os servicos mais vendidos aparecerao aqui quando houver faturamento."
+              title="Sem serviços no período"
+              description="Os serviços mais vendidos aparecerão aqui quando houver faturamento."
             />
           ) : (
             <div className="space-y-3">
@@ -438,7 +438,7 @@ export default async function AdminFinanceiroPage({
 
       <SectionCard
         title="Gerar repasse dos barbeiros"
-        description="Confira os valores do periodo e salve o fechamento para cada barbeiro."
+        description="Confira os valores do período e salve o fechamento para cada barbeiro."
         className="mt-8"
         actions={
           <GeneratePayoutsButton
@@ -458,7 +458,7 @@ export default async function AdminFinanceiroPage({
         {data.barberPayouts.length === 0 ? (
           <EmptyState
             title="Nenhum fechamento para mostrar"
-            description="Conclua atendimentos no periodo escolhido para gerar os repasses."
+            description="Conclua atendimentos no período escolhido para gerar os repasses."
           />
         ) : (
           <div className="space-y-4">
@@ -471,7 +471,7 @@ export default async function AdminFinanceiroPage({
                   <div>
                     <p className="text-lg font-semibold text-white">{item.barberName}</p>
                     <p className="mt-1 text-sm text-zinc-400">
-                      {item.appointmentsCount} atendimentos concluidos no periodo
+                      {item.appointmentsCount} atendimentos concluídos no período
                     </p>
                     <div className="mt-3">
                       <StatusBadge
@@ -524,7 +524,7 @@ export default async function AdminFinanceiroPage({
 
       <SectionCard
         title="Fechamentos salvos"
-        description="Ultimos repasses gerados e pagos para consulta rapida."
+        description="últimos repasses gerados e pagos para consulta rápida."
         className="mt-8"
         actions={
           <FinanceHistoryFilters
@@ -535,8 +535,8 @@ export default async function AdminFinanceiroPage({
       >
         {data.history.length === 0 ? (
           <EmptyState
-            title="Sem historico ainda"
-            description="Os fechamentos realizados aparecerao aqui."
+            title="Sem histórico ainda"
+            description="Os fechamentos realizados aparecerão aqui."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -544,13 +544,13 @@ export default async function AdminFinanceiroPage({
               <thead>
                 <tr className="border-b border-zinc-800 text-left text-sm text-zinc-400">
                   <th className="px-4 py-3">Barbeiro</th>
-                  <th className="px-4 py-3">Periodo</th>
+                  <th className="px-4 py-3">Período</th>
                   <th className="px-4 py-3">Total vendido</th>
                   <th className="px-4 py-3">Repasse</th>
                   <th className="px-4 py-3">Barbearia</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Pago em</th>
-                  <th className="px-4 py-3">Acoes</th>
+                  <th className="px-4 py-3">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -558,7 +558,7 @@ export default async function AdminFinanceiroPage({
                   <tr key={item.id} className="border-b border-zinc-800 text-sm">
                     <td className="px-4 py-3">{item.barber.name || "Barbeiro"}</td>
                     <td className="px-4 py-3">
-                      {new Date(item.periodStart).toLocaleDateString("pt-BR")} ate{" "}
+                      {new Date(item.periodStart).toLocaleDateString("pt-BR")} até{" "}
                       {new Date(item.periodEnd).toLocaleDateString("pt-BR")}
                     </td>
                     <td className="px-4 py-3">{formatCurrency(item.grossRevenue)}</td>

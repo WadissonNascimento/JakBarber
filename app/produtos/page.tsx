@@ -38,7 +38,7 @@ export default async function ProdutosPage() {
 
         {products.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-zinc-300">
-            Nenhum produto no catalogo no momento.
+            Nenhum produto no catálogo no momento.
           </div>
         ) : (
           <ProductGrid

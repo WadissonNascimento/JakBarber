@@ -41,9 +41,9 @@ export default async function AdminServicosPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 text-white">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Servicos e comissoes</h1>
+          <h1 className="text-3xl font-bold">Serviços e comissões</h1>
           <p className="text-zinc-400">
-            O admin controla os percentuais de repasse de todos os servicos, gerais e exclusivos.
+            O admin controla os percentuais de repasse de todos os serviços, gerais e exclusivos.
           </p>
         </div>
 

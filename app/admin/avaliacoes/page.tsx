@@ -40,8 +40,8 @@ export default async function AdminReviewsPage() {
     <main className="page-shell max-w-6xl text-white">
       <PageHeader
         eyebrow="Admin"
-        title="Avaliacoes"
-        description="Publique, oculte ou remova avaliacoes exibidas no site."
+        title="Avaliações"
+        description="Publique, oculte ou remova avaliações exibidas no site."
         actions={
           <Link
             href="/admin"
@@ -53,8 +53,8 @@ export default async function AdminReviewsPage() {
       />
 
       <SectionCard
-        title="Avaliacoes dos clientes"
-        description="Somente avaliacoes publicas aparecem na home e na pagina de avaliacoes."
+        title="Avaliações dos clientes"
+        description="Somente avaliações públicas aparecem na home e na página de avaliações."
       >
         <AdminReviewsClient reviews={reviews} />
       </SectionCard>

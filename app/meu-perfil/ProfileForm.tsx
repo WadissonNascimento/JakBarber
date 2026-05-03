@@ -90,7 +90,7 @@ export default function ProfileForm({
           label="Barbeiro preferido"
           defaultValue={profile?.preferredBarberId || ""}
           options={[
-            { value: "", label: "Sem preferencia" },
+            { value: "", label: "Sem preferência" },
             ...barbers.map((barber) => ({
               value: barber.id,
               label: barber.name || "Barbeiro",
@@ -111,12 +111,12 @@ export default function ProfileForm({
       </label>
 
       <label className="block">
-        <span className="mb-2 block text-sm text-zinc-300">Preferencias</span>
+        <span className="mb-2 block text-sm text-zinc-300">Preferências</span>
         <textarea
           name="preferences"
           rows={3}
           defaultValue={profile?.preferences || ""}
-          placeholder="Ex.: estilo de corte, acabamento, horario favorito"
+          placeholder="Ex.: estilo de corte, acabamento, horário favorito"
           className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm outline-none"
         />
       </label>

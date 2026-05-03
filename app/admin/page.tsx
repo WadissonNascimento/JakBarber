@@ -127,7 +127,7 @@ export default async function AdminPage() {
       href: "/admin/agenda",
       icon: CalendarRange,
       title: "Agenda geral",
-      description: "Horarios de todos os barbeiros em um lugar.",
+      description: "Horários de todos os barbeiros em um lugar.",
     },
     {
       href: "/admin/barbeiros",
@@ -139,21 +139,21 @@ export default async function AdminPage() {
     {
       href: "/admin/servicos",
       icon: Scissors,
-      title: "Servicos",
-      description: "Precos, duracao e repasse dos servicos.",
+      title: "Serviços",
+      description: "Preços, duração e repasse dos serviços.",
     },
     {
       href: "/admin/produtos",
       icon: PackageSearch,
       title: "Produtos",
-      description: "Catalogo, estoque e itens ativos do Arsenal.",
+      description: "Catélogo, estoque e itens ativos do Arsenal.",
       badge: activeProducts ? `${activeProducts}` : undefined,
     },
     {
       href: "/admin/avaliacoes",
       icon: MessageSquareText,
-      title: "Avaliacoes",
-      description: "Moderacao dos comentarios do site.",
+      title: "Avaliações",
+      description: "Moderacao dos comentários do site.",
       badge: visibleReviews ? `${visibleReviews}` : undefined,
     },
     {
@@ -186,7 +186,7 @@ export default async function AdminPage() {
               icon={<CalendarRange />}
               label="Atendimentos"
               value={`${todayAppointments.length}`}
-              helper={`${completedTodayAppointments.length} concluidos`}
+              helper={`${completedTodayAppointments.length} concluídos`}
             />
             <AdminMetric
               icon={<UsersRound />}
@@ -198,7 +198,7 @@ export default async function AdminPage() {
               icon={<DollarSign />}
               label="Faturado hoje"
               value={formatCurrency(todayRevenue)}
-              helper="atendimentos concluidos"
+              helper="atendimentos concluídos"
             />
             <AdminMetric
               icon={<Coins />}
@@ -213,7 +213,7 @@ export default async function AdminPage() {
           <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold text-white">Proximos horarios</h2>
+                <h2 className="text-xl font-semibold text-white">Próximos horários</h2>
                 <p className="mt-1 text-sm text-zinc-400">O que ainda vem hoje.</p>
               </div>
               <a
@@ -227,7 +227,7 @@ export default async function AdminPage() {
             <div className="mt-4 space-y-3">
               {nextAppointments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-400">
-                  Nenhum horario pendente para hoje.
+                  Nenhum horário pendente para hoje.
                 </div>
               ) : (
                 nextAppointments.map((appointment) => (

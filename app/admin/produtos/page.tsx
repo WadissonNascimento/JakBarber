@@ -30,7 +30,7 @@ export default async function ProdutosPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 text-white">
       <PageHeader
         title="Produtos"
-        description="Catalogo, estoque e reposicao do Arsenal."
+        description="Catélogo, estoque e reposição do Arsenal."
         actions={
           <div className="flex gap-3">
             <Link
@@ -50,7 +50,7 @@ export default async function ProdutosPage() {
       />
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <SectionCard title="Produtos ativos" description="Itens visiveis no catalogo.">
+        <SectionCard title="Produtos ativos" description="Itens visíveis no catélogo.">
           <p className="text-3xl font-semibold text-white">
             {products.filter((product) => product.isActive).length}
           </p>
@@ -62,7 +62,7 @@ export default async function ProdutosPage() {
           </p>
         </SectionCard>
 
-        <SectionCard title="Sem estoque" description="Itens indisponiveis no momento.">
+        <SectionCard title="Sem estoque" description="Itens indisponíveis no momento.">
           <p className="text-3xl font-semibold text-rose-300">
             {products.filter((product) => product.stock === 0).length}
           </p>

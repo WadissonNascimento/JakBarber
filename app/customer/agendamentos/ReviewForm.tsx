@@ -45,7 +45,7 @@ export default function ReviewForm({
           Como foi seu atendimento?
         </p>
         <p className="mt-1 text-xs text-zinc-400">
-          Sua avaliacao pode aparecer na pagina inicial da barbearia.
+          Sua avaliação pode aparecer na página inicial da barbearia.
         </p>
       </div>
 
@@ -85,7 +85,7 @@ export default function ReviewForm({
       >
         {isPending
           ? "Salvando..."
-          : "Enviar avaliacao"}
+          : "Enviar avaliação"}
       </button>
     </form>
   );

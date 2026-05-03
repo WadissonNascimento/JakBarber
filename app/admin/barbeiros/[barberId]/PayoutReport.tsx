@@ -77,7 +77,7 @@ export default async function PayoutReport({
           service.commissionValueSnapshot
         ),
         payout: service.barberPayoutSnapshot,
-        type: "Servico",
+        type: "Serviço",
       }))
   );
 
@@ -126,7 +126,7 @@ export default async function PayoutReport({
       <div className="mt-5 space-y-3">
         {rows.length === 0 ? (
           <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-400">
-            Nenhum atendimento concluido nesse periodo.
+            Nenhum atendimento concluído nesse período.
           </div>
         ) : (
           rows.map((row) => (

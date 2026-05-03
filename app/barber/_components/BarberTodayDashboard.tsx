@@ -147,13 +147,13 @@ export default function BarberTodayDashboard({
               Agenda
             </QuickLink>
             <QuickLink href="/barber/disponibilidade" icon={<Clock3 />}>
-              Disponibidade
+              Disponibilidade
             </QuickLink>
             <QuickLink href="/barber/clientes" icon={<Users />}>
               Clientes
             </QuickLink>
             <QuickLink href="/barber/servicos" icon={<Scissors />}>
-              Servicos
+              Serviços
             </QuickLink>
           </div>
         </div>
@@ -174,7 +174,7 @@ export default function BarberTodayDashboard({
             icon={<CalendarRange />}
             label="Atendimentos"
             value={`${appointments.length}`}
-            helper={`${summary.completedToday} concluidos`}
+            helper={`${summary.completedToday} concluídos`}
           />
           <MetricCard
             icon={<UserRound />}
@@ -192,7 +192,7 @@ export default function BarberTodayDashboard({
             icon={<DollarSign />}
             label="Seu repasse"
             value={formatCurrency(summary.barberPayoutToday)}
-            helper="concluido hoje"
+            helper="concluído hoje"
           />
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function BarberTodayDashboard({
             <div className="min-w-0">
               <h2 className="text-xl font-semibold text-white">Agenda do dia</h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Horario, cliente e proxima acao.
+                Horário, cliente e próxima ação.
               </p>
             </div>
             <Link
@@ -219,7 +219,7 @@ export default function BarberTodayDashboard({
           <div className="mt-4 space-y-3">
             {visibleAppointments.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-400">
-                Nenhum proximo horario para hoje.
+                Nenhum próximo horário para hoje.
               </div>
             ) : (
               visibleAppointments.map((appointment) => (
@@ -239,9 +239,9 @@ export default function BarberTodayDashboard({
 
         <aside className="min-w-0 space-y-5">
           <div className="min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur sm:p-5">
-            <h2 className="text-xl font-semibold text-white">Proximos agendamentos</h2>
+            <h2 className="text-xl font-semibold text-white">Próximos agendamentos</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Pendentes e confirmados que ainda vao acontecer.
+              Pendentes e confirmados que ainda vão acontecer.
             </p>
 
             <div className="mt-4 space-y-3">
@@ -272,7 +272,7 @@ export default function BarberTodayDashboard({
           </div>
 
           <div className="min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur sm:p-5">
-            <h2 className="text-xl font-semibold text-white">Proximo horario</h2>
+            <h2 className="text-xl font-semibold text-white">Próximo horário</h2>
             {nextAppointment ? (
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-4xl font-bold text-white">
@@ -303,16 +303,16 @@ export default function BarberTodayDashboard({
               </div>
             ) : (
               <p className="mt-4 rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-400">
-                Sem proximos horarios hoje.
+                Sem próximos horários hoje.
               </p>
             )}
           </div>
 
           <div className="min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur sm:p-5">
-            <h2 className="text-xl font-semibold text-white">Servicos do dia</h2>
+            <h2 className="text-xl font-semibold text-white">Serviços do dia</h2>
             <div className="mt-4 space-y-3">
               {summary.todayServices.length === 0 ? (
-                <p className="text-sm text-zinc-400">Sem servicos agendados.</p>
+                <p className="text-sm text-zinc-400">Sem serviços agendados.</p>
               ) : (
                 summary.todayServices.slice(0, 5).map((service) => (
                   <div
@@ -394,7 +394,7 @@ function TodayAppointmentCard({
       {appointment.notes ? (
         <div className="mt-3 rounded-2xl border border-[var(--brand)]/20 bg-[var(--brand-muted)]/25 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-            Observacao
+            Observação
           </p>
           <p className="mt-2 text-sm leading-5 text-zinc-200">
             {appointment.notes}
@@ -427,7 +427,7 @@ function TodayAppointmentCard({
               pending={isPending && pendingKey === `${appointment.id}-NO_SHOW`}
               onClick={() => onUpdateStatus(appointment, "NO_SHOW")}
             >
-              Nao veio
+              Não veio
             </ActionButton>
             <ActionButton
               variant="danger"
@@ -495,7 +495,7 @@ function UpcomingAppointmentCard({
       {appointment.notes ? (
         <div className="mt-3 rounded-2xl border border-[var(--brand)]/20 bg-[var(--brand-muted)]/25 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-            Observacao
+            Observação
           </p>
           <p className="mt-2 text-sm leading-5 text-zinc-200">
             {appointment.notes}

@@ -43,7 +43,7 @@ export default function RegisterForm() {
         </p>
         <h1 className="text-4xl font-bold">Criar conta</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Crie sua conta de cliente para agendar. Antes de finalizar, voce confirma um codigo enviado por e-mail.
+          Crie sua conta de cliente para agendar. Antes de finalizar, vocé confirma um código enviado por e-mail.
         </p>
       </div>
 
@@ -154,7 +154,7 @@ export default function RegisterForm() {
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-300">
-        Ja tem conta?{" "}
+        Já tem conta?{" "}
         <Link href="/login" className="font-semibold text-[var(--brand-strong)] hover:underline">
           Entrar
         </Link>

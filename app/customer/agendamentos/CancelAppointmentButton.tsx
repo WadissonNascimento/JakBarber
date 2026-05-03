@@ -68,7 +68,7 @@ export default function CancelAppointmentButton({
                 Cancelar agendamento?
               </h2>
               <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-zinc-400">
-                Esse horario volta para a agenda e podera ser reservado por outro cliente.
+                Esse horário volta para a agenda e poderá ser reservado por outro cliente.
               </p>
             </div>
 

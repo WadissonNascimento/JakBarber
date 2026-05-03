@@ -85,7 +85,7 @@ export default function AdminCouponsClient({
               runAction("create-coupon", createCouponAction, new FormData(form), () => form.reset());
             }}
           >
-            <Field label="Codigo">
+            <Field label="Código">
               <input
                 name="code"
                 required
@@ -93,7 +93,7 @@ export default function AdminCouponsClient({
               />
             </Field>
 
-            <Field label="Descricao">
+            <Field label="Descrição">
               <input
                 name="description"
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
@@ -157,7 +157,7 @@ export default function AdminCouponsClient({
                 />
               </Field>
 
-              <Field label="Valido ate">
+              <Field label="Válido até">
                 <PremiumDatePicker
                   name="expiresAt"
                 />
@@ -178,7 +178,7 @@ export default function AdminCouponsClient({
           {coupons.length === 0 ? (
             <EmptyState
               title="Nenhum cupom cadastrado"
-              description="Os cupons promocionais aparecerao aqui."
+              description="Os cupons promocionais aparecerão aqui."
             />
           ) : (
             coupons.map((coupon) => (
@@ -251,7 +251,7 @@ export default function AdminCouponsClient({
                 >
                   <input type="hidden" name="couponId" value={coupon.id} />
 
-                  <Field label="Descricao">
+                  <Field label="Descrição">
                     <input
                       name="description"
                       defaultValue={coupon.description || ""}
@@ -314,7 +314,7 @@ export default function AdminCouponsClient({
                     />
                   </Field>
 
-                  <Field label="Valido ate">
+                  <Field label="Válido até">
                     <PremiumDatePicker
                       name="expiresAt"
                       defaultValue={

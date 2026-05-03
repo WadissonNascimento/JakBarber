@@ -19,7 +19,7 @@ export default function BarberTodayPayoutPage({
     <PayoutReport
       barberId={params.barberId}
       title="Repasse de hoje"
-      description="Servicos e produtos concluidos hoje, com comissao individual."
+      description="Serviços e produtos concluídos hoje, com comissão individual."
       range={getDayRange()}
     />
   );

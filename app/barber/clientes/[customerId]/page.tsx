@@ -58,7 +58,7 @@ export default async function BarberClientProfilePage({
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       <PageHeader
         title="Perfil do cliente"
-        description="Historico completo deste cliente com voce."
+        description="Histórico completo deste cliente com vocé."
         actions={
           <div className="flex items-center gap-3">
             <Link
@@ -83,11 +83,11 @@ export default async function BarberClientProfilePage({
           <div className="mt-5 space-y-4 text-sm">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-zinc-400">E-mail</p>
-              <p className="mt-1 text-white">{profile.customer.email || "Nao informado"}</p>
+              <p className="mt-1 text-white">{profile.customer.email || "Não informado"}</p>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-zinc-400">Telefone</p>
-              <p className="mt-1 text-white">{profile.customer.phone || "Nao informado"}</p>
+              <p className="mt-1 text-white">{profile.customer.phone || "Não informado"}</p>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-zinc-400">Cliente desde</p>
@@ -100,25 +100,25 @@ export default async function BarberClientProfilePage({
               <p className="mt-1 text-white">
                 {profile.customer.birthDate
                   ? new Date(profile.customer.birthDate).toLocaleDateString("pt-BR")
-                  : "Nao informado"}
+                  : "Não informado"}
               </p>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-zinc-400">Barbeiro preferido</p>
               <p className="mt-1 text-white">
-                {profile.customer.preferredBarberName || "Sem preferencia definida"}
+                {profile.customer.preferredBarberName || "Sem preferência definida"}
               </p>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-zinc-400">Alergias ou cuidados</p>
               <p className="mt-1 text-white">
-                {profile.customer.allergies || "Nenhuma observacao registrada"}
+                {profile.customer.allergies || "Nenhuma observação registrada"}
               </p>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="text-zinc-400">Preferencias</p>
+              <p className="text-zinc-400">Preferências</p>
               <p className="mt-1 text-white">
-                {profile.customer.preferences || "Nenhuma preferencia registrada"}
+                {profile.customer.preferences || "Nenhuma preferência registrada"}
               </p>
             </div>
           </div>
@@ -137,28 +137,28 @@ export default async function BarberClientProfilePage({
               value={profile.stats.totalAppointments}
             />
             <StatCard
-              label="Concluidos"
+              label="Concluídos"
               value={profile.stats.completedAppointments}
             />
             <StatCard
-              label="Valor em servicos"
+              label="Valor em serviços"
               value={`R$ ${profile.stats.totalSpent.toFixed(2)}`}
             />
             <StatCard
-              label="Servico favorito"
+              label="Serviço favorito"
               value={profile.stats.favoriteService || "-"}
             />
           </section>
 
           <SectionCard
-            title="Historico de atendimentos"
-            description="Lista completa dos servicos feitos com este cliente."
+            title="Histórico de atendimentos"
+            description="Lista completa dos serviços feitos com este cliente."
           >
             <div className="space-y-4">
               {profile.appointments.length === 0 ? (
                 <EmptyState
                   title="Sem atendimentos registrados"
-                  description="Assim que esse cliente concluir atendimentos, o historico aparecera aqui."
+                  description="Assim que esse cliente concluir atendimentos, o histórico aparecerá aqui."
                 />
               ) : (
                 profile.appointments.map((appointment) => (
@@ -188,7 +188,7 @@ export default async function BarberClientProfilePage({
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Servico
+                          Serviço
                         </p>
                         <p className="mt-2 text-sm text-white">
                           {getAppointmentDisplayName(appointment.services)}

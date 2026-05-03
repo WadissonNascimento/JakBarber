@@ -77,7 +77,7 @@ export function WeeklyAvailabilityForm({
               <p className="text-sm text-zinc-400">
                 {day.isActive
                   ? "Dia ativo para agendamentos."
-                  : "Dia desativado. Clientes nao vao ver horarios aqui."}
+                  : "Dia desativado. Clientes não vão ver horários aqui."}
               </p>
             </div>
 
@@ -96,7 +96,7 @@ export function WeeklyAvailabilityForm({
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-sm text-zinc-300">Inicio</span>
+              <span className="mb-2 block text-sm text-zinc-300">Início</span>
               <input
                 type="time"
                 name={`day-${day.weekDay}-startTime`}

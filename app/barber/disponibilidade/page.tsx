@@ -18,7 +18,7 @@ export default async function BarberAvailabilityPage({
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       <PageHeader
         title="Disponibilidade"
-        description="Horarios da semana, pausas e bloqueios."
+        description="Horários da semana, pausas e bloqueios."
         actions={
           <Link
             href="/barber"

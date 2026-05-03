@@ -86,7 +86,7 @@ export default async function AdminAgendaPage({
 
       <SectionCard
         title="Filtros"
-        description="Refine por barbeiro, periodo e status para localizar horarios."
+        description="Refine por barbeiro, período e status para localizar horários."
       >
         <form className="grid gap-4 md:grid-cols-5">
           <div>
@@ -115,7 +115,7 @@ export default async function AdminAgendaPage({
           <div>
             <PremiumDatePicker
               name="dateTo"
-              label="Ate"
+              label="Até"
               defaultValue={dateTo}
             />
           </div>
@@ -162,7 +162,7 @@ export default async function AdminAgendaPage({
         </SectionCard>
 
         <SectionCard
-          title="Concluidos"
+          title="Concluídos"
           description="Atendimentos finalizados dentro do filtro."
         >
           <p className="text-3xl font-semibold text-emerald-300">
@@ -172,7 +172,7 @@ export default async function AdminAgendaPage({
 
         <SectionCard
           title="Perdidos"
-          description="Cancelados ou marcados como nao compareceu."
+          description="Cancelados ou marcados como não compareceu."
         >
           <p className="text-3xl font-semibold text-rose-300">
             {summary.cancelled}
@@ -182,7 +182,7 @@ export default async function AdminAgendaPage({
 
       <SectionCard
         title="Agendamentos"
-        description="Lista do dia para acompanhar todos os horarios."
+        description="Lista do dia para acompanhar todos os horários."
         className="mt-8"
         actions={
           <Link
@@ -200,7 +200,7 @@ export default async function AdminAgendaPage({
         {appointments.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento encontrado"
-            description="Ajuste os filtros acima para encontrar outros horarios."
+            description="Ajuste os filtros acima para encontrar outros horários."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -211,11 +211,11 @@ export default async function AdminAgendaPage({
                   <th className="px-4 py-3">Hora</th>
                   <th className="px-4 py-3">Barbeiro</th>
                   <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3">Servico</th>
+                  <th className="px-4 py-3">Serviço</th>
                   <th className="px-4 py-3">Extras</th>
                   <th className="px-4 py-3">Valor</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Observacoes</th>
+                  <th className="px-4 py-3">Observações</th>
                 </tr>
               </thead>
 

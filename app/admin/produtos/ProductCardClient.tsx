@@ -121,7 +121,7 @@ export default function ProductCardClient({
           message:
             error instanceof Error
               ? error.message
-              : "Nao foi possivel atualizar o produto.",
+              : "Não foi possível atualizar o produto.",
           tone: "error",
         });
       } finally {
@@ -231,7 +231,7 @@ export default function ProductCardClient({
             </div>
 
             <label className="space-y-2 text-sm text-zinc-300">
-              <span>Descricao</span>
+              <span>Descrição</span>
               <textarea
                 value={draft.description}
                 onChange={(event) =>
@@ -333,7 +333,7 @@ export default function ProductCardClient({
                     message:
                       error instanceof Error
                         ? error.message
-                        : "Nao foi possivel preparar a imagem.",
+                        : "Não foi possível preparar a imagem.",
                     tone: "error",
                   });
                 }
@@ -400,7 +400,7 @@ export default function ProductCardClient({
             onClick={() => {
               if (
                 !window.confirm(
-                  "Excluir produto? Se houver historico, ele sera apenas ocultado para preservar pedidos."
+                  "Excluir produto? Se houver histórico, ele será apenas ocultado para preservar pedidos."
                 )
               ) {
                 return;

@@ -55,7 +55,7 @@ export default async function AdminPedidosPage({
 
       <SectionCard
         title="Filtros"
-        description="Refine os pedidos por periodo e status antes de exportar."
+        description="Refine os pedidos por período e status antes de exportar."
         className="mt-6"
       >
         <OrdersFilters
@@ -88,7 +88,7 @@ export default async function AdminPedidosPage({
 
         <SectionCard
           title="Pendentes"
-          description="Pedidos aguardando confirmacao."
+          description="Pedidos aguardando confirmação."
         >
           <p className="text-3xl font-semibold text-amber-300">
             {summary.pending}
@@ -109,7 +109,7 @@ export default async function AdminPedidosPage({
         {orders.length === 0 ? (
           <EmptyState
             title="Nenhum pedido encontrado"
-            description="Os novos pedidos da loja aparecerao aqui automaticamente."
+            description="Os novos pedidos da loja aparecerão aqui automaticamente."
           />
         ) : (
           <>
@@ -140,13 +140,13 @@ export default async function AdminPedidosPage({
                     </StatusBadge>
                   </div>
                   <p>
-                    <b>Endereco:</b> {order.shippingAddress || "Nao informado"}
+                    <b>Endereco:</b> {order.shippingAddress || "Não informado"}
                   </p>
                   <p>
-                    <b>CEP:</b> {order.shippingZipCode || "Nao informado"}
+                    <b>CEP:</b> {order.shippingZipCode || "Não informado"}
                   </p>
                   <p>
-                    <b>Frete:</b> {order.shippingMethod || "Nao informado"} - R$ {order.shippingCost.toFixed(2)}
+                    <b>Frete:</b> {order.shippingMethod || "Não informado"} - R$ {order.shippingCost.toFixed(2)}
                   </p>
                   <p>
                     <b>Subtotal:</b> R$ {order.subtotal.toFixed(2)}
@@ -158,7 +158,7 @@ export default async function AdminPedidosPage({
                     <b>Cupom:</b> {order.coupon?.code || "Nenhum"}
                   </p>
                   <p>
-                    <b>Rastreio:</b> {order.trackingCode || "Nao informado"}
+                    <b>Rastreio:</b> {order.trackingCode || "Não informado"}
                   </p>
                 </div>
 

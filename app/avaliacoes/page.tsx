@@ -37,11 +37,11 @@ export default async function ReviewsPage() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-            Avaliacoes
+            Avaliações
           </p>
           <h1 className="mt-2 text-3xl font-bold">Clientes da JakCompany</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Comentarios enviados depois de atendimentos concluidos.
+            Comentários enviados depois de atendimentos concluídos.
           </p>
         </div>
 
@@ -55,7 +55,7 @@ export default async function ReviewsPage() {
 
       {reviews.length === 0 ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.04] p-6 text-sm text-zinc-400">
-          Ainda nao ha avaliacoes publicas.
+          Ainda não há avaliações públicas.
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

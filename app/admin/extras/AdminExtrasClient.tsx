@@ -58,7 +58,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
         <SectionCard title="Estoque baixo" description="Itens com 3 unidades ou menos.">
           <p className="text-3xl font-semibold text-amber-300">{lowStockExtras}</p>
         </SectionCard>
-        <SectionCard title="Sem estoque" description="Nao aparecem para o cliente.">
+        <SectionCard title="Sem estoque" description="Não aparecem para o cliente.">
           <p className="text-3xl font-semibold text-rose-300">{outOfStockExtras}</p>
         </SectionCard>
       </div>
@@ -98,7 +98,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
                   message:
                     error instanceof Error
                       ? error.message
-                      : "Nao foi possivel cadastrar o extra.",
+                      : "Não foi possível cadastrar o extra.",
                   tone: "error",
                 });
               }
@@ -132,7 +132,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
           </div>
 
           <label className="space-y-2 text-sm text-zinc-300">
-            <span>Descricao</span>
+            <span>Descrição</span>
             <textarea
               name="description"
               rows={2}
@@ -167,7 +167,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
               />
             </label>
             <label className="space-y-2 text-sm text-zinc-300">
-              <span>Comissao</span>
+              <span>Comissão</span>
               <select
                 name="commissionType"
                 defaultValue="PERCENT"
@@ -178,7 +178,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
               </select>
             </label>
             <label className="space-y-2 text-sm text-zinc-300">
-              <span>Valor comissao</span>
+              <span>Valor comissão</span>
               <input
                 name="commissionValue"
                 type="number"
@@ -217,7 +217,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
                       message:
                         error instanceof Error
                           ? error.message
-                          : "Nao foi possivel preparar a imagem.",
+                          : "Não foi possível preparar a imagem.",
                       tone: "error",
                     });
                   }
@@ -256,7 +256,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
 
       <SectionCard
         title="Lista atual de extras"
-        description="Gerencie o que fica disponivel para o cliente no agendamento."
+        description="Gerencie o que fica disponível para o cliente no agendamento."
       >
         {extras.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-zinc-500">

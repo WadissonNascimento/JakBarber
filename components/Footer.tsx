@@ -17,7 +17,7 @@ export default function Footer({
   businessHours: string;
 }) {
   const whatsappMessage = encodeURIComponent(
-    `Ola! Vim pelo site da ${brandName} e queria tirar uma duvida.`
+    `Ola! Vim pelo site da ${brandName} e queria tirar uma dúvida.`
   );
 
   return (
@@ -50,10 +50,10 @@ export default function Footer({
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Experiencia
+                Experiência
               </p>
               <p className="mt-2 text-zinc-200">
-                Agenda rapida no celular e acompanhamento em tempo real
+                Agenda rápida no celular e acompanhamento em tempo real
               </p>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function Footer({
               href="/servicos"
               className="text-zinc-400 transition hover:text-[var(--brand-strong)]"
             >
-              Servicos
+              Serviços
             </Link>
             <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
             <Link

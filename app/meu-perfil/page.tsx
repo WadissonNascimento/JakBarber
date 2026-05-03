@@ -81,7 +81,7 @@ export default async function MeuPerfilPage({
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       <PageHeader
         title="Meu perfil"
-        description="Veja seus dados, preferencias e historico de servicos."
+        description="Veja seus dados, preferências e histórico de serviços."
         actions={
           <div className="flex items-center gap-3">
             <Link
@@ -97,7 +97,7 @@ export default async function MeuPerfilPage({
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[380px_1fr]">
         <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="text-xl font-semibold">Informacoes pessoais</h2>
+          <h2 className="text-xl font-semibold">Informações pessoais</h2>
 
           <ProfileForm
             customer={{
@@ -124,7 +124,7 @@ export default async function MeuPerfilPage({
             </div>
 
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="text-sm text-zinc-400">Servico favorito</p>
+              <p className="text-sm text-zinc-400">Serviço favorito</p>
               <p className="mt-1 text-lg font-semibold">
                 {favoriteService || "Ainda indefinido"}
               </p>
@@ -133,7 +133,7 @@ export default async function MeuPerfilPage({
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
               <p className="text-sm text-zinc-400">Barbeiro preferido</p>
               <p className="mt-1 text-lg font-semibold">
-                {profile?.preferredBarber?.name || "Nao informado"}
+                {profile?.preferredBarber?.name || "Não informado"}
               </p>
             </div>
           </div>
@@ -142,7 +142,7 @@ export default async function MeuPerfilPage({
         <div className="space-y-8">
           <SectionCard
             title="Resumo do perfil"
-            description="Informacoes que ajudam a personalizar melhor seus proximos atendimentos."
+            description="Informações que ajudam a personalizar melhor seus próximos atendimentos."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
@@ -150,23 +150,23 @@ export default async function MeuPerfilPage({
                   Alergias ou cuidados
                 </p>
                 <p className="mt-2 text-sm text-white">
-                  {profile?.allergies || "Nenhuma observacao registrada"}
+                  {profile?.allergies || "Nenhuma observação registrada"}
                 </p>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  Preferencias
+                  Preferências
                 </p>
                 <p className="mt-2 text-sm text-white">
-                  {profile?.preferences || "Nenhuma preferencia registrada"}
+                  {profile?.preferences || "Nenhuma preferência registrada"}
                 </p>
               </div>
             </div>
           </SectionCard>
 
           <SectionCard
-            title="Historico de servicos"
-            description="Linha do tempo dos seus ultimos atendimentos."
+            title="Histórico de serviços"
+            description="Linha do tempo dos seus últimos atendimentos."
             actions={
               <Link
                 href="/agendar"
@@ -179,8 +179,8 @@ export default async function MeuPerfilPage({
             <div className="space-y-4">
               {appointments.length === 0 ? (
                 <EmptyState
-                  title="Sem historico de servicos"
-                  description="Seus atendimentos vao aparecer aqui com status e barbeiro."
+                  title="Sem histórico de serviços"
+                  description="Seus atendimentos vão aparecer aqui com status e barbeiro."
                   actionLabel="Agendar atendimento"
                   actionHref="/agendar"
                 />
@@ -197,7 +197,7 @@ export default async function MeuPerfilPage({
                     <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                       <div className="min-w-0">
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          {index === 0 ? "Ultimo atendimento" : "Atendimento"}
+                          {index === 0 ? "último atendimento" : "Atendimento"}
                         </p>
                         <p className="mt-1 break-words text-lg font-semibold text-white">
                           {getAppointmentDisplayName(appointment.services)}
@@ -240,7 +240,7 @@ export default async function MeuPerfilPage({
 
                     {appointment.notes && (
                       <p className="mt-3 text-sm text-zinc-300">
-                        Observacoes: {appointment.notes}
+                        Observações: {appointment.notes}
                       </p>
                     )}
                   </div>

@@ -103,10 +103,10 @@ export default function AdminServicesClient({
               Cadastro
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-white">
-              Novo servico
+              Novo serviço
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-300">
-              Crie um servico geral da casa ou um servico exclusivo de um barbeiro,
+              Crie um serviço geral da casa ou um serviço exclusivo de um barbeiro,
               sem sair do painel do admin.
             </p>
           </div>
@@ -124,7 +124,7 @@ export default function AdminServicesClient({
                     : "text-zinc-300 hover:bg-white/5"
                 }`}
               >
-                Servico geral
+                Serviço geral
               </button>
 
               <button
@@ -136,14 +136,14 @@ export default function AdminServicesClient({
                     : "text-zinc-300 hover:bg-white/5"
                 }`}
               >
-                Servico exclusivo
+                Serviço exclusivo
               </button>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
               {serviceScope === "GLOBAL"
-                ? "Esse servico entra na agenda de qualquer barbeiro disponivel."
-                : "Esse servico vai ficar disponivel apenas para o barbeiro selecionado."}
+                ? "Esse serviço entra na agenda de qualquer barbeiro disponível."
+                : "Esse serviço vai ficar disponível apenas para o barbeiro selecionado."}
             </div>
 
             {serviceScope === "EXCLUSIVE" ? (
@@ -179,7 +179,7 @@ export default function AdminServicesClient({
               />
             </Field>
 
-            <Field label="Descricao">
+            <Field label="Descrição">
               <textarea
                 name="description"
                 rows={3}
@@ -200,7 +200,7 @@ export default function AdminServicesClient({
                 />
               </Field>
 
-              <Field label="Duracao (min)">
+              <Field label="Duração (min)">
                 <input
                   type="number"
                   min="10"
@@ -212,7 +212,7 @@ export default function AdminServicesClient({
               </Field>
             </div>
 
-            <Field label="Comissao do barbeiro (%)">
+            <Field label="Comissão do barbeiro (%)">
               <input
                 type="number"
                 min="0"
@@ -233,8 +233,8 @@ export default function AdminServicesClient({
               {isPending && pendingKey === "create-service"
                 ? "Criando..."
                 : serviceScope === "EXCLUSIVE"
-                ? "Criar servico exclusivo"
-                : "Criar servico geral"}
+                ? "Criar serviço exclusivo"
+                : "Criar serviço geral"}
             </button>
           </div>
         </form>
@@ -242,16 +242,16 @@ export default function AdminServicesClient({
         <div className="space-y-8">
           <section>
             <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white">Servicos gerais</h2>
+              <h2 className="text-xl font-semibold text-white">Serviços gerais</h2>
               <p className="text-sm text-zinc-400">
-                Disponiveis para qualquer barbeiro, com repasse definido pelo admin.
+                Disponíveis para qualquer barbeiro, com repasse definido pelo admin.
               </p>
             </div>
 
             <div className="space-y-4">
               {globalServices.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-6 text-sm text-zinc-400">
-                  Nenhum servico geral cadastrado.
+                  Nenhum serviço geral cadastrado.
                 </div>
               ) : (
                 globalServices.map((service) => (
@@ -269,7 +269,7 @@ export default function AdminServicesClient({
 
           <section>
             <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white">Servicos exclusivos dos barbeiros</h2>
+              <h2 className="text-xl font-semibold text-white">Serviços exclusivos dos barbeiros</h2>
               <p className="text-sm text-zinc-400">
                 Criados e controlados pelo admin para barbeiros especificos.
               </p>
@@ -278,7 +278,7 @@ export default function AdminServicesClient({
             <div className="space-y-4">
               {barberServices.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-6 text-sm text-zinc-400">
-                  Nenhum servico exclusivo cadastrado.
+                  Nenhum serviço exclusivo cadastrado.
                 </div>
               ) : (
                 barberServices.map((service) => (
@@ -320,7 +320,7 @@ function ServiceCard({
 }) {
   const ownerLabel = service.barber
     ? `Exclusivo de ${service.barber.name || service.barber.email || "Barbeiro"}`
-    : "Servico geral";
+    : "Serviço geral";
 
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
@@ -329,7 +329,7 @@ function ServiceCard({
           <p className="text-lg font-semibold text-white">{service.name}</p>
           <p className="text-sm text-zinc-400">{ownerLabel}</p>
           <p className="text-xs text-zinc-500">
-            {service.isActive ? "Ativo para agendamento" : "Desativado"} - Comissao:{" "}
+            {service.isActive ? "Ativo para agendamento" : "Desativado"} - Comissão:{" "}
             {service.commissionValue}%
           </p>
         </div>
@@ -362,7 +362,7 @@ function ServiceCard({
             onClick={() => {
               if (
                 !window.confirm(
-                  "Excluir servico? Se houver agendamentos no historico, ele sera apenas desativado."
+                  "Excluir serviço? Se houver agendamentos no histórico, ele será apenas desativado."
                 )
               ) {
                 return;
@@ -398,7 +398,7 @@ function ServiceCard({
           />
         </Field>
 
-        <Field label="Descricao">
+        <Field label="Descrição">
           <textarea
             name="description"
             defaultValue={service.description || ""}
@@ -420,7 +420,7 @@ function ServiceCard({
             />
           </Field>
 
-          <Field label="Duracao (min)">
+          <Field label="Duração (min)">
             <input
               type="number"
               min="10"
@@ -433,7 +433,7 @@ function ServiceCard({
           </Field>
         </div>
 
-        <Field label="Comissao do barbeiro (%)">
+        <Field label="Comissão do barbeiro (%)">
           <input
             type="number"
             min="0"

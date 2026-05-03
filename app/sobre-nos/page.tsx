@@ -2,21 +2,21 @@ import Image from "next/image";
 
 export const metadata = {
   title: "Sobre nos",
-  description: "Conheca a trajetoria da Jak Barber e o cuidado por tras do atendimento.",
+  description: "Conheça a trajetoria da Jak Barber e o cuidado por tras do atendimento.",
 };
 
 const timeline = [
   {
     label: "Comeco",
-    text: "A Jak Barber nasceu com foco em corte bem feito, atendimento direto e respeito pelo horario do cliente.",
+    text: "A Jak Barber nasceu com foco em corte bem feito, atendimento direto e respeito pelo horário do cliente.",
   },
   {
     label: "Crescimento",
-    text: "A rotina ficou mais organizada com agenda marcada, equipe alinhada e servicos pensados para cada perfil.",
+    text: "A rotina ficou mais organizada com agenda marcada, equipe alinhada e serviços pensados para cada perfil.",
   },
   {
     label: "Hoje",
-    text: "A barbearia une tecnica, praticidade e acompanhamento para manter a experiencia simples do inicio ao fim.",
+    text: "A barbearia une técnica, praticidade e acompanhamento para manter a experiência simples do início ao fim.",
   },
 ];
 
@@ -56,13 +56,13 @@ export default function SobreNosPage() {
           </h1>
           <div className="mt-5 space-y-4 text-sm leading-7 text-zinc-300 sm:text-base">
             <p>
-              A Jak Barber foi criada para entregar uma experiencia simples:
-              o cliente chega no horario, senta na cadeira e recebe um atendimento
-              feito com calma, tecnica e atencao ao detalhe.
+              A Jak Barber foi criada para entregar uma experiência simples:
+              o cliente chega no horário, senta na cadeira e recebe um atendimento
+              feito com calma, técnica e atencao ao detalhe.
             </p>
             <p>
               Com o tempo, a barbearia evoluiu sem perder essa base. A agenda
-              passou a ser digital, os servicos ficaram mais organizados e a
+              passou a ser digital, os serviços ficaram mais organizados e a
               equipe ganhou ferramentas para cuidar melhor de cada atendimento.
             </p>
             <p>

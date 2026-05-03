@@ -84,7 +84,7 @@ export default function AdminBarbersClient({
         {barbers.length === 0 ? (
           <EmptyState
             title="Nenhum barbeiro cadastrado"
-            description="Depois que um convite for confirmado, o barbeiro aparecera aqui."
+            description="Depois que um convite for confirmado, o barbeiro aparecerá aqui."
           />
         ) : (
           <div className="space-y-3">
@@ -123,7 +123,7 @@ export default function AdminBarbersClient({
                     </span>
                   </div>
                   <p className="mt-1 truncate text-sm text-zinc-400">
-                    {barber.email || "E-mail nao informado"}
+                    {barber.email || "E-mail não informado"}
                   </p>
                 </div>
 
@@ -136,13 +136,13 @@ export default function AdminBarbersClient({
 
       <SectionCard
         title="Convites pendentes"
-        description="Acessos enviados que ainda nao foram confirmados."
+        description="Acessos enviados que ainda não foram confirmados."
         className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(180deg,rgba(15,22,36,0.98),rgba(9,12,20,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.08)]"
       >
         {pendingBarbers.length === 0 ? (
           <EmptyState
             title="Nenhum convite pendente"
-            description="Quando voce enviar um novo convite, ele aparecera aqui ate a confirmacao."
+            description="Quando vocé enviar um novo convite, ele aparecerá aqui até a confirmação."
           />
         ) : (
           <div className="space-y-3">
@@ -153,11 +153,11 @@ export default function AdminBarbersClient({
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold text-white">{barber.name}</h3>
-                  <StatusBadge variant="warning">Pendente de confirmacao</StatusBadge>
+                  <StatusBadge variant="warning">Pendente de confirmação</StatusBadge>
                 </div>
                 <p className="mt-2 break-all text-sm text-zinc-300">{barber.email}</p>
                 <p className="text-sm text-zinc-400">
-                  {barber.phone || "Telefone nao informado"}
+                  {barber.phone || "Telefone não informado"}
                 </p>
                 <p className="mt-3 text-xs uppercase tracking-[0.18em] text-zinc-500">
                   Expira em {new Date(barber.expiresAt).toLocaleString("pt-BR")}

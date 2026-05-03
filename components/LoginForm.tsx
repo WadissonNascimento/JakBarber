@@ -22,7 +22,7 @@ export default function LoginForm({
         </p>
         <h1 className="text-4xl font-bold">Entrar</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Entre para abrir seu painel e acompanhar seus horarios.
+          Entre para abrir seu painel e acompanhar seus horários.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default function LoginForm({
       </div>
 
       <p className="mt-6 text-center text-sm text-zinc-300">
-        Ainda nao tem conta?{" "}
+        Ainda não tem conta?{" "}
         <Link
           href="/register"
           className="font-semibold text-[var(--brand-strong)] hover:underline"

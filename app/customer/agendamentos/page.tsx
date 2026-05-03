@@ -52,7 +52,7 @@ export default async function CustomerAppointmentsPage() {
     <div className="mx-auto max-w-5xl px-4 py-10 text-white">
       <PageHeader
         title="Meus agendamentos"
-        description="Veja seus horarios e acompanhe o andamento de cada atendimento em uma pagina so."
+        description="Veja seus horários e acompanhe o andamento de cada atendimento em uma página so."
         actions={
           <div className="flex flex-wrap gap-3">
             <Link
@@ -73,12 +73,12 @@ export default async function CustomerAppointmentsPage() {
 
       <SectionCard
         title="Agenda do cliente"
-        description="Cada card abaixo concentra data, hora, barbeiro, servicos e status."
+        description="Cada card abaixo concentra data, hora, barbeiro, serviços e status."
       >
         {appointments.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento por enquanto"
-            description="Quando voce reservar seu primeiro horario, ele aparecera aqui."
+            description="Quando vocé reservar seu primeiro horário, ele aparecerá aqui."
             actionLabel="Agendar agora"
             actionHref="/agendar"
           />
@@ -109,7 +109,7 @@ export default async function CustomerAppointmentsPage() {
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
                     <div className="min-w-0">
                       <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                        Servicos
+                        Serviços
                       </p>
                       <p className="mt-2 break-words text-lg font-semibold text-white">
                         {serviceLabel}
@@ -137,8 +137,8 @@ export default async function CustomerAppointmentsPage() {
                       value={time}
                     />
                     <InfoBlock
-                      label="Observacoes"
-                      value={appointment.notes || "Sem observacoes registradas"}
+                      label="Observações"
+                      value={appointment.notes || "Sem observações registradas"}
                     />
                     <InfoBlock
                       label="Extras"
@@ -165,7 +165,7 @@ export default async function CustomerAppointmentsPage() {
                       href="/agendar"
                       className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5"
                     >
-                      Remarcar horario
+                      Remarcar horário
                     </Link>
                     {whatsappHref ? (
                       <a
@@ -183,7 +183,7 @@ export default async function CustomerAppointmentsPage() {
                     ) : null}
                     </div>
                     <p className="mt-3 text-xs leading-5 text-zinc-500">
-                      Chegue 5 minutos antes do horario marcado.
+                      Chegue 5 minutos antes do horário marcado.
                     </p>
                   </div>
 
@@ -191,10 +191,10 @@ export default async function CustomerAppointmentsPage() {
                     appointment.review ? (
                       <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
                         <p className="text-sm font-semibold text-white">
-                          Avaliacao enviada
+                          Avaliação enviada
                         </p>
                         <p className="mt-2 text-sm leading-6 text-zinc-300">
-                          Obrigado pelo feedback. Sua avaliacao foi registrada.
+                          Obrigado pelo feedback. Sua avaliação foi registrada.
                         </p>
                       </div>
                     ) : (

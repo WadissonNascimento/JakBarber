@@ -104,7 +104,7 @@ export default function HomeClient({
             </h1>
 
             <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">
-              Agende seu horario com praticidade e tenha uma experiencia premium
+              Agende seu horário com praticidade e tenha uma experiência premium
               na JakCompany.
             </p>
 
@@ -113,7 +113,7 @@ export default function HomeClient({
                 href="/agendar"
                 className="rounded-lg bg-[var(--brand)] px-6 py-3 text-center font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110 active:scale-[0.98]"
               >
-                Agendar horario
+                Agendar horário
               </Link>
 
               <Link
@@ -131,7 +131,7 @@ export default function HomeClient({
               </div>
 
               <div className="surface-card rounded-lg p-4">
-                <p className="text-xs text-[var(--brand-strong)]">Horario</p>
+                <p className="text-xs text-[var(--brand-strong)]">Horário</p>
                 <p className="mt-2 text-sm text-zinc-200">Terca a domingo</p>
               </div>
 
@@ -183,7 +183,7 @@ export default function HomeClient({
                     type="button"
                     onClick={nextSlide}
                     className="absolute right-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-white/10 bg-black/35 text-lg text-white backdrop-blur-xl transition hover:bg-[var(--brand-muted)] sm:right-4 sm:flex sm:h-12 sm:w-12 sm:text-xl"
-                    aria-label="Proxima foto"
+                    aria-label="Próxima foto"
                   >
                     {">"}
                   </button>
@@ -216,7 +216,7 @@ export default function HomeClient({
         <div className="mb-5">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-              Avaliacoes
+              Avaliações
             </p>
             <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
               O que os clientes acharam.
@@ -226,8 +226,8 @@ export default function HomeClient({
 
         {reviews.length === 0 ? (
           <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.04] p-5 text-sm text-zinc-400">
-            As avaliacoes reais dos clientes vao aparecer aqui depois dos
-            atendimentos concluidos.
+            As avaliações reais dos clientes vão aparecer aqui depois dos
+            atendimentos concluídos.
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-3">
@@ -254,7 +254,7 @@ export default function HomeClient({
               href="/avaliacoes"
               className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5"
             >
-              Ver mais avaliacoes
+              Ver mais avaliações
             </Link>
           </div>
         ) : null}

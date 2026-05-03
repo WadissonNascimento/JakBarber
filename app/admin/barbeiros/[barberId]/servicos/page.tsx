@@ -50,8 +50,8 @@ export default async function BarberServicesPage({
     <div className="mx-auto max-w-5xl px-4 py-10 text-white">
       <PageHeader
         eyebrow={barber.name || "Barbeiro"}
-        title="Servicos"
-        description="Servicos que este barbeiro pode executar e suas comissoes individuais."
+        title="Serviços"
+        description="Serviços que este barbeiro pode executar e suas comissões individuais."
         actions={
           <Link
             href={`/admin/barbeiros/${barber.id}`}

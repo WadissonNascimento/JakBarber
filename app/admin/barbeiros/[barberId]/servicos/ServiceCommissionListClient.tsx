@@ -55,7 +55,7 @@ export default function ServiceCommissionListClient({
 
       {services.length === 0 ? (
         <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.03] p-6 text-sm text-zinc-400">
-          Nenhum servico disponivel para esse barbeiro.
+          Nenhum serviço disponível para esse barbeiro.
         </div>
       ) : (
         services.map((service) => {
@@ -107,7 +107,7 @@ export default function ServiceCommissionListClient({
                   <input type="hidden" name="serviceId" value={service.id} />
 
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-zinc-300">
-                    Padrao do servico:{" "}
+                    Padrão do serviço:{" "}
                     <span className="font-semibold text-white">
                       {formatCommission(service.commissionType, service.commissionValue)}
                     </span>
@@ -127,7 +127,7 @@ export default function ServiceCommissionListClient({
                     </label>
 
                     <label className="space-y-2 text-sm text-zinc-300">
-                      <span>Comissao</span>
+                      <span>Comissão</span>
                       <input
                         name="commissionValue"
                         type="number"

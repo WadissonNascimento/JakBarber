@@ -26,7 +26,7 @@ export default async function AdminCouponsPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 text-white">
       <PageHeader
         title="Cupons"
-        description="Crie descontos promocionais para a loja e acompanhe o uso de cada codigo."
+        description="Crie descontos promocionais para a loja e acompanhe o uso de cada código."
         actions={
           <Link
             href="/admin"

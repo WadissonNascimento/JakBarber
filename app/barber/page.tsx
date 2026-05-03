@@ -23,7 +23,7 @@ export default async function BarberPage() {
       href: "/barber/agenda",
       icon: CalendarRange,
       title: "Agenda",
-      description: "Filtros, historico e status dos atendimentos.",
+      description: "Filtros, histórico e status dos atendimentos.",
       badge: dashboard.summary.appointmentsToday
         ? `${dashboard.summary.appointmentsToday}`
         : undefined,
@@ -31,15 +31,15 @@ export default async function BarberPage() {
     {
       href: "/barber/servicos",
       icon: Scissors,
-      title: "Servicos",
-      description: "Crie e ajuste seus servicos exclusivos.",
+      title: "Serviços",
+      description: "Crie e ajuste seus serviços exclusivos.",
       badge: dashboard.services.length ? `${dashboard.services.length}` : undefined,
     },
     {
       href: "/barber/disponibilidade",
       icon: Clock3,
       title: "Disponibilidade",
-      description: "Horarios da semana, pausas e bloqueios.",
+      description: "Horários da semana, pausas e bloqueios.",
       badge:
         dashboard.blocks.length || dashboard.recurringBlocks.length
           ? `${dashboard.blocks.length + dashboard.recurringBlocks.length}`
@@ -87,7 +87,7 @@ export default async function BarberPage() {
             <div>
               <h2 className="text-xl font-semibold text-white">Atalhos</h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Rotinas que nao precisam ficar na frente da agenda.
+                Rotinas que não precisam ficar na frente da agenda.
               </p>
             </div>
           </div>

@@ -60,7 +60,7 @@ export default function BarberProfileClient({
                   E-mail
                 </p>
                 <p className="mt-2 break-all text-sm text-zinc-200">
-                  {barber.email || "Nao informado"}
+                  {barber.email || "Não informado"}
                 </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -68,7 +68,7 @@ export default function BarberProfileClient({
                   Telefone
                 </p>
                 <p className="mt-2 text-sm text-zinc-200">
-                  {barber.phone || "Nao informado"}
+                  {barber.phone || "Não informado"}
                 </p>
               </div>
             </div>
@@ -89,13 +89,13 @@ export default function BarberProfileClient({
           href={`${baseHref}/agendamentos-hoje`}
           label="Agendamentos de hoje"
           value={`${summary.todayAppointments}`}
-          helper="Ver horarios do dia"
+          helper="Ver horários do dia"
         />
         <ProfileMenuCard
           href={`${baseHref}/repasse-hoje`}
           label="Repasse de hoje"
           value={formatCurrency(summary.todayPayout)}
-          helper="Servicos e extras concluidos"
+          helper="Serviços e extras concluídos"
         />
         <ProfileMenuCard
           href={`${baseHref}/repasse-semana`}
@@ -105,9 +105,9 @@ export default function BarberProfileClient({
         />
         <ProfileMenuCard
           href={`${baseHref}/servicos`}
-          label="Servicos"
+          label="Serviços"
           value={`${summary.servicesCount}`}
-          helper="Editar comissoes individuais"
+          helper="Editar comissões individuais"
         />
       </div>
     </div>

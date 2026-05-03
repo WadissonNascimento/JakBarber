@@ -41,16 +41,16 @@ function getHeaderLinks(role: HeaderRole): {
       homeHref: "/admin",
       eyebrow: "Admin",
       primary: [
-        { href: "/admin", label: "Inicio" },
+        { href: "/admin", label: "Início" },
         { href: "/admin/agenda", label: "Agenda" },
         { href: "/admin/barbeiros", label: "Equipe" },
         { href: "/admin/financeiro", label: "Financeiro" },
       ],
       secondary: [
-        { href: "/admin/servicos", label: "Servicos" },
+        { href: "/admin/servicos", label: "Serviços" },
         { href: "/admin/produtos", label: "Produtos" },
         { href: "/admin/extras", label: "Extras" },
-        { href: "/admin/avaliacoes", label: "Avaliacoes" },
+        { href: "/admin/avaliacoes", label: "Avaliações" },
       ],
     };
   }
@@ -65,7 +65,7 @@ function getHeaderLinks(role: HeaderRole): {
         { href: "/barber/clientes", label: "Clientes" },
         { href: "/barber/disponibilidade", label: "Pausas" },
       ],
-      secondary: [{ href: "/barber/servicos", label: "Meus servicos" }],
+      secondary: [{ href: "/barber/servicos", label: "Meus serviços" }],
     };
   }
 
@@ -75,7 +75,7 @@ function getHeaderLinks(role: HeaderRole): {
       eyebrow: "Cliente",
       primary: [
         { href: "/agendar", label: "Agendar" },
-        { href: "/customer/agendamentos", label: "Meus horarios" },
+        { href: "/customer/agendamentos", label: "Meus horários" },
         { href: "/produtos", label: "Arsenal" },
       ],
       secondary: [{ href: "/meu-perfil", label: "Meu cadastro" }],
@@ -87,7 +87,7 @@ function getHeaderLinks(role: HeaderRole): {
     eyebrow: "JakCompany",
     primary: [
       { href: "/agendar", label: "Agendar" },
-      { href: "/servicos", label: "Servicos" },
+      { href: "/servicos", label: "Serviços" },
       { href: "/produtos", label: "Arsenal" },
       { href: "/login", label: "Entrar" },
     ],

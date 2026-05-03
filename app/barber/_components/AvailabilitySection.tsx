@@ -64,7 +64,7 @@ export function AvailabilitySection({
   return (
     <SectionCard
       title="Disponibilidade"
-      description="Abra horarios e bloqueie pausas quando precisar."
+      description="Abra horários e bloqueie pausas quando precisar."
       className="rounded-[28px] bg-zinc-900/90"
     >
       <div className="mt-6 space-y-3">
@@ -95,16 +95,16 @@ export function AvailabilitySection({
               );
             }}
           >
-            <h3 className="text-lg font-semibold text-white">Bloquear periodo</h3>
+            <h3 className="text-lg font-semibold text-white">Bloquear período</h3>
             <p className="mt-1 text-sm text-zinc-400">
-              Use para folga, pausa, almoco ou qualquer indisponibilidade.
+              Use para folga, pausa, almoço ou qualquer indisponibilidade.
             </p>
 
             <div className="mt-4 space-y-4">
               <label className="block">
                 <PremiumDateTimePicker
                   name="startDateTime"
-                  label="Inicio"
+                  label="Início"
                   required
                 />
               </label>
@@ -121,7 +121,7 @@ export function AvailabilitySection({
                 <span className="mb-2 block text-sm text-zinc-300">Motivo</span>
                 <input
                   name="reason"
-                  placeholder="Ex.: almoco, curso, folga"
+                  placeholder="Ex.: almoço, curso, folga"
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
                 />
               </label>
@@ -133,7 +133,7 @@ export function AvailabilitySection({
               >
                 {isPending && pendingKey === "create-block"
                   ? "Bloqueando..."
-                  : "Bloquear horario"}
+                  : "Bloquear horário"}
               </button>
             </div>
           </form>
@@ -145,7 +145,7 @@ export function AvailabilitySection({
               {blocks.length === 0 ? (
                 <EmptyState
                   title="Nenhum bloqueio futuro"
-                  description="Use bloqueios para almoco, folga, curso ou qualquer pausa pontual."
+                  description="Use bloqueios para almoço, folga, curso ou qualquer pausa pontual."
                 />
               ) : (
                 blocks.map((block) => (
@@ -154,7 +154,7 @@ export function AvailabilitySection({
                     className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"
                   >
                     <p className="text-sm font-medium text-white">
-                      {new Date(block.startDateTime).toLocaleString("pt-BR")} ate{" "}
+                      {new Date(block.startDateTime).toLocaleString("pt-BR")} até{" "}
                       {new Date(block.endDateTime).toLocaleString("pt-BR")}
                     </p>
                     <p className="mt-1 text-sm text-zinc-400">
@@ -165,7 +165,7 @@ export function AvailabilitySection({
                       type="button"
                       disabled={isPending && pendingKey === `block-${block.id}`}
                       onClick={() => {
-                        if (!window.confirm("Remover este bloqueio de horario?")) {
+                        if (!window.confirm("Remover este bloqueio de horário?")) {
                           return;
                         }
 
@@ -201,7 +201,7 @@ export function AvailabilitySection({
           >
             <h3 className="text-lg font-semibold text-white">Bloqueio recorrente</h3>
             <p className="mt-1 text-sm text-zinc-400">
-              Use para almoco, pausa fixa ou horarios indisponiveis que se repetem toda semana.
+              Use para almoço, pausa fixa ou horários indisponíveis que se repetem toda semana.
             </p>
 
             <div className="mt-4 space-y-4">
@@ -226,7 +226,7 @@ export function AvailabilitySection({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-300">Inicio</span>
+                  <span className="mb-2 block text-sm text-zinc-300">Início</span>
                   <input
                     type="time"
                     name="startTime"
@@ -250,7 +250,7 @@ export function AvailabilitySection({
                 <span className="mb-2 block text-sm text-zinc-300">Motivo</span>
                 <input
                   name="reason"
-                  placeholder="Ex.: almoco fixo"
+                  placeholder="Ex.: almoço fixo"
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
                 />
               </label>
@@ -284,7 +284,7 @@ export function AvailabilitySection({
                   >
                     <p className="text-sm font-medium text-white">
                       {weekDays.find((day) => day.value === block.weekDay)?.label || "Dia"}:{" "}
-                      {block.startTime} ate {block.endTime}
+                      {block.startTime} até {block.endTime}
                     </p>
                     <p className="mt-1 text-sm text-zinc-400">
                       {block.reason || "Sem motivo informado"}

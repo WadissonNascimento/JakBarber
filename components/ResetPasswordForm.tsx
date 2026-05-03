@@ -44,16 +44,16 @@ export default function ResetPasswordForm({
         </p>
         <h1 className="text-4xl font-bold">Redefinir senha</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Digite o codigo enviado para <span className="font-semibold text-white">{email}</span> e escolha sua nova senha.
+          Digite o código enviado para <span className="font-semibold text-white">{email}</span> e escolha sua nova senha.
         </p>
       </div>
 
       <FormFeedback
         success={
           devCode
-            ? `Codigo de recuperacao local: ${devCode}`
+            ? `Código de recuperação local: ${devCode}`
             : sent
-            ? "Enviamos um codigo de recuperacao para o seu e-mail."
+            ? "Enviamos um código de recuperação para o seu e-mail."
             : safeResetState.success
         }
         error={safeResetState.error}
@@ -67,7 +67,7 @@ export default function ResetPasswordForm({
             htmlFor="code"
             className="mb-2 block text-sm font-medium text-zinc-200"
           >
-            Codigo de recuperacao
+            Código de recuperação
           </label>
           <input
             id="code"
@@ -124,7 +124,7 @@ export default function ResetPasswordForm({
         <form action={resendAction} className="mt-4">
           <input type="hidden" name="email" value={email} />
           <SubmitButton
-            idleText="Reenviar codigo"
+            idleText="Reenviar código"
             loadingText="Reenviando..."
             className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4 font-semibold text-white transition hover:border-sky-400/40 hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:opacity-70"
           />

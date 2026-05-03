@@ -66,7 +66,7 @@ export default function FinancePeriodFilters({
       <div>
         <PremiumSelect
           name="period"
-          label="Periodo do painel"
+          label="Período do painel"
           value={filters.period}
           options={[
             { value: "week", label: "Esta semana" },
@@ -130,7 +130,7 @@ export default function FinancePeriodFilters({
           ? "Atualizando os numeros..."
           : filters.period === "custom"
           ? "As datas escolhidas atualizam o painel automaticamente."
-          : "Troque o periodo para atualizar o painel sem recarregar a pagina inteira."}
+          : "Troque o período para atualizar o painel sem recarregar a página inteira."}
       </p>
     </form>
   );

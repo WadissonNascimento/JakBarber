@@ -13,20 +13,20 @@ export function ServicesSection({
 }) {
   return (
     <SectionCard
-      title="Servicos"
-      description="Seus servicos aparecem aqui para consulta. Cadastros, exclusividades e ajustes agora ficam centralizados no admin."
+      title="Serviços"
+      description="Seus serviços aparecem aqui para consulta. Cadastros, exclusividades e ajustes agora ficam centralizados no admin."
       className="rounded-[28px] bg-zinc-900/90"
     >
       <div className="mt-6 rounded-2xl border border-sky-500/15 bg-sky-500/5 px-4 py-4 text-sm leading-6 text-zinc-300">
-        O admin controla quais servicos gerais e exclusivos entram na sua agenda.
-        Se precisar adicionar ou ajustar um servico, fale com o painel administrativo.
+        O admin controla quais serviços gerais e exclusivos entram na sua agenda.
+        Se precisar adicionar ou ajustar um serviço, fale com o painel administrativo.
       </div>
 
       <div className="mt-6 space-y-4">
         {services.length === 0 ? (
           <EmptyState
-            title="Nenhum servico liberado"
-            description="Assim que o admin cadastrar servicos gerais ou exclusivos para voce, eles vao aparecer aqui."
+            title="Nenhum serviço liberado"
+            description="Assim que o admin cadastrar serviços gerais ou exclusivos para vocé, eles vão aparecer aqui."
           />
         ) : (
           services.map((service) => (
@@ -39,7 +39,7 @@ export function ServicesSection({
                   <div>
                     <p className="text-lg font-semibold text-white">{service.name}</p>
                     <p className="text-sm text-zinc-400">
-                      {service.isActive ? "Ativo para agendamento" : "Indisponivel no momento"}
+                      {service.isActive ? "Ativo para agendamento" : "Indisponível no momento"}
                     </p>
                   </div>
 
@@ -52,7 +52,7 @@ export function ServicesSection({
 
                 <div className="grid min-w-[180px] gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-300">
                   <InfoRow label="Preco" value={`R$ ${service.price.toFixed(2).replace(".", ",")}`} />
-                  <InfoRow label="Duracao" value={`${service.duration} min`} />
+                  <InfoRow label="Duração" value={`${service.duration} min`} />
                   <InfoRow
                     label="Intervalo"
                     value={

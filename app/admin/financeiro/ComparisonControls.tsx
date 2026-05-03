@@ -77,7 +77,7 @@ export default function ComparisonControls({
             label="Comparar com"
             value={mode}
             options={[
-              { value: "auto", label: "Periodo anterior automatico" },
+              { value: "auto", label: "Período anterior automático" },
               { value: "custom", label: "Datas escolhidas por mim" },
             ]}
             onChange={(value) => setMode(value as "auto" | "custom")}

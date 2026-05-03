@@ -25,7 +25,7 @@ export default async function BarberAgendaPage({
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       <PageHeader
         title="Agenda do barbeiro"
-        description="Horarios, clientes e status dos atendimentos."
+        description="Horários, clientes e status dos atendimentos."
         actions={
           <div className="flex flex-wrap gap-3">
             <WalkInAppointmentCard

@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const brandName = shop.name || "Jak Barber";
   const description =
     shop.metadataDescription ||
-    "Agende seu horario na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
+    "Agende seu horário na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
   const faviconPath = shop.faviconPath || "/favicon.png?v=20260503-j";
 
   return {

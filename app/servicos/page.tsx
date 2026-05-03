@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata = {
-  title: "Servicos | Jak Barber",
-  description: "Veja cortes, barba e servicos disponiveis na Jak Barber.",
+  title: "Serviços | Jak Barber",
+  description: "Veja cortes, barba e serviços disponíveis na Jak Barber.",
 };
 
 export default async function ServicosPage() {
@@ -26,13 +26,13 @@ export default async function ServicosPage() {
     <main className="page-shell max-w-5xl text-white">
       <section className="max-w-3xl">
         <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-          Servicos
+          Serviços
         </p>
         <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl">
           Escolha o cuidado ideal
         </h1>
         <p className="mt-4 text-sm leading-7 text-zinc-400 sm:text-base">
-          Conheca os servicos disponiveis antes de agendar. Alguns atendimentos
+          Conheça os serviços disponíveis antes de agendar. Alguns atendimentos
           sao gerais e outros sao exclusivos de barbeiros especificos.
         </p>
       </section>
@@ -72,7 +72,7 @@ export default async function ServicosPage() {
           href="/agendar"
           className="inline-flex rounded-2xl bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
         >
-          Agendar horario
+          Agendar horário
         </Link>
       </div>
     </main>

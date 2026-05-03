@@ -47,7 +47,7 @@ export default function AdminLoginForm({
       </div>
 
       <p className="mt-5 text-sm text-zinc-400">
-        Se preferir, voce tambem pode usar o login comum em{" "}
+        Se preferir, vocé também pode usar o login comum em{" "}
         <Link href="/login" className="text-sky-300 hover:underline">
           /login
         </Link>

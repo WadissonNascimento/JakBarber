@@ -80,7 +80,7 @@ function formatTime(date: Date) {
 
 function getGapLabel(nextAppointmentDate: Date | null) {
   if (!nextAppointmentDate) {
-    return "Sem proximo atendimento hoje.";
+    return "Sem próximo atendimento hoje.";
   }
 
   const diffMinutes = Math.max(
@@ -91,7 +91,7 @@ function getGapLabel(nextAppointmentDate: Date | null) {
     )
   );
 
-  return `${diffMinutes} min livres ate ${formatTime(nextAppointmentDate)}.`;
+  return `${diffMinutes} min livres até ${formatTime(nextAppointmentDate)}.`;
 }
 
 export default function WalkInAppointmentCard({
@@ -224,7 +224,7 @@ export default function WalkInAppointmentCard({
 
                   {services.length === 0 ? (
                     <p className="mt-4 rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-400">
-                      Cadastre um servico ativo antes de criar encaixes.
+                      Cadastre um serviço ativo antes de criar encaixes.
                     </p>
                   ) : (
                     <form
@@ -252,7 +252,7 @@ export default function WalkInAppointmentCard({
                             form.reset();
                             setSuccessDetails({
                               customerName: customerName || "Cliente",
-                              serviceName: submittedService?.name || "Servico",
+                              serviceName: submittedService?.name || "Serviço",
                               startTime: selectedStartTime || startTime,
                             });
                             setIsOpen(false);
@@ -291,7 +291,7 @@ export default function WalkInAppointmentCard({
 
                       <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
                         <label className="block">
-                          <span className="mb-2 block text-sm text-zinc-300">Servico</span>
+                          <span className="mb-2 block text-sm text-zinc-300">Serviço</span>
                           <select
                             name="serviceId"
                             required
@@ -321,7 +321,7 @@ export default function WalkInAppointmentCard({
                         </label>
 
                         <label className="block">
-                          <span className="mb-2 block text-sm text-zinc-300">Inicio</span>
+                          <span className="mb-2 block text-sm text-zinc-300">Início</span>
                           <input
                             name="startTime"
                             type="time"
@@ -334,7 +334,7 @@ export default function WalkInAppointmentCard({
                       </div>
 
                       <label className="block">
-                        <span className="mb-2 block text-sm text-zinc-300">Observacao</span>
+                        <span className="mb-2 block text-sm text-zinc-300">Observação</span>
                         <textarea
                           name="notes"
                           rows={2}
@@ -381,7 +381,7 @@ export default function WalkInAppointmentCard({
                       Encaixe criado com sucesso!
                     </h2>
                     <p className="mt-2 text-sm text-zinc-400">
-                      O horario foi reservado e a agenda do dia ja foi atualizada.
+                      O horário foi reservado e a agenda do dia já foi atualizada.
                     </p>
                   </div>
 
@@ -402,8 +402,8 @@ export default function WalkInAppointmentCard({
 
                 <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
                   <SummaryRow label="Cliente" value={successDetails.customerName} />
-                  <SummaryRow label="Servico" value={successDetails.serviceName} />
-                  <SummaryRow label="Horario" value={successDetails.startTime} />
+                  <SummaryRow label="Serviço" value={successDetails.serviceName} />
+                  <SummaryRow label="Horário" value={successDetails.startTime} />
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">

@@ -16,7 +16,7 @@ export function ClientsSection({
   return (
     <SectionCard
       title="Clientes"
-      description="Consulte quem ja passou pela sua cadeira e salve observacoes uteis."
+      description="Consulte quem já passou pela sua cadeira e salve observações úteis."
       className="rounded-[28px] bg-zinc-900/90"
     >
       <div className="mt-6 space-y-4">
@@ -43,7 +43,7 @@ export function ClientsSection({
         {clients.length === 0 ? (
           <EmptyState
             title="Nenhum cliente encontrado"
-            description="Seus clientes aparecerao aqui conforme novos atendimentos forem realizados."
+            description="Seus clientes aparecerão aqui conforme novos atendimentos forem realizados."
           />
         ) : (
           clients.map((client) => (
@@ -60,7 +60,7 @@ export function ClientsSection({
                     {client.name}
                   </Link>
                   <p className="mt-1 text-sm text-zinc-400">
-                    {client.phone || client.email || "Contato nao informado"}
+                    {client.phone || client.email || "Contato não informado"}
                   </p>
                   <Link
                     href={`/barber/clientes/${client.id}`}
@@ -72,7 +72,7 @@ export function ClientsSection({
 
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                    Ultimo atendimento
+                    último atendimento
                   </p>
                   <p className="mt-2 text-sm text-white">
                     {new Date(client.lastAppointment).toLocaleDateString("pt-BR")}
@@ -95,12 +95,12 @@ export function ClientsSection({
                   <input type="hidden" name="redirectTo" value={redirectTo} />
                   <input type="hidden" name="customerId" value={client.id} />
                   <label className="block">
-                    <span className="mb-2 block text-sm text-zinc-300">Observacao</span>
+                    <span className="mb-2 block text-sm text-zinc-300">Observação</span>
                     <textarea
                       name="note"
                       defaultValue={client.note}
                       rows={3}
-                      placeholder="Preferencias, alergias, estilo recorrente..."
+                      placeholder="Preferências, alergias, estilo recorrente..."
                       className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
                     />
                   </label>
@@ -108,7 +108,7 @@ export function ClientsSection({
                     type="submit"
                     className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
                   >
-                    Salvar observacao
+                    Salvar observação
                   </button>
                 </form>
               </div>

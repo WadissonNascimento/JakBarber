@@ -108,7 +108,7 @@ export default async function AdminBarberProfilePage({
       <PageHeader
         eyebrow="Equipe"
         title="Perfil do barbeiro"
-        description="Dados, foto e comissoes individuais."
+        description="Dados, foto e comissões individuais."
       />
 
       <BarberProfileClient

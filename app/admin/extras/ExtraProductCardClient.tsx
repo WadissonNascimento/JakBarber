@@ -127,7 +127,7 @@ export default function ExtraProductCardClient({
       } catch (error) {
         setFeedback({
           message:
-            error instanceof Error ? error.message : "Nao foi possivel atualizar o extra.",
+            error instanceof Error ? error.message : "Não foi possível atualizar o extra.",
           tone: "error",
         });
       } finally {
@@ -160,7 +160,7 @@ export default function ExtraProductCardClient({
             </StatusBadge>
             <StatusBadge variant="info">{getExtraCategoryLabel(draft.category)}</StatusBadge>
             <StatusBadge variant="info">
-              Comissao:{" "}
+              Comissão:{" "}
               {draft.commissionType === "FIXED"
                 ? `R$ ${draft.commissionValue}`
                 : `${draft.commissionValue}%`}
@@ -229,7 +229,7 @@ export default function ExtraProductCardClient({
             </div>
 
             <label className="space-y-2 text-sm text-zinc-300">
-              <span>Descricao</span>
+              <span>Descrição</span>
               <textarea
                 value={draft.description}
                 onChange={(event) =>
@@ -255,7 +255,7 @@ export default function ExtraProductCardClient({
                 />
               </label>
               <label className="space-y-2 text-sm text-zinc-300">
-                <span>Comissao</span>
+                <span>Comissão</span>
                 <select
                   value={draft.commissionType}
                   onChange={(event) =>
@@ -271,7 +271,7 @@ export default function ExtraProductCardClient({
                 </select>
               </label>
               <label className="space-y-2 text-sm text-zinc-300">
-                <span>Valor comissao</span>
+                <span>Valor comissão</span>
                 <input
                   type="number"
                   min="0"
@@ -358,7 +358,7 @@ export default function ExtraProductCardClient({
                     message:
                       error instanceof Error
                         ? error.message
-                        : "Nao foi possivel preparar a imagem.",
+                        : "Não foi possível preparar a imagem.",
                     tone: "error",
                   });
                 }
@@ -421,7 +421,7 @@ export default function ExtraProductCardClient({
             onClick={() => {
               if (
                 !window.confirm(
-                  "Excluir extra? Se houver historico, ele sera apenas ocultado para preservar entregas."
+                  "Excluir extra? Se houver histórico, ele será apenas ocultado para preservar entregas."
                 )
               ) {
                 return;

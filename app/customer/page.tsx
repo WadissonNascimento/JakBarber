@@ -32,14 +32,14 @@ export default async function CustomerPage() {
     {
       href: "/agendar",
       icon: CalendarPlus,
-      title: "Agendar horario",
-      description: "Escolha barbeiro, servico e melhor horario.",
+      title: "Agendar horário",
+      description: "Escolha barbeiro, serviço e melhor horário.",
     },
     {
       href: "/customer/agendamentos",
       icon: CalendarDays,
       title: "Meus agendamentos",
-      description: "Horarios marcados, barbeiro e status.",
+      description: "Horários marcados, barbeiro e status.",
       badge: appointmentsCount ? `${appointmentsCount}` : undefined,
     },
     {
@@ -52,13 +52,13 @@ export default async function CustomerPage() {
       href: "/meu-perfil",
       icon: UserRound,
       title: "Meu cadastro",
-      description: "Dados, preferencias e barbeiro favorito.",
+      description: "Dados, preferências e barbeiro favorito.",
     },
     {
       href: "/forgot-password",
       icon: KeyRound,
       title: "Trocar senha",
-      description: "Receba um codigo por e-mail.",
+      description: "Receba um código por e-mail.",
     },
   ];
 
@@ -68,7 +68,7 @@ export default async function CustomerPage() {
         <PageHeader
           eyebrow="Minha Conta"
           title="Painel do cliente"
-          description="Tudo que voce precisa antes e depois do atendimento."
+          description="Tudo que vocé precisa antes e depois do atendimento."
         />
 
         <div className="grid gap-4 sm:grid-cols-2">

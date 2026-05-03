@@ -144,7 +144,7 @@ export function AppointmentsSection({
   return (
     <SectionCard
       title="Agenda"
-      description="Seus horarios, clientes e proximas acoes."
+      description="Seus horários, clientes e próximas ações."
       className="max-w-full rounded-[28px] border-white/10 bg-white/[0.04] backdrop-blur"
       actions={
         <div className="w-full space-y-4">
@@ -217,12 +217,12 @@ export function AppointmentsSection({
               value={selectedStatus}
               options={[
                 { value: "ACTIVE", label: "Fluxo do dia" },
-                { value: "ALL", label: "Historico completo" },
+                { value: "ALL", label: "Histórico completo" },
                 { value: "PENDING", label: "Pendente" },
                 { value: "CONFIRMED", label: "Confirmado" },
-                { value: "COMPLETED", label: "Concluido" },
+                { value: "COMPLETED", label: "Concluído" },
                 { value: "CANCELLED", label: "Cancelado" },
-                { value: "NO_SHOW", label: "Nao compareceu" },
+                { value: "NO_SHOW", label: "Não compareceu" },
               ]}
               onChange={(value) => {
                 const next = {
@@ -255,7 +255,7 @@ export function AppointmentsSection({
         {appointments.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento encontrado"
-            description="Ajuste os filtros acima para ver outros horarios ou volte mais tarde."
+            description="Ajuste os filtros acima para ver outros horários ou volte mais tarde."
           />
         ) : (
           appointments.map((appointment) => {
@@ -306,7 +306,7 @@ export function AppointmentsSection({
 
                   <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                      Servico
+                      Serviço
                     </p>
                     <p className="mt-2 break-words text-base font-semibold text-white">
                       {getAppointmentDisplayName(appointment.services)}
@@ -319,10 +319,10 @@ export function AppointmentsSection({
 
                 <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    Observacoes
+                    Observações
                   </p>
                   <p className="mt-2 break-words text-sm leading-5 text-zinc-300">
-                    {appointment.notes || "Sem observacoes registradas"}
+                    {appointment.notes || "Sem observações registradas"}
                   </p>
                 </div>
 
@@ -380,7 +380,7 @@ export function AppointmentsSection({
                           variant="warning"
                           onFeedback={setFeedback}
                         >
-                          Nao veio
+                          Não veio
                         </StatusButton>
                       </>
                     ) : null}
@@ -413,7 +413,7 @@ export function AppointmentsSection({
                           variant="warning"
                           onFeedback={setFeedback}
                         >
-                          Nao veio
+                          Não veio
                         </StatusButton>
                         <StatusButton
                           appointmentId={appointment.id}

@@ -68,8 +68,8 @@ export default function AdminReviewsClient({
 
       {reviews.length === 0 ? (
         <EmptyState
-          title="Nenhuma avaliacao recebida"
-          description="As avaliacoes aparecem aqui depois que clientes avaliarem atendimentos concluidos."
+          title="Nenhuma avaliação recebida"
+          description="As avaliações aparecem aqui depois que clientes avaliarem atendimentos concluídos."
         />
       ) : (
         reviews.map((review) => (
@@ -81,7 +81,7 @@ export default function AdminReviewsClient({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge variant={review.isVisible ? "success" : "neutral"}>
-                    {review.isVisible ? "Publica" : "Oculta"}
+                    {review.isVisible ? "Pública" : "Oculta"}
                   </StatusBadge>
                   <CrownRating rating={review.rating} size="sm" />
                 </div>
@@ -123,7 +123,7 @@ export default function AdminReviewsClient({
                   type="button"
                   disabled={isPending && pendingKey === `delete-${review.id}`}
                   onClick={() => {
-                    if (!window.confirm("Excluir esta avaliacao definitivamente?")) {
+                    if (!window.confirm("Excluir esta avaliação definitivamente?")) {
                       return;
                     }
 

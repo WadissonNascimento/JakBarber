@@ -21,11 +21,11 @@ export default function ForgotPasswordRequestForm() {
     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
       <div className="mb-8 text-center">
         <p className="mb-2 text-xs uppercase tracking-[0.35em] text-sky-300">
-          Recuperacao
+          Recuperação
         </p>
         <h1 className="text-4xl font-bold">Esqueceu a senha?</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Informe seu e-mail para receber um codigo de recuperacao.
+          Informe seu e-mail para receber um código de recuperação.
         </p>
       </div>
 
@@ -49,7 +49,7 @@ export default function ForgotPasswordRequestForm() {
           />
         </div>
 
-        <SubmitButton idleText="Enviar codigo" loadingText="Enviando..." />
+        <SubmitButton idleText="Enviar código" loadingText="Enviando..." />
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-300">

@@ -245,7 +245,7 @@ export function PremiumDatePicker({
                     type="button"
                     onClick={() => moveMonth(1)}
                     className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
-                    aria-label="Proximo mes"
+                    aria-label="Próximo mes"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -445,7 +445,7 @@ export function PremiumDateTimePicker({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-                    {label || "Periodo"}
+                    {label || "Período"}
                   </p>
                   <p className="mt-1 truncate text-lg font-semibold capitalize">
                     {formatMonthLabel(displayMonth)}
@@ -464,7 +464,7 @@ export function PremiumDateTimePicker({
                     type="button"
                     onClick={() => moveMonth(1)}
                     className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
-                    aria-label="Proximo mes"
+                    aria-label="Próximo mes"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -508,7 +508,7 @@ export function PremiumDateTimePicker({
               </div>
 
               <label className="mt-4 block">
-                <span className="mb-2 block text-sm text-zinc-300">Horario</span>
+                <span className="mb-2 block text-sm text-zinc-300">Horário</span>
                 <input
                   type="time"
                   value={draftTime}

@@ -84,7 +84,7 @@ export default function ClientsDirectoryClient({
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    Ultimo atendimento
+                    último atendimento
                   </p>
                   <p className="mt-2 text-sm text-white">
                     {new Date(client.lastAppointment).toLocaleDateString("pt-BR")}
