@@ -11,7 +11,9 @@ export default auth((req) => {
 
   const isAuthPage =
     pathname === "/login" ||
+    pathname === "/login/submit" ||
     pathname === "/admin/login" ||
+    pathname === "/admin/login/submit" ||
     pathname === "/cadastro" ||
     pathname === "/register" ||
     pathname.startsWith("/register/") ||
@@ -76,6 +78,7 @@ export default auth((req) => {
 export const config = {
   matcher: [
     "/login",
+    "/login/:path*",
     "/cadastro",
     "/register",
     "/register/:path*",

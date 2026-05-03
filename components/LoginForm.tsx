@@ -1,8 +1,6 @@
 import Link from "next/link";
-import AuthSubmitButton from "@/components/AuthSubmitButton";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
-import { loginSubmitAction } from "@/app/login/actions";
 
 export default function LoginForm({
   errorMessage = null,
@@ -13,7 +11,8 @@ export default function LoginForm({
 }) {
   return (
     <form
-      action={loginSubmitAction}
+      action="/login/submit"
+      method="post"
       className="surface-card-strong w-full max-w-md rounded-[32px] p-6 shadow-2xl sm:p-8"
     >
       <div className="mb-8 text-center">
@@ -75,7 +74,12 @@ export default function LoginForm({
           </Link>
         </div>
 
-        <AuthSubmitButton idleText="Entrar" loadingText="Entrando..." />
+        <button
+          type="submit"
+          className="w-full rounded-2xl bg-[var(--brand)] px-6 py-4 font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110 active:scale-[0.98]"
+        >
+          Entrar
+        </button>
       </div>
 
       <p className="mt-6 text-center text-sm text-zinc-300">

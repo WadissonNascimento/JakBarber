@@ -1,7 +1,5 @@
 import Link from "next/link";
-import AuthSubmitButton from "@/components/AuthSubmitButton";
 import AuthFormMessage from "@/components/AuthFormMessage";
-import { adminLoginSubmitAction } from "@/app/admin/login/actions";
 
 export default function AdminLoginForm({
   errorMessage = null,
@@ -10,7 +8,8 @@ export default function AdminLoginForm({
 }) {
   return (
     <form
-      action={adminLoginSubmitAction}
+      action="/admin/login/submit"
+      method="post"
       className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-white"
     >
       <h1 className="text-3xl font-bold">Login do admin</h1>
@@ -40,10 +39,12 @@ export default function AdminLoginForm({
       </div>
 
       <div className="mt-5">
-        <AuthSubmitButton
-          idleText="Entrar no admin"
-          loadingText="Entrando..."
-        />
+        <button
+          type="submit"
+          className="w-full rounded-2xl bg-[var(--brand)] px-6 py-4 font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110 active:scale-[0.98]"
+        >
+          Entrar no admin
+        </button>
       </div>
 
       <p className="mt-5 text-sm text-zinc-400">
