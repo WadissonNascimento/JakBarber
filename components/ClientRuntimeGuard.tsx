@@ -21,6 +21,32 @@ function isRecoverableChunkError(message: string) {
   );
 }
 
+function reportRuntimeError(message: string) {
+  const payload = JSON.stringify({
+    source: "runtime-guard",
+    path: window.location.href,
+    message,
+    userAgent: window.navigator.userAgent,
+  });
+
+  try {
+    if (window.navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: "application/json" });
+      window.navigator.sendBeacon("/api/client-errors", blob);
+      return;
+    }
+  } catch {
+    // Fall back to fetch below.
+  }
+
+  fetch("/api/client-errors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 export default function ClientRuntimeGuard() {
   useEffect(() => {
     const clearReloadFlag = window.setTimeout(() => {
@@ -35,6 +61,7 @@ export default function ClientRuntimeGuard() {
     function recoverFromStaleRuntime(event: ErrorEvent | PromiseRejectionEvent) {
       const message = getErrorMessage(event);
       if (!isRecoverableChunkError(message)) return;
+      reportRuntimeError(message);
 
       try {
         if (window.sessionStorage.getItem(RELOAD_FLAG) === "1") return;

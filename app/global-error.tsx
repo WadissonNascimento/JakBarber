@@ -10,6 +10,34 @@ function getCacheBustedUrl() {
   return url.toString();
 }
 
+function reportClientError(error: Error & { digest?: string }) {
+  const payload = JSON.stringify({
+    source: "global-error",
+    path: window.location.href,
+    message: error.message,
+    stack: error.stack,
+    digest: error.digest,
+    userAgent: window.navigator.userAgent,
+  });
+
+  try {
+    if (window.navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: "application/json" });
+      window.navigator.sendBeacon("/api/client-errors", blob);
+      return;
+    }
+  } catch {
+    // Fall back to fetch below.
+  }
+
+  fetch("/api/client-errors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 export default function GlobalError({
   error,
   reset,
@@ -19,6 +47,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error);
+    reportClientError(error);
 
     const timeout = window.setTimeout(() => {
       try {
