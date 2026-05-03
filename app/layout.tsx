@@ -26,6 +26,22 @@ export const metadata: Metadata = {
   },
   description:
     "Agende seu horario na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.png",
+        sizes: "64x64",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
   openGraph: {
     title: "Jak Barber",
     description: "Barbearia com agendamento online e atendimento com hora marcada.",

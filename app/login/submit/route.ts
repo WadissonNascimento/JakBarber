@@ -5,9 +5,29 @@ import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
-function redirectToLogin(request: NextRequest, message: string) {
+function wantsJson(request: NextRequest) {
+  return (
+    request.headers.get("accept")?.includes("application/json") ||
+    request.headers.get("x-requested-with") === "fetch"
+  );
+}
+
+function loginErrorUrl(request: NextRequest, message: string) {
   const url = new URL("/login", request.url);
   url.searchParams.set("error", message);
+
+  return url;
+}
+
+function loginError(request: NextRequest, message: string) {
+  const url = loginErrorUrl(request, message);
+
+  if (wantsJson(request)) {
+    return NextResponse.json(
+      { ok: false, error: message, redirectTo: `${url.pathname}${url.search}` },
+      { status: 401 }
+    );
+  }
 
   return NextResponse.redirect(url, 303);
 }
@@ -20,7 +40,7 @@ export async function POST(request: NextRequest) {
   const password = String(formData.get("password") || "").trim();
 
   if (!email || !password) {
-    return redirectToLogin(request, "Preencha e-mail e senha.");
+    return loginError(request, "Preencha e-mail e senha.");
   }
 
   const rateLimit = await enforceRateLimit({
@@ -31,7 +51,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!rateLimit.allowed) {
-    return redirectToLogin(
+    return loginError(
       request,
       "Muitas tentativas de login. Aguarde alguns minutos e tente novamente."
     );
@@ -47,10 +67,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof AuthError) {
       logSecurityEvent("login_submit_failed", { email });
-      return redirectToLogin(request, "E-mail ou senha invalidos.");
+      return loginError(request, "E-mail ou senha invalidos.");
     }
 
     throw error;
+  }
+
+  if (wantsJson(request)) {
+    return NextResponse.json({ ok: true, redirectTo: "/painel" });
   }
 
   return NextResponse.redirect(new URL("/painel", request.url), 303);

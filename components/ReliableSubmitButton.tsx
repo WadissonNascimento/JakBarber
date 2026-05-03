@@ -20,7 +20,7 @@ export default function ReliableSubmitButton({
   const submittedRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
 
-  function submitNow() {
+  async function submitNow() {
     if (submittedRef.current) return;
 
     const button = buttonRef.current;
@@ -34,12 +34,40 @@ export default function ReliableSubmitButton({
     submittedRef.current = true;
     setSubmitting(true);
 
-    if (typeof form.requestSubmit === "function") {
-      form.requestSubmit(button);
+    try {
+      const response = await fetch(form.action, {
+        method: form.method || "post",
+        body: new FormData(form),
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "fetch",
+        },
+      });
+      const contentType = response.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        const data = (await response.json()) as {
+          redirectTo?: string;
+        };
+
+        if (data.redirectTo) {
+          window.location.assign(data.redirectTo);
+          return;
+        }
+      }
+
+      if (response.redirected) {
+        window.location.assign(response.url);
+        return;
+      }
+    } catch {
+      form.submit();
       return;
     }
 
-    form.submit();
+    submittedRef.current = false;
+    setSubmitting(false);
   }
 
   return (
@@ -52,26 +80,11 @@ export default function ReliableSubmitButton({
         if (event.pointerType !== "touch") return;
 
         event.preventDefault();
-        submitNow();
+        void submitNow();
       }}
       onClick={(event) => {
-        const form = buttonRef.current?.form;
-
-        if (
-          form &&
-          typeof form.reportValidity === "function" &&
-          !form.reportValidity()
-        ) {
-          return;
-        }
-
-        if (submittedRef.current) {
-          event.preventDefault();
-          return;
-        }
-
-        submittedRef.current = true;
-        setSubmitting(true);
+        event.preventDefault();
+        void submitNow();
       }}
     >
       {submitting ? loadingText : idleText}
