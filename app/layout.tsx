@@ -2,6 +2,7 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
@@ -62,6 +63,7 @@ export default async function RootLayout({
       <body
         className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[var(--app-bg)] text-[var(--text-primary)]`}
       >
+        <ClientRuntimeGuard />
         <CartProvider>
           <div className="flex min-h-screen flex-col">
             <Header

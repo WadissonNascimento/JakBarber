@@ -42,7 +42,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCart(JSON.parse(storedCart) as CartItem[]);
       }
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // Private mobile browsers can block storage access entirely.
+      }
     } finally {
       setHydrated(true);
     }
@@ -50,7 +54,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      // Keep the cart in memory if storage is unavailable.
+    }
   }, [cart, hydrated]);
 
   function addToCart(item: CartItem) {

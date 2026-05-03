@@ -1,0 +1,45 @@
+"use client";
+
+export default function GlobalError({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <html lang="pt-BR">
+      <body className="min-h-screen bg-[#030712] text-white">
+        <main className="flex min-h-screen items-center justify-center px-5">
+          <section className="w-full max-w-md rounded-[28px] border border-white/10 bg-white/[0.04] p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
+            <p className="text-xs uppercase tracking-[0.28em] text-sky-300">
+              Jak Barber
+            </p>
+            <h1 className="mt-3 text-2xl font-bold">Vamos recarregar o painel</h1>
+            <p className="mt-3 text-sm text-zinc-300">
+              A pagina carregou uma versao antiga. Recarregue para continuar com
+              tudo atualizado.
+            </p>
+            <div className="mt-6 grid gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  reset();
+                  window.location.reload();
+                }}
+                className="rounded-2xl bg-[#0ea5e9] px-5 py-3 font-semibold text-white"
+              >
+                Tentar novamente
+              </button>
+              <a
+                href="/login"
+                className="rounded-2xl border border-white/10 px-5 py-3 font-semibold text-white"
+              >
+                Voltar para login
+              </a>
+            </div>
+          </section>
+        </main>
+      </body>
+    </html>
+  );
+}
