@@ -2,7 +2,13 @@
 
 import { useEffect } from "react";
 
-const GLOBAL_RELOAD_FLAG = "jakbarber-global-error-reload";
+const GLOBAL_RELOAD_FLAG = "jakbarber-global-error-reload-v2";
+
+function getCacheBustedUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("__recover", String(Date.now()));
+  return url.toString();
+}
 
 export default function GlobalError({
   error,
@@ -16,14 +22,15 @@ export default function GlobalError({
 
     const timeout = window.setTimeout(() => {
       try {
-        if (window.sessionStorage.getItem(GLOBAL_RELOAD_FLAG) === "1") return;
-        window.sessionStorage.setItem(GLOBAL_RELOAD_FLAG, "1");
+        const attempts = Number(window.sessionStorage.getItem(GLOBAL_RELOAD_FLAG) || "0");
+        if (attempts >= 2) return;
+        window.sessionStorage.setItem(GLOBAL_RELOAD_FLAG, String(attempts + 1));
       } catch {
         // Storage can be unavailable in private mobile sessions.
       }
 
-      window.location.reload();
-    }, 700);
+      window.location.replace(getCacheBustedUrl());
+    }, 120);
 
     return () => window.clearTimeout(timeout);
   }, [error]);
@@ -51,7 +58,7 @@ export default function GlobalError({
                     // Storage can be unavailable in private mobile sessions.
                   }
                   reset();
-                  window.location.reload();
+                  window.location.replace(getCacheBustedUrl());
                 }}
                 className="rounded-2xl bg-[#0ea5e9] px-5 py-3 font-semibold text-white"
               >

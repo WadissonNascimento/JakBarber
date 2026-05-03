@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 const RELOAD_FLAG = "jakbarber-runtime-reload";
+const GLOBAL_ERROR_RELOAD_FLAG = "jakbarber-global-error-reload-v2";
 
 function getErrorMessage(event: ErrorEvent | PromiseRejectionEvent) {
   if ("reason" in event) {
@@ -25,6 +26,7 @@ export default function ClientRuntimeGuard() {
     const clearReloadFlag = window.setTimeout(() => {
       try {
         window.sessionStorage.removeItem(RELOAD_FLAG);
+        window.sessionStorage.removeItem(GLOBAL_ERROR_RELOAD_FLAG);
       } catch {
         // Storage can be unavailable in some private mobile sessions.
       }
