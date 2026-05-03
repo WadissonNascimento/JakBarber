@@ -17,7 +17,7 @@ async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
     return { error: "Preencha e-mail e senha.", success: null };
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { email },
   });
 

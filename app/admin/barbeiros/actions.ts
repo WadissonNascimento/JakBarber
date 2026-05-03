@@ -39,7 +39,7 @@ function buildVerificationUrl(email: string) {
 export async function createBarberAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
@@ -55,10 +55,10 @@ export async function createBarberAction(
   }
 
   const [existingUser, existingPendingRegistration] = await Promise.all([
-    prisma.user.findUnique({
+    prisma.user.findFirst({
       where: { email },
     }),
-    prisma.pendingRegistration.findUnique({
+    prisma.pendingRegistration.findFirst({
       where: { email },
     }),
   ]);
@@ -85,6 +85,7 @@ export async function createBarberAction(
     await prisma.pendingRegistration.create({
       data: {
         name,
+        shopId: admin.shopId || undefined,
         email,
         phone: phone || null,
         passwordHash: hashedPassword,
@@ -274,7 +275,7 @@ export async function deleteBarberAction(
 export async function upsertBarberServiceCommissionAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const barberId = String(formData.get("barberId") || "").trim();
   const serviceId = String(formData.get("serviceId") || "").trim();
@@ -329,6 +330,7 @@ export async function upsertBarberServiceCommissionAction(
       commissionValue,
     },
     create: {
+      shopId: admin.shopId || undefined,
       barberId,
       serviceId,
       commissionType,

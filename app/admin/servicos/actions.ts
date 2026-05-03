@@ -15,6 +15,8 @@ async function requireAdmin() {
   if (!session?.user?.id || session.user.role !== "ADMIN") {
     throw new Error("Nao autorizado.");
   }
+
+  return session.user;
 }
 
 function revalidateServiceViews() {
@@ -28,7 +30,7 @@ function revalidateServiceViews() {
 export async function createAdminServiceAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const serviceScope = String(formData.get("serviceScope") || "GLOBAL");
   const barberIdRaw = String(formData.get("barberId") || "").trim();
@@ -70,6 +72,7 @@ export async function createAdminServiceAction(
 
   await prisma.service.create({
     data: {
+      shopId: admin.shopId || undefined,
       barberId,
       name,
       description: description || null,

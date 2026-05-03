@@ -7,6 +7,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getCurrentShop } from "@/lib/shop";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -18,53 +19,61 @@ const headingFont = Space_Grotesk({
   variable: "--font-heading",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getConfiguredAppUrl()),
-  title: {
-    default: "Jak Barber | Barbearia com hora marcada",
-    template: "%s | Jak Barber",
-  },
-  description:
-    "Agende seu horario na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.",
-  icons: {
-    icon: [
-      {
-        url: "/favicon.png?v=20260503-j",
-        sizes: "64x64",
-        type: "image/png",
-      },
-    ],
-    shortcut: [
-      {
-        url: "/favicon.png?v=20260503-j",
-        type: "image/png",
-      },
-    ],
-    apple: [
-      {
-        url: "/apple-touch-icon.png?v=20260503-j",
-        sizes: "180x180",
-        type: "image/png",
-      },
-    ],
-  },
-  openGraph: {
-    title: "Jak Barber",
-    description: "Barbearia com agendamento online e atendimento com hora marcada.",
-    url: "/",
-    siteName: "Jak Barber",
-    images: [
-      {
-        url: "/cortes/corte1.png",
-        width: 1200,
-        height: 630,
-        alt: "Jak Barber",
-      },
-    ],
-    locale: "pt_BR",
-    type: "website",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const shop = await getCurrentShop();
+  const brandName = shop.name || "Jak Barber";
+  const description =
+    shop.metadataDescription ||
+    "Agende seu horario na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
+  const faviconPath = shop.faviconPath || "/favicon.png?v=20260503-j";
+
+  return {
+    metadataBase: new URL(getConfiguredAppUrl()),
+    title: {
+      default: shop.metadataTitle || `${brandName} | Barbearia com hora marcada`,
+      template: `%s | ${brandName}`,
+    },
+    description,
+    icons: {
+      icon: [
+        {
+          url: faviconPath,
+          sizes: "64x64",
+          type: "image/png",
+        },
+      ],
+      shortcut: [
+        {
+          url: faviconPath,
+          type: "image/png",
+        },
+      ],
+      apple: [
+        {
+          url: "/apple-touch-icon.png?v=20260503-j",
+          sizes: "180x180",
+          type: "image/png",
+        },
+      ],
+    },
+    openGraph: {
+      title: brandName,
+      description,
+      url: "/",
+      siteName: brandName,
+      images: [
+        {
+          url: "/cortes/corte1.png",
+          width: 1200,
+          height: 630,
+          alt: brandName,
+        },
+      ],
+      locale: "pt_BR",
+      type: "website",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -72,6 +81,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
+  const shop = await getCurrentShop();
   const role =
     session?.user?.role === "ADMIN" ||
     session?.user?.role === "BARBER" ||
@@ -89,13 +99,25 @@ export default async function RootLayout({
         <CartProvider>
           <div className="flex min-h-screen flex-col">
             <Header
+              brandName={shop.name || "Jak Barber"}
+              logoPath={shop.logoPath || "/logo.png"}
+              publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
               role={role}
               userName={session?.user?.name || null}
             />
             <main className="flex-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
               {children}
             </main>
-            {hideFooter ? null : <Footer />}
+            {hideFooter ? null : (
+              <Footer
+                brandName={shop.name || "Jak Barber"}
+                logoPath={shop.logoPath || "/logo.png"}
+                whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
+                instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
+                addressLine={shop.addressLine || "Osasco, SP"}
+                businessHours={shop.businessHours || "Terca a domingo, das 09h as 20h"}
+              />
+            )}
           </div>
         </CartProvider>
       </body>

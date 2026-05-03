@@ -17,6 +17,7 @@ const authConfig = {
         token.id = user.id;
         token.role = (user as { role?: string }).role ?? "CUSTOMER";
         token.active = (user as { active?: boolean }).active ?? true;
+        token.shopId = (user as { shopId?: string }).shopId ?? null;
       }
 
       return token;
@@ -27,6 +28,7 @@ const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.active = Boolean(token.active);
+        session.user.shopId = (token.shopId as string | null) ?? null;
       }
 
       return session;

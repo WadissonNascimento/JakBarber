@@ -20,8 +20,56 @@ enum ExtraCategory {
   OTHER
 }
 
+model Shop {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  primaryDomain       String?  @unique
+  isDefault           Boolean  @default(false)
+  isActive            Boolean  @default(true)
+  metadataTitle       String?
+  metadataDescription String?
+  whatsappNumber      String?
+  instagramUrl        String?
+  addressLine         String?
+  businessHours       String?
+  logoPath            String?
+  faviconPath         String?
+  brandColor          String?
+  brandColorStrong    String?
+  brandColorMuted     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  users                    User[]
+  pendingRegistrations     PendingRegistration[]
+  passwordResetRequests    PasswordResetRequest[]
+  services                 Service[]
+  appointments             Appointment[]
+  appointmentServices      AppointmentService[]
+  reviews                  Review[]
+  barberAvailabilities     BarberAvailability[]
+  barberBlocks             BarberBlock[]
+  recurringBarberBlocks    RecurringBarberBlock[]
+  clientNotes              ClientNote[]
+  customerProfiles         CustomerProfile[]
+  products                 Product[]
+  barberServiceCommissions BarberServiceCommission[]
+  extraProducts            ExtraProduct[]
+  appointmentItems         AppointmentItem[]
+  orders                   Order[]
+  orderItems               OrderItem[]
+  coupons                  Coupon[]
+  stockMovements           StockMovement[]
+  extraStockMovements      ExtraStockMovement[]
+  barberPayouts            BarberPayout[]
+
+  @@index([isActive, isDefault])
+}
+
 model User {
   id            String    @id @default(cuid())
+  shopId        String    @default("shop_jak_barber")
   name          String?
   email         String?   @unique
   emailVerified DateTime?
@@ -33,25 +81,30 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
   accounts Account[]
   sessions Session[]
 
-  customerAppointments  Appointment[]          @relation("CustomerAppointments")
-  barberAppointments    Appointment[]          @relation("BarberAppointments")
-  customerReviews        Review[]              @relation("CustomerReviews")
-  barberReviews          Review[]              @relation("BarberReviews")
-  barberServices        Service[]              @relation("BarberServices")
+  customerAppointments     Appointment[]             @relation("CustomerAppointments")
+  barberAppointments       Appointment[]             @relation("BarberAppointments")
+  customerReviews          Review[]                  @relation("CustomerReviews")
+  barberReviews            Review[]                  @relation("BarberReviews")
+  barberServices           Service[]                 @relation("BarberServices")
   barberServiceCommissions BarberServiceCommission[]
-  barberAvailabilities  BarberAvailability[]
-  barberBlocks          BarberBlock[]
-  recurringBarberBlocks RecurringBarberBlock[]
-  barberPayouts         BarberPayout[]
-  barberClientNotes     ClientNote[]           @relation("BarberClientNotes")
-  customerClientNotes   ClientNote[]           @relation("CustomerClientNotes")
-  customerProfile       CustomerProfile?       @relation("CustomerProfileOwner")
-  preferredByProfiles   CustomerProfile[]      @relation("PreferredBarber")
+  barberAvailabilities     BarberAvailability[]
+  barberBlocks             BarberBlock[]
+  recurringBarberBlocks    RecurringBarberBlock[]
+  barberPayouts            BarberPayout[]
+  barberClientNotes        ClientNote[]              @relation("BarberClientNotes")
+  customerClientNotes      ClientNote[]              @relation("CustomerClientNotes")
+  customerProfile          CustomerProfile?          @relation("CustomerProfileOwner")
+  preferredByProfiles      CustomerProfile[]         @relation("PreferredBarber")
+  orders                   Order[]                   @relation("CustomerOrders")
 
-  orders Order[] @relation("CustomerOrders")
+  @@unique([id, shopId])
+  @@index([shopId, role, isActive])
+  @@index([shopId, createdAt])
 }
 
 model Account {
@@ -92,6 +145,7 @@ model VerificationToken {
 
 model PendingRegistration {
   id           String   @id @default(cuid())
+  shopId       String   @default("shop_jak_barber")
   name         String
   email        String   @unique
   phone        String?
@@ -103,11 +157,15 @@ model PendingRegistration {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@index([email, expiresAt])
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, email, expiresAt])
 }
 
 model PasswordResetRequest {
   id        String   @id @default(cuid())
+  shopId    String   @default("shop_jak_barber")
   email     String   @unique
   code      String
   expiresAt DateTime
@@ -115,11 +173,15 @@ model PasswordResetRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([email, expiresAt])
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, email, expiresAt])
 }
 
 model Service {
   id              String   @id @default(cuid())
+  shopId          String   @default("shop_jak_barber")
   barberId        String?
   name            String
   description     String?
@@ -132,16 +194,20 @@ model Service {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  barber           User?                @relation("BarberServices", fields: [barberId], references: [id], onDelete: Cascade)
-  appointmentItems AppointmentService[]
-  barberCommissions BarberServiceCommission[]
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber User? @relation("BarberServices", fields: [barberId], references: [id], onDelete: Cascade)
 
-  @@index([barberId])
-  @@index([barberId, isActive])
+  appointmentItems    AppointmentService[]
+  barberCommissions   BarberServiceCommission[]
+
+  @@unique([id, shopId])
+  @@index([shopId, isActive, name])
+  @@index([shopId, barberId, isActive])
 }
 
 model Appointment {
   id         String   @id @default(cuid())
+  shopId     String   @default("shop_jak_barber")
   customerId String
   barberId   String
   date       DateTime
@@ -150,20 +216,23 @@ model Appointment {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  customer User                 @relation("CustomerAppointments", fields: [customerId], references: [id], onDelete: Cascade)
-  barber   User                 @relation("BarberAppointments", fields: [barberId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer User @relation("CustomerAppointments", fields: [customerId], references: [id], onDelete: Cascade)
+  barber   User @relation("BarberAppointments", fields: [barberId], references: [id], onDelete: Cascade)
+
   services AppointmentService[]
   items    AppointmentItem[]
   review   Review?
 
-  @@index([customerId])
-  @@index([barberId])
-  @@index([date])
-  @@index([barberId, status])
+  @@unique([id, shopId])
+  @@index([shopId, customerId])
+  @@index([shopId, barberId, status])
+  @@index([shopId, date])
 }
 
 model AppointmentService {
   id                      String   @id @default(cuid())
+  shopId                  String   @default("shop_jak_barber")
   appointmentId           String
   serviceId               String
   orderIndex              Int      @default(0)
@@ -177,15 +246,18 @@ model AppointmentService {
   shopRevenueSnapshot     Float    @default(0)
   createdAt               DateTime @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   service     Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  @@index([appointmentId, orderIndex])
-  @@index([serviceId])
+  @@unique([id, shopId])
+  @@index([shopId, appointmentId, orderIndex])
+  @@index([shopId, serviceId])
 }
 
 model Review {
   id            String   @id @default(cuid())
+  shopId        String   @default("shop_jak_barber")
   appointmentId String   @unique
   customerId    String
   barberId      String
@@ -195,17 +267,20 @@ model Review {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   customer    User        @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
   barber      User        @relation("BarberReviews", fields: [barberId], references: [id], onDelete: Cascade)
 
-  @@index([customerId])
-  @@index([barberId])
-  @@index([isVisible, createdAt])
+  @@unique([id, shopId])
+  @@index([shopId, customerId])
+  @@index([shopId, barberId])
+  @@index([shopId, isVisible, createdAt])
 }
 
 model BarberAvailability {
   id        String   @id @default(cuid())
+  shopId    String   @default("shop_jak_barber")
   barberId  String
   weekDay   Int
   startTime String
@@ -214,14 +289,17 @@ model BarberAvailability {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   barber User @relation(fields: [barberId], references: [id], onDelete: Cascade)
 
+  @@unique([id, shopId])
   @@unique([barberId, weekDay])
-  @@index([barberId, weekDay])
+  @@index([shopId, barberId, weekDay])
 }
 
 model BarberBlock {
   id            String   @id @default(cuid())
+  shopId        String   @default("shop_jak_barber")
   barberId      String
   startDateTime DateTime
   endDateTime   DateTime
@@ -229,14 +307,17 @@ model BarberBlock {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   barber User @relation(fields: [barberId], references: [id], onDelete: Cascade)
 
-  @@index([barberId, startDateTime])
-  @@index([barberId, endDateTime])
+  @@unique([id, shopId])
+  @@index([shopId, barberId, startDateTime])
+  @@index([shopId, barberId, endDateTime])
 }
 
 model RecurringBarberBlock {
   id        String   @id @default(cuid())
+  shopId    String   @default("shop_jak_barber")
   barberId  String
   weekDay   Int
   startTime String
@@ -246,30 +327,36 @@ model RecurringBarberBlock {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   barber User @relation(fields: [barberId], references: [id], onDelete: Cascade)
 
-  @@index([barberId, weekDay, isActive])
-  @@index([barberId, isActive])
+  @@unique([id, shopId])
+  @@index([shopId, barberId, weekDay, isActive])
+  @@index([shopId, barberId, isActive])
 }
 
 model ClientNote {
   id         String   @id @default(cuid())
+  shopId     String   @default("shop_jak_barber")
   barberId   String
   customerId String
   note       String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  barber   User @relation("BarberClientNotes", fields: [barberId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber User @relation("BarberClientNotes", fields: [barberId], references: [id], onDelete: Cascade)
   customer User @relation("CustomerClientNotes", fields: [customerId], references: [id], onDelete: Cascade)
 
+  @@unique([id, shopId])
   @@unique([barberId, customerId])
-  @@index([barberId])
-  @@index([customerId])
+  @@index([shopId, barberId])
+  @@index([shopId, customerId])
 }
 
 model CustomerProfile {
   id                String    @id @default(cuid())
+  shopId            String    @default("shop_jak_barber")
   customerId        String    @unique
   birthDate         DateTime?
   preferredBarberId String?
@@ -278,31 +365,40 @@ model CustomerProfile {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customer        User  @relation("CustomerProfileOwner", fields: [customerId], references: [id], onDelete: Cascade)
   preferredBarber User? @relation("PreferredBarber", fields: [preferredBarberId], references: [id], onDelete: SetNull)
 
-  @@index([preferredBarberId])
+  @@unique([id, shopId])
+  @@index([shopId, preferredBarberId])
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
+  shopId      String          @default("shop_jak_barber")
   name        String
   description String?
   category    ProductCategory @default(OTHER)
   price       Float
   imageUrl    String?
-  imagePath   String?  @map("image_path")
-  stock       Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  imagePath   String?         @map("image_path")
+  stock       Int             @default(0)
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
-  orderItems        OrderItem[]
-  stockMovements    StockMovement[]
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+
+  @@unique([id, shopId])
+  @@index([shopId, isActive, createdAt])
 }
 
 model BarberServiceCommission {
   id              String   @id @default(cuid())
+  shopId          String   @default("shop_jak_barber")
   barberId        String
   serviceId       String
   commissionType  String   @default("PERCENT")
@@ -310,58 +406,70 @@ model BarberServiceCommission {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   barber  User    @relation(fields: [barberId], references: [id], onDelete: Cascade)
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
+  @@unique([id, shopId])
   @@unique([barberId, serviceId])
-  @@index([barberId])
-  @@index([serviceId])
+  @@index([shopId, barberId])
+  @@index([shopId, serviceId])
 }
 
 model ExtraProduct {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  category    ExtraCategory @default(OTHER)
-  price       Float
-  commissionType  String   @default("PERCENT")
-  commissionValue Float    @default(0)
-  imageUrl    String?
-  imagePath   String?       @map("image_path")
-  stock       Int           @default(0)
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  shopId          String        @default("shop_jak_barber")
+  name            String
+  description     String?
+  category        ExtraCategory @default(OTHER)
+  price           Float
+  commissionType  String        @default("PERCENT")
+  commissionValue Float         @default(0)
+  imageUrl        String?
+  imagePath       String?       @map("image_path")
+  stock           Int           @default(0)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   appointmentItems AppointmentItem[]
   stockMovements   ExtraStockMovement[]
+
+  @@unique([id, shopId])
+  @@index([shopId, isActive, createdAt])
 }
 
 model AppointmentItem {
-  id                  String   @id @default(cuid())
-  appointmentId       String
-  extraProductId      String   @map("productId")
-  productNameSnapshot String
-  quantity            Int      @default(1)
-  unitPrice           Float
-  subtotal            Float
-  commissionTypeSnapshot  String @default("PERCENT")
-  commissionValueSnapshot Float  @default(0)
-  barberPayoutSnapshot    Float  @default(0)
-  shopRevenueSnapshot     Float  @default(0)
-  isDelivered         Boolean  @default(false)
-  deliveredAt         DateTime?
-  createdAt           DateTime @default(now())
+  id                      String   @id @default(cuid())
+  shopId                  String   @default("shop_jak_barber")
+  appointmentId           String
+  extraProductId          String   @map("productId")
+  productNameSnapshot     String
+  quantity                Int      @default(1)
+  unitPrice               Float
+  subtotal                Float
+  commissionTypeSnapshot  String   @default("PERCENT")
+  commissionValueSnapshot Float    @default(0)
+  barberPayoutSnapshot    Float    @default(0)
+  shopRevenueSnapshot     Float    @default(0)
+  isDelivered             Boolean  @default(false)
+  deliveredAt             DateTime?
+  createdAt               DateTime @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   extraProduct ExtraProduct @relation(fields: [extraProductId], references: [id], onDelete: Cascade)
 
-  @@index([appointmentId])
-  @@index([extraProductId])
+  @@unique([id, shopId])
+  @@index([shopId, appointmentId])
+  @@index([shopId, extraProductId])
 }
 
 model Order {
   id              String   @id @default(cuid())
+  shopId          String   @default("shop_jak_barber")
   customerId      String
   couponId        String?
   status          String   @default("PENDING")
@@ -378,17 +486,20 @@ model Order {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  customer User        @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Cascade)
-  coupon   Coupon?     @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer User @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Cascade)
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items    OrderItem[]
 
-  @@index([customerId])
-  @@index([status])
-  @@index([couponId])
+  @@unique([id, shopId])
+  @@index([shopId, customerId])
+  @@index([shopId, status])
+  @@index([shopId, couponId])
 }
 
 model OrderItem {
   id                  String   @id @default(cuid())
+  shopId              String   @default("shop_jak_barber")
   orderId             String
   productId           String
   productNameSnapshot String
@@ -396,15 +507,18 @@ model OrderItem {
   unitPrice           Float
   createdAt           DateTime @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@index([orderId])
-  @@index([productId])
+  @@unique([id, shopId])
+  @@index([shopId, orderId])
+  @@index([shopId, productId])
 }
 
 model Coupon {
   id            String    @id @default(cuid())
+  shopId        String    @default("shop_jak_barber")
   code          String    @unique
   description   String?
   discountType  String
@@ -418,41 +532,50 @@ model Coupon {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   orders Order[]
 
-  @@index([code, isActive])
+  @@unique([id, shopId])
+  @@index([shopId, code, isActive])
 }
 
 model StockMovement {
   id        String   @id @default(cuid())
+  shopId    String   @default("shop_jak_barber")
   productId String
   type      String
   quantity  Int
   reason    String?
   createdAt DateTime @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@index([productId, createdAt])
-  @@index([type])
+  @@unique([id, shopId])
+  @@index([shopId, productId, createdAt])
+  @@index([shopId, type])
 }
 
 model ExtraStockMovement {
   id             String   @id @default(cuid())
+  shopId         String   @default("shop_jak_barber")
   extraProductId String
   type           String
   quantity       Int
   reason         String?
   createdAt      DateTime @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   extraProduct ExtraProduct @relation(fields: [extraProductId], references: [id], onDelete: Cascade)
 
-  @@index([extraProductId, createdAt])
-  @@index([type])
+  @@unique([id, shopId])
+  @@index([shopId, extraProductId, createdAt])
+  @@index([shopId, type])
 }
 
 model BarberPayout {
   id              String    @id @default(cuid())
+  shopId          String    @default("shop_jak_barber")
   barberId        String
   periodStart     DateTime
   periodEnd       DateTime
@@ -465,9 +588,11 @@ model BarberPayout {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   barber User @relation(fields: [barberId], references: [id], onDelete: Cascade)
 
+  @@unique([id, shopId])
   @@unique([barberId, periodStart, periodEnd])
-  @@index([barberId, status])
-  @@index([periodStart, periodEnd])
+  @@index([shopId, barberId, status])
+  @@index([shopId, periodStart, periodEnd])
 }

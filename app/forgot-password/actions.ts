@@ -10,6 +10,7 @@ import {
 } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { getCurrentShopId } from "@/lib/shop";
 
 function generateCode() {
   return randomInt(100000, 1000000).toString();
@@ -25,6 +26,7 @@ export async function requestPasswordResetAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
+  const shopId = await getCurrentShopId();
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
@@ -50,12 +52,12 @@ export async function requestPasswordResetAction(
     };
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { email },
   });
 
   if (!user || !user.passwordHash) {
-    const pendingRegistration = await prisma.pendingRegistration.findUnique({
+    const pendingRegistration = await prisma.pendingRegistration.findFirst({
       where: { email },
     });
 
@@ -85,6 +87,7 @@ export async function requestPasswordResetAction(
         attempts: 0,
       },
       create: {
+        shopId,
         email,
         code,
         expiresAt: getExpirationDate(),
@@ -140,10 +143,10 @@ export async function resendPasswordResetCodeAction(
   }
 
   const [resetRequest, user] = await Promise.all([
-    prisma.passwordResetRequest.findUnique({
+    prisma.passwordResetRequest.findFirst({
       where: { email },
     }),
-    prisma.user.findUnique({
+    prisma.user.findFirst({
       where: { email },
     }),
   ]);
@@ -233,7 +236,7 @@ export async function resetPasswordWithCodeAction(
     };
   }
 
-  const resetRequest = await prisma.passwordResetRequest.findUnique({
+  const resetRequest = await prisma.passwordResetRequest.findFirst({
     where: { email },
   });
 
@@ -275,7 +278,7 @@ export async function resetPasswordWithCodeAction(
     };
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { email },
   });
 

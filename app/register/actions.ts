@@ -11,6 +11,7 @@ import {
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getCurrentShopId } from "@/lib/shop";
 
 function generateVerificationCode() {
   return randomInt(100000, 1000000).toString();
@@ -49,6 +50,7 @@ export async function registerCustomerAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
+  const shopId = await getCurrentShopId();
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "")
     .trim()
@@ -84,7 +86,7 @@ export async function registerCustomerAction(
     };
   }
 
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await prisma.user.findFirst({
     where: { email },
   });
 
@@ -95,7 +97,7 @@ export async function registerCustomerAction(
     };
   }
 
-  const existingPendingRegistration = await prisma.pendingRegistration.findUnique({
+  const existingPendingRegistration = await prisma.pendingRegistration.findFirst({
     where: { email },
   });
 
@@ -119,6 +121,7 @@ export async function registerCustomerAction(
     await prisma.pendingRegistration.create({
       data: {
         name,
+        shopId,
         email,
         phone,
         passwordHash: hashedPassword,
@@ -183,7 +186,7 @@ export async function verifyRegistrationCodeAction(
     };
   }
 
-  const pending = await prisma.pendingRegistration.findUnique({
+  const pending = await prisma.pendingRegistration.findFirst({
     where: { email },
   });
 
@@ -225,7 +228,7 @@ export async function verifyRegistrationCodeAction(
     };
   }
 
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await prisma.user.findFirst({
     where: { email },
   });
 
@@ -244,6 +247,7 @@ export async function verifyRegistrationCodeAction(
     prisma.user.create({
       data: {
         name: pending.name,
+        shopId: pending.shopId,
         email: pending.email,
         passwordHash: pending.passwordHash,
         phone: pending.phone,
@@ -289,7 +293,7 @@ export async function resendRegistrationCodeAction(
     };
   }
 
-  const pending = await prisma.pendingRegistration.findUnique({
+  const pending = await prisma.pendingRegistration.findFirst({
     where: { email },
   });
 

@@ -20,12 +20,14 @@ async function requireAdmin() {
   if (!session?.user?.id || session.user.role !== "ADMIN") {
     throw new Error("Nao autorizado.");
   }
+
+  return session.user;
 }
 
 export async function generateBarberPayoutsAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const range = resolveFinanceRange({
     period: String(formData.get("period") || "week") as "week" | "month" | "custom",
@@ -59,6 +61,7 @@ export async function generateBarberPayoutsAction(
           status: item.savedStatus === "PAID" ? "PAID" : "CLOSED",
         },
         create: {
+          shopId: admin.shopId || undefined,
           barberId: item.barberId,
           periodStart: range.start,
           periodEnd: range.end,

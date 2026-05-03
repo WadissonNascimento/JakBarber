@@ -72,10 +72,14 @@ export async function createOrder(data: {
 
   const order = await prisma.order.create({
     data: {
+      shopId: session.user.shopId || undefined,
       customerId: session.user.id,
       total,
       items: {
-        create: itemsWithPrice,
+        create: itemsWithPrice.map((item) => ({
+          ...item,
+          shopId: session.user.shopId || undefined,
+        })),
       },
     },
     include: orderInclude,

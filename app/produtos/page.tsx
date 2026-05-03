@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ProductGrid } from "@/components/ProductGrid";
+import { getCurrentShop } from "@/lib/shop";
 
 export const metadata = {
   title: "Arsenal do barbeiro",
@@ -7,6 +8,7 @@ export const metadata = {
 };
 
 export default async function ProdutosPage() {
+  const shop = await getCurrentShop();
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
@@ -41,7 +43,7 @@ export default async function ProdutosPage() {
         ) : (
           <ProductGrid
             products={products}
-            whatsappNumber="5511961971267"
+            whatsappNumber={shop.whatsappNumber || "5511961971267"}
           />
         )}
       </section>

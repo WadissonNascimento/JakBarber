@@ -18,6 +18,8 @@ async function ensureExtraAccess() {
   if (!session?.user || session.user.role !== "ADMIN") {
     throw new Error("Nao autorizado.");
   }
+
+  return session.user;
 }
 
 function revalidateExtraViews() {
@@ -54,7 +56,7 @@ function parseCommissionFields(formData: FormData) {
 }
 
 export async function createExtraProductFromForm(formData: FormData) {
-  await ensureExtraAccess();
+  const admin = await ensureExtraAccess();
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -76,6 +78,7 @@ export async function createExtraProductFromForm(formData: FormData) {
 
   const extra = await prisma.extraProduct.create({
     data: {
+      shopId: admin.shopId || undefined,
       name,
       description: description || null,
       category,
@@ -104,6 +107,7 @@ export async function createExtraProductFromForm(formData: FormData) {
 
     if (stock > 0) {
       await registerExtraStockMovement({
+        shopId: admin.shopId || undefined,
         extraProductId: extra.id,
         type: "IN",
         quantity: stock,

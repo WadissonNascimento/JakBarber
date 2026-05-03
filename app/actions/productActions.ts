@@ -18,6 +18,8 @@ async function ensureProductAccess() {
   if (!session?.user || session.user.role !== "ADMIN") {
     throw new Error("Nao autorizado.");
   }
+
+  return session.user;
 }
 
 function revalidateProductViews() {
@@ -45,7 +47,7 @@ export async function createProduct(data: {
   imageUrl?: string;
   stock: number;
 }) {
-  await ensureProductAccess();
+  const admin = await ensureProductAccess();
 
   const name = data.name.trim();
   const price = Number(data.price);
@@ -57,6 +59,7 @@ export async function createProduct(data: {
 
   const product = await prisma.product.create({
     data: {
+      shopId: admin.shopId || undefined,
       name,
       description: data.description?.trim() || null,
       category: data.category || ProductCategory.OTHER,
@@ -67,6 +70,7 @@ export async function createProduct(data: {
   });
 
   await registerStockMovement({
+    shopId: admin.shopId || undefined,
     productId: product.id,
     type: "IN",
     quantity: stock,
@@ -78,7 +82,7 @@ export async function createProduct(data: {
 }
 
 export async function createProductFromForm(formData: FormData) {
-  await ensureProductAccess();
+  const admin = await ensureProductAccess();
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -99,6 +103,7 @@ export async function createProductFromForm(formData: FormData) {
 
   const product = await prisma.product.create({
     data: {
+      shopId: admin.shopId || undefined,
       name,
       description: description || null,
       category,
@@ -123,8 +128,9 @@ export async function createProductFromForm(formData: FormData) {
       });
     }
 
-    await registerStockMovement({
-      productId: product.id,
+      await registerStockMovement({
+        shopId: admin.shopId || undefined,
+        productId: product.id,
       type: "IN",
       quantity: stock,
       reason: "Cadastro inicial do produto",
@@ -198,7 +204,7 @@ export async function updateProduct(
 }
 
 export async function updateProductFromForm(formData: FormData) {
-  await ensureProductAccess();
+  const admin = await ensureProductAccess();
 
   const productId = String(formData.get("productId") || "").trim();
   const name = String(formData.get("name") || "").trim();

@@ -44,6 +44,7 @@ export async function reserveInventoryForOrder(
 
       await tx.stockMovement.create({
         data: {
+          shopId: order.shopId,
           productId: item.productId,
           type: "OUT",
           quantity: item.quantity,

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     return adminLoginError(request, "Preencha e-mail e senha.");
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { email },
   });
 

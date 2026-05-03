@@ -15,6 +15,8 @@ async function requireAdmin() {
   if (!session?.user || session.user.role !== "ADMIN") {
     throw new Error("Nao autorizado.");
   }
+
+  return session.user;
 }
 
 function revalidateCoupons() {
@@ -26,7 +28,7 @@ function revalidateCoupons() {
 export async function createCouponAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const code = String(formData.get("code") || "").trim().toUpperCase();
   const description = String(formData.get("description") || "").trim();
@@ -43,6 +45,7 @@ export async function createCouponAction(
 
   await prisma.coupon.create({
     data: {
+      shopId: admin.shopId || undefined,
       code,
       description: description || null,
       discountType,

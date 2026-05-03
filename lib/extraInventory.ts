@@ -5,6 +5,7 @@ type ExtraStockMovementClient = Pick<typeof prisma, "extraStockMovement">;
 export async function registerExtraStockMovement(
   input: {
     extraProductId: string;
+    shopId?: string;
     type: string;
     quantity: number;
     reason?: null | string;
@@ -17,6 +18,7 @@ export async function registerExtraStockMovement(
 
   return db.extraStockMovement.create({
     data: {
+      shopId: input.shopId,
       extraProductId: input.extraProductId,
       type: input.type,
       quantity: Math.trunc(input.quantity),

@@ -1,10 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function Footer() {
-  const whatsappNumber = process.env.BARBER_WHATSAPP_NUMBER || "";
+export default function Footer({
+  brandName,
+  logoPath,
+  whatsappNumber,
+  instagramUrl,
+  addressLine,
+  businessHours,
+}: {
+  brandName: string;
+  logoPath: string;
+  whatsappNumber: string;
+  instagramUrl: string;
+  addressLine: string;
+  businessHours: string;
+}) {
   const whatsappMessage = encodeURIComponent(
-    "Ola! Vim pelo site da Jak Barber e queria tirar uma duvida."
+    `Ola! Vim pelo site da ${brandName} e queria tirar uma duvida.`
   );
 
   return (
@@ -15,15 +28,15 @@ export default function Footer() {
         <div className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/logo.png"
-              alt="Jak Barber"
+              src={logoPath}
+              alt={brandName}
               width={50}
               height={50}
               className="object-contain"
             />
 
             <div>
-              <p className="text-lg font-bold">Jak Barber</p>
+              <p className="text-lg font-bold">{brandName}</p>
               <p className="text-xs text-zinc-400">Atendimento com hora marcada</p>
             </div>
           </Link>
@@ -33,7 +46,7 @@ export default function Footer() {
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Funcionamento
               </p>
-              <p className="mt-2 text-zinc-200">Terca a domingo, das 09h as 20h</p>
+              <p className="mt-2 text-zinc-200">{businessHours}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -47,7 +60,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-3 self-start md:self-auto">
             <a
-              href="https://www.instagram.com/jakcompany_/"
+              href={instagramUrl}
               target="_blank"
               rel="noreferrer"
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand-muted)] hover:text-[var(--brand-strong)]"
@@ -65,7 +78,7 @@ export default function Footer() {
             </a>
 
             <a
-              href="https://maps.google.com/?q=Osasco+SP"
+              href={`https://maps.google.com/?q=${encodeURIComponent(addressLine)}`}
               target="_blank"
               rel="noreferrer"
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand-muted)] hover:text-[var(--brand-strong)]"
@@ -97,7 +110,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-6 flex flex-col gap-4 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} Jak Barber Company</p>
+          <p>&copy; {new Date().getFullYear()} {brandName}</p>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/sobre-nos"

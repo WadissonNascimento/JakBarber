@@ -135,14 +135,21 @@ function NavItemIcon({ href, className }: { href: string; className?: string }) 
 }
 
 export default function Header({
+  brandName,
+  logoPath,
+  publicEyebrow,
   role,
   userName,
 }: {
+  brandName: string;
+  logoPath: string;
+  publicEyebrow: string;
   role: HeaderRole;
   userName?: string | null;
 }) {
   const pathname = usePathname() || "";
   const nav = getHeaderLinks(role);
+  const eyebrow = role ? nav.eyebrow : publicEyebrow;
   const menuToggleId = useId();
   const menuToggleRef = useRef<HTMLInputElement | null>(null);
 
@@ -166,8 +173,8 @@ export default function Header({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link href={nav.homeHref} className="flex min-w-0 items-center gap-3">
             <Image
-              src="/logo.png"
-              alt="Jak Barber"
+              src={logoPath}
+              alt={brandName}
               width={120}
               height={50}
               className="h-auto w-[108px] object-contain sm:w-[120px]"
@@ -175,7 +182,7 @@ export default function Header({
             />
             {role ? (
               <span className="hidden max-w-[150px] truncate text-xs text-zinc-400 sm:inline">
-                {userName || nav.eyebrow}
+                {userName || eyebrow}
               </span>
             ) : null}
           </Link>
@@ -234,7 +241,7 @@ export default function Header({
         <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
           <p className="text-sm font-semibold text-white">Menu</p>
           <div className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--brand-strong)]">
-            {nav.eyebrow}
+            {eyebrow}
           </div>
         </div>
 
