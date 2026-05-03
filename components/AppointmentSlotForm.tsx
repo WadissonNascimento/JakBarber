@@ -36,6 +36,7 @@ export default function AppointmentSlotForm({
     createAppointmentAction,
     initialFormFeedbackState
   );
+  const formState = state ?? initialFormFeedbackState;
 
   return (
     <form action={formAction}>
@@ -51,7 +52,7 @@ export default function AppointmentSlotForm({
       </div>
 
       <div className="mt-4">
-        <FeedbackMessage message={state.error} tone="error" />
+        <FeedbackMessage message={formState.error} tone="error" />
       </div>
     </form>
   );

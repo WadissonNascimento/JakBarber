@@ -30,6 +30,7 @@ export default function RegisterForm() {
     registerCustomerAction,
     initialFormFeedbackState
   );
+  const formState = state ?? initialFormFeedbackState;
   const [password, setPassword] = useState("");
   const [showPasswordError, setShowPasswordError] = useState(false);
   const hasPasswordError = showPasswordError && !isValidPassword(password);
@@ -47,7 +48,7 @@ export default function RegisterForm() {
       </div>
 
       <form action={formAction} className="space-y-5">
-        <FeedbackMessage message={state.error} tone="error" />
+        <FeedbackMessage message={formState.error} tone="error" />
 
         <div>
           <label

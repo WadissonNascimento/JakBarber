@@ -30,6 +30,8 @@ export default function RegisterVerifyForm({
     resendRegistrationCodeAction,
     initialFormFeedbackState
   );
+  const safeVerifyState = verifyState ?? initialFormFeedbackState;
+  const safeResendState = resendState ?? initialFormFeedbackState;
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
@@ -49,9 +51,9 @@ export default function RegisterVerifyForm({
             ? `Codigo de verificacao local: ${devCode}`
             : sent
             ? "Enviamos um codigo de verificacao para o seu e-mail."
-            : verifyState.success
+            : safeVerifyState.success
         }
-        error={verifyState.error}
+        error={safeVerifyState.error}
       />
 
       <form action={verifyAction} className="mt-5 space-y-5">
@@ -80,7 +82,7 @@ export default function RegisterVerifyForm({
       </form>
 
       <div className="mt-6 border-t border-white/10 pt-6">
-        <FormFeedback success={resendState.success} error={resendState.error} />
+        <FormFeedback success={safeResendState.success} error={safeResendState.error} />
 
         <form action={resendAction} className="mt-4">
           <input type="hidden" name="email" value={email} />

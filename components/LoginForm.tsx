@@ -14,6 +14,7 @@ export default function LoginForm({
   successMessage?: string | null;
 }) {
   const [state, formAction] = useFormState(loginAction, initialFormFeedbackState);
+  const formState = state ?? initialFormFeedbackState;
 
   return (
     <form
@@ -32,7 +33,7 @@ export default function LoginForm({
 
       <div className="space-y-3">
         <FeedbackMessage message={successMessage} tone="success" />
-        <AuthFormMessage message={state.error} />
+        <AuthFormMessage message={formState.error} />
       </div>
 
       <div className="space-y-5">

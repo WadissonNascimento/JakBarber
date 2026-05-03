@@ -12,6 +12,7 @@ export default function AdminLoginForm() {
     adminLoginAction,
     initialFormFeedbackState
   );
+  const formState = state ?? initialFormFeedbackState;
 
   return (
     <form
@@ -24,7 +25,7 @@ export default function AdminLoginForm() {
       </p>
 
       <div className="mt-6">
-        <AuthFormMessage message={state.error} />
+        <AuthFormMessage message={formState.error} />
       </div>
 
       <div className="space-y-4">

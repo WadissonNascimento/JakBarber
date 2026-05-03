@@ -33,6 +33,8 @@ export default function ResetPasswordForm({
     resendPasswordResetCodeAction,
     initialFormFeedbackState
   );
+  const safeResetState = resetState ?? initialFormFeedbackState;
+  const safeResendState = resendState ?? initialFormFeedbackState;
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
@@ -52,9 +54,9 @@ export default function ResetPasswordForm({
             ? `Codigo de recuperacao local: ${devCode}`
             : sent
             ? "Enviamos um codigo de recuperacao para o seu e-mail."
-            : resetState.success
+            : safeResetState.success
         }
-        error={resetState.error}
+        error={safeResetState.error}
       />
 
       <form action={resetAction} className="mt-5 space-y-5">
@@ -117,7 +119,7 @@ export default function ResetPasswordForm({
       </form>
 
       <div className="mt-6 border-t border-white/10 pt-6">
-        <FormFeedback success={resendState.success} error={resendState.error} />
+        <FormFeedback success={safeResendState.success} error={safeResendState.error} />
 
         <form action={resendAction} className="mt-4">
           <input type="hidden" name="email" value={email} />

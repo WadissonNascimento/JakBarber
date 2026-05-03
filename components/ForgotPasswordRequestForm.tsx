@@ -15,6 +15,7 @@ export default function ForgotPasswordRequestForm() {
     requestPasswordResetAction,
     initialFormFeedbackState
   );
+  const formState = state ?? initialFormFeedbackState;
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
@@ -28,7 +29,7 @@ export default function ForgotPasswordRequestForm() {
         </p>
       </div>
 
-      <FormFeedback error={state.error} success={state.success} />
+      <FormFeedback error={formState.error} success={formState.success} />
 
       <form action={formAction} className="mt-5 space-y-5">
         <div>
