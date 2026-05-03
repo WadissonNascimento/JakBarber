@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
+import ReliableSubmitButton from "@/components/ReliableSubmitButton";
 
 export default function LoginForm({
   errorMessage = null,
@@ -74,12 +75,7 @@ export default function LoginForm({
           </Link>
         </div>
 
-        <button
-          type="submit"
-          className="w-full rounded-2xl bg-[var(--brand)] px-6 py-4 font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110 active:scale-[0.98]"
-        >
-          Entrar
-        </button>
+        <ReliableSubmitButton idleText="Entrar" loadingText="Entrando..." />
       </div>
 
       <p className="mt-6 text-center text-sm text-zinc-300">
