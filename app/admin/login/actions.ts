@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
@@ -45,10 +46,8 @@ export async function adminLoginAction(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/admin",
+      redirect: false,
     });
-
-    return { error: null, success: null };
   } catch (error) {
     if (error instanceof AuthError) {
       return { error: "Nao foi possivel entrar no painel admin.", success: null };
@@ -56,4 +55,6 @@ export async function adminLoginAction(
 
     throw error;
   }
+
+  redirect("/admin");
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
@@ -36,10 +37,8 @@ export async function loginAction(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/painel",
+      redirect: false,
     });
-
-    return { error: null, success: null };
   } catch (error) {
     if (error instanceof AuthError) {
       logSecurityEvent("login_action_failed", { email });
@@ -48,4 +47,6 @@ export async function loginAction(
 
     throw error;
   }
+
+  redirect("/painel");
 }
