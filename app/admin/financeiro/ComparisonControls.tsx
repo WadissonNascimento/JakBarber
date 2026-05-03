@@ -29,7 +29,7 @@ export default function ComparisonControls({
   const [compareDates, setCompareDates] = useState({ compareStart, compareEnd });
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/admin/financeiro";
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function ComparisonControls({
     nextCompareStart: string,
     nextCompareEnd: string
   ) {
-    const nextParams = new URLSearchParams(searchParams.toString());
+    const nextParams = new URLSearchParams(searchParams?.toString() ?? "");
 
     nextParams.set("compareMode", nextCompareMode);
     if (nextCompareStart) {

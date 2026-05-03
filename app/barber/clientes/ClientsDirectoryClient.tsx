@@ -23,7 +23,7 @@ export default function ClientsDirectoryClient({
   search: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/barber/clientes";
   const [query, setQuery] = useState(search);
   const [isPending, startTransition] = useTransition();
 

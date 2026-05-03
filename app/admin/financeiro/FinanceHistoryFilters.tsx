@@ -12,7 +12,7 @@ export default function FinanceHistoryFilters({
   historyEnd: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/admin/financeiro";
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState({ historyStart, historyEnd });
   const [isPending, startTransition] = useTransition();
@@ -22,7 +22,7 @@ export default function FinanceHistoryFilters({
   }, [historyEnd, historyStart]);
 
   function applyFilters(next: typeof filters) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
 
     if (next.historyStart) {
       params.set("historyStart", next.historyStart);

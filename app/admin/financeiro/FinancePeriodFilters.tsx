@@ -16,7 +16,7 @@ export default function FinancePeriodFilters({
   end: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/admin/financeiro";
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState({ period, start, end });
   const [isPending, startTransition] = useTransition();
@@ -26,7 +26,7 @@ export default function FinancePeriodFilters({
   }, [end, period, start]);
 
   function applyFilters(next: typeof filters) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
 
     if (next.period === "week") {
       params.delete("period");

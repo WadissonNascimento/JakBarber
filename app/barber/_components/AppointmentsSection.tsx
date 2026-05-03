@@ -87,7 +87,7 @@ export function AppointmentsSection({
   barberName,
 }: AppointmentsSectionProps) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/barber/agenda";
   const [feedback, setFeedback] = useState<{
     message: string | null;
     tone: "success" | "error" | "info";

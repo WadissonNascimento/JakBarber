@@ -1,11 +1,33 @@
 "use client";
 
+import { useEffect } from "react";
+
+const GLOBAL_RELOAD_FLAG = "jakbarber-global-error-reload";
+
 export default function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error(error);
+
+    const timeout = window.setTimeout(() => {
+      try {
+        if (window.sessionStorage.getItem(GLOBAL_RELOAD_FLAG) === "1") return;
+        window.sessionStorage.setItem(GLOBAL_RELOAD_FLAG, "1");
+      } catch {
+        // Storage can be unavailable in private mobile sessions.
+      }
+
+      window.location.reload();
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [error]);
+
   return (
     <html lang="pt-BR">
       <body className="min-h-screen bg-[#030712] text-white">
@@ -16,13 +38,18 @@ export default function GlobalError({
             </p>
             <h1 className="mt-3 text-2xl font-bold">Vamos recarregar o painel</h1>
             <p className="mt-3 text-sm text-zinc-300">
-              A pagina carregou uma versao antiga. Recarregue para continuar com
-              tudo atualizado.
+              O painel encontrou uma falha no carregamento. Vamos tentar abrir
+              novamente com tudo atualizado.
             </p>
             <div className="mt-6 grid gap-3">
               <button
                 type="button"
                 onClick={() => {
+                  try {
+                    window.sessionStorage.removeItem(GLOBAL_RELOAD_FLAG);
+                  } catch {
+                    // Storage can be unavailable in private mobile sessions.
+                  }
                   reset();
                   window.location.reload();
                 }}

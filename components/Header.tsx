@@ -141,7 +141,7 @@ export default function Header({
   role: HeaderRole;
   userName?: string | null;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
   const nav = getHeaderLinks(role);
   const menuToggleId = useId();
   const menuToggleRef = useRef<HTMLInputElement | null>(null);

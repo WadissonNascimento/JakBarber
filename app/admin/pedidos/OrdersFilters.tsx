@@ -16,7 +16,7 @@ export default function OrdersFilters({
   statusOptions: Array<{ value: string; label: string }>;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/admin/pedidos";
   const [filters, setFilters] = useState({ dateFrom, dateTo, status });
   const [isPending, startTransition] = useTransition();
 
