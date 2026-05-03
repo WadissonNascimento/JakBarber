@@ -8,6 +8,14 @@ import {
   toMinutes,
 } from "@/lib/barberSchedule";
 import { prisma } from "@/lib/prisma";
+import {
+  createScheduleDate,
+  getCurrentScheduleDateValue,
+  getCurrentScheduleMinutes,
+  getScheduleDayOfWeek,
+  getScheduleDayRange,
+  getScheduleMinutes,
+} from "@/lib/scheduleTime";
 
 type BookingPrismaClient = Pick<
   PrismaClient,
@@ -37,14 +45,6 @@ function splitSlotsByPeriod(slots: string[]): BookingPeriodSlots {
   };
 }
 
-function getLocalDateString(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 export async function getBookingAvailability(
   {
     barberId,
@@ -70,15 +70,14 @@ export async function getBookingAvailability(
     };
   }
 
-  const selectedDay = new Date(`${date}T00:00:00`);
+  const dayRange = getScheduleDayRange(date);
+  const dayOfWeek = getScheduleDayOfWeek(date);
 
-  if (Number.isNaN(selectedDay.getTime())) {
+  if (!dayRange || dayOfWeek === null) {
     throw new BookingAvailabilityError("Data invalida.");
   }
 
-  const dayStart = new Date(`${date}T00:00:00`);
-  const dayEnd = new Date(`${date}T23:59:59.999`);
-  const dayOfWeek = selectedDay.getDay();
+  const { start: dayStart, end: dayEnd } = dayRange;
 
   const [services, availability, appointments, blocks, recurringBlocks] = await Promise.all([
     db.service.findMany({
@@ -155,9 +154,9 @@ export async function getBookingAvailability(
 
   const generatedSlots = generateSlots(availability.startTime, availability.endTime);
   const dayEndMinutes = toMinutes(availability.endTime);
-  const todayString = getLocalDateString(now);
+  const todayString = getCurrentScheduleDateValue(now);
   const isToday = date === todayString;
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = getCurrentScheduleMinutes(now);
 
   const validSlots = generatedSlots.filter((slot) => {
     const candidateStart = toMinutes(slot);
@@ -171,7 +170,12 @@ export async function getBookingAvailability(
       return false;
     }
 
-    const startDate = new Date(`${date}T${slot}:00`);
+    const startDate = createScheduleDate(date, slot);
+
+    if (!startDate) {
+      return false;
+    }
+
     const endDate = new Date(startDate.getTime() + selectedOccupiedDuration * 60000);
 
     if (isBlockedPeriod(startDate, endDate, blocks)) {
@@ -188,8 +192,7 @@ export async function getBookingAvailability(
       }
 
       const appointmentDate = new Date(appointment.date);
-      const existingStart =
-        appointmentDate.getHours() * 60 + appointmentDate.getMinutes();
+      const existingStart = getScheduleMinutes(appointmentDate);
       const existingEnd =
         existingStart + getAppointmentServicesOccupiedDuration(appointment.services);
 

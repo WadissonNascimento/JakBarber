@@ -11,6 +11,11 @@ import {
   normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
 import { orderStatusLabel } from "@/lib/orderStatus";
+import {
+  formatScheduleDate,
+  formatScheduleTime,
+  getScheduleDayRange,
+} from "@/lib/scheduleTime";
 
 export type AdminAgendaFilters = {
   barberId?: string;
@@ -35,15 +40,20 @@ function parseEndDate(date?: string) {
   return date ? new Date(`${date}T23:59:59`) : undefined;
 }
 
+function parseScheduleStartDate(date?: string) {
+  return date ? getScheduleDayRange(date)?.start : undefined;
+}
+
+function parseScheduleEndDate(date?: string) {
+  return date ? getScheduleDayRange(date)?.end : undefined;
+}
+
 function formatDate(date: Date) {
-  return date.toLocaleDateString("pt-BR");
+  return formatScheduleDate(date);
 }
 
 function formatTime(date: Date) {
-  return date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatScheduleTime(date);
 }
 
 function formatCurrency(value: number) {
@@ -59,8 +69,8 @@ function escapeCsvValue(value: string | number | null | undefined) {
 }
 
 export function buildAgendaReportQuery(filters: AdminAgendaFilters) {
-  const startDate = parseStartDate(filters.dateFrom);
-  const endDate = parseEndDate(filters.dateTo);
+  const startDate = parseScheduleStartDate(filters.dateFrom);
+  const endDate = parseScheduleEndDate(filters.dateTo);
   const normalizedStatus = filters.status?.trim().toUpperCase();
 
   const where: Prisma.AppointmentWhereInput = {

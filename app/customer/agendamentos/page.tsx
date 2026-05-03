@@ -13,6 +13,11 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import {
+  formatScheduleDate,
+  formatScheduleTime,
+  isScheduleDateTimePast,
+} from "@/lib/scheduleTime";
 import CancelAppointmentButton from "./CancelAppointmentButton";
 import ReviewForm from "./ReviewForm";
 
@@ -81,11 +86,8 @@ export default async function CustomerAppointmentsPage() {
           <div className="space-y-4">
             {appointments.map((appointment) => {
               const date = new Date(appointment.date);
-              const time = date.toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-              const dateLabel = date.toLocaleDateString("pt-BR");
+              const time = formatScheduleTime(date);
+              const dateLabel = formatScheduleDate(date);
               const serviceLabel = getAppointmentDisplayName(appointment.services);
               const whatsappMessage = encodeURIComponent(
                 `Ola! Quero falar sobre meu agendamento de ${dateLabel} as ${time} com ${appointment.barber.name || "o barbeiro"} para ${serviceLabel}.`
@@ -96,7 +98,7 @@ export default async function CustomerAppointmentsPage() {
               const canCancel =
                 !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(
                   appointment.status
-                ) && date.getTime() > Date.now();
+                ) && !isScheduleDateTimePast(date);
               const canReview = ["COMPLETED", "DONE"].includes(appointment.status);
 
               return (

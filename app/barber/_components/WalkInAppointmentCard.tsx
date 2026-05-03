@@ -6,6 +6,12 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, Plus, X } from "lucide-react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import { isActiveAppointmentStatus, minutesToTime, toMinutes } from "@/lib/barberSchedule";
+import {
+  formatScheduleTime,
+  getCurrentScheduleDate,
+  getCurrentScheduleMinutes,
+  getScheduleMinutes,
+} from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import { createWalkInAppointmentAction } from "../actions";
 import type { getBarberDashboardData } from "../data";
@@ -27,17 +33,11 @@ type WalkInSuccessDetails = {
   startTime: string;
 };
 
-function pad(value: number) {
-  return String(value).padStart(2, "0");
-}
-
 function getRoundedStartTime() {
-  const now = new Date();
-  const minutes = now.getMinutes();
-  const roundedMinutes = Math.ceil(minutes / 5) * 5;
-  now.setMinutes(roundedMinutes, 0, 0);
+  const currentMinutes = getCurrentScheduleMinutes();
+  const roundedMinutes = Math.ceil(currentMinutes / 5) * 5;
 
-  return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return minutesToTime(Math.min(roundedMinutes, 23 * 60 + 55));
 }
 
 function getSuggestedStartTime(
@@ -50,7 +50,7 @@ function getSuggestedStartTime(
     .filter((appointment) => isActiveAppointmentStatus(appointment.status))
     .map((appointment) => {
       const startDate = new Date(appointment.date);
-      const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+      const startMinutes = getScheduleMinutes(startDate);
 
       return {
         startMinutes,
@@ -75,10 +75,7 @@ function getSuggestedStartTime(
 }
 
 function formatTime(date: Date) {
-  return new Date(date).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatScheduleTime(new Date(date));
 }
 
 function getGapLabel(nextAppointmentDate: Date | null) {
@@ -88,7 +85,10 @@ function getGapLabel(nextAppointmentDate: Date | null) {
 
   const diffMinutes = Math.max(
     0,
-    Math.floor((new Date(nextAppointmentDate).getTime() - Date.now()) / 60000)
+    Math.floor(
+      (new Date(nextAppointmentDate).getTime() - getCurrentScheduleDate().getTime()) /
+        60000
+    )
   );
 
   return `${diffMinutes} min livres ate ${formatTime(nextAppointmentDate)}.`;

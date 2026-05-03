@@ -12,16 +12,16 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
 import { appointmentStatusLabel } from "@/lib/appointmentStatus";
+import {
+  formatScheduleTime,
+  getCurrentScheduleDate,
+  getCurrentScheduleDateValue,
+  getScheduleDayRange,
+} from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 
-function getDayRange(baseDate = new Date()) {
-  const start = new Date(baseDate);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(baseDate);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
+function getTodayRange() {
+  return getScheduleDayRange(getCurrentScheduleDateValue())!;
 }
 
 export default async function AdminPage() {
@@ -35,7 +35,8 @@ export default async function AdminPage() {
     redirect("/painel");
   }
 
-  const { start: todayStart, end: todayEnd } = getDayRange();
+  const { start: todayStart, end: todayEnd } = getTodayRange();
+  const currentScheduleDate = getCurrentScheduleDate();
   const [
     activeBarbers,
     activeProducts,
@@ -116,7 +117,7 @@ export default async function AdminPage() {
   const nextAppointments = todayAppointments
     .filter(
       (appointment) =>
-        new Date(appointment.date).getTime() >= Date.now() &&
+        new Date(appointment.date).getTime() >= currentScheduleDate.getTime() &&
         !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(appointment.status)
     )
     .slice(0, 3);
@@ -237,10 +238,7 @@ export default async function AdminPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-2xl font-bold text-white">
-                          {new Date(appointment.date).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatScheduleTime(new Date(appointment.date))}
                         </p>
                         <p className="mt-2 font-semibold text-white">
                           {appointment.customer.name || "Cliente"}

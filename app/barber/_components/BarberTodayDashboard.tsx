@@ -17,6 +17,11 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import {
+  formatScheduleDate,
+  formatScheduleTime,
+  getCurrentScheduleDate,
+} from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import { buildAppointmentContactWhatsAppUrl } from "@/lib/whatsapp";
 import { updateAppointmentStatusAction } from "../actions";
@@ -27,14 +32,11 @@ type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
 type DashboardAppointment = BarberDashboardData["summary"]["todayAppointments"][number];
 
 function formatTime(date: Date) {
-  return new Date(date).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatScheduleTime(new Date(date));
 }
 
 function formatDateLabel(date: Date) {
-  return new Date(date).toLocaleDateString("pt-BR", {
+  return formatScheduleDate(new Date(date), {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
@@ -80,7 +82,8 @@ export default function BarberTodayDashboard({
   );
   const nextAppointment =
     visibleAppointments.find(
-      (appointment) => new Date(appointment.date).getTime() >= Date.now()
+      (appointment) =>
+        new Date(appointment.date).getTime() >= getCurrentScheduleDate().getTime()
     ) || visibleAppointments[0] || null;
   const visibleUpcomingAppointments = upcomingAppointments.slice(0, 3);
 

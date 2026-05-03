@@ -18,6 +18,13 @@ import {
   syncAppointmentFinancialSnapshots,
 } from "@/lib/financials";
 import { prisma } from "@/lib/prisma";
+import {
+  createScheduleDate,
+  getScheduleDayOfWeek,
+  getScheduleDayRange,
+  getScheduleMinutes,
+  isScheduleDateTimePast,
+} from "@/lib/scheduleTime";
 
 type AppointmentPrismaClient = Pick<
   PrismaClient,
@@ -227,21 +234,25 @@ async function createCustomerAppointmentInTransaction(
     }
   }
 
-  const appointmentDate = new Date(`${date}T${time}:00`);
+  const appointmentDate = createScheduleDate(date, time);
 
-  if (Number.isNaN(appointmentDate.getTime())) {
+  if (!appointmentDate) {
     throw new AppointmentMutationError("Data ou horario invalido.");
   }
 
   const now = input.now ?? new Date();
-  if (appointmentDate.getTime() <= now.getTime()) {
+  if (isScheduleDateTimePast(appointmentDate, now)) {
     throw new AppointmentMutationError("Nao e possivel agendar em um horario que ja passou.");
   }
 
-  const selectedDay = new Date(`${date}T00:00:00`);
-  const dayOfWeek = selectedDay.getDay();
-  const dayStart = new Date(`${date}T00:00:00`);
-  const dayEnd = new Date(`${date}T23:59:59.999`);
+  const dayOfWeek = getScheduleDayOfWeek(date);
+  const dayRange = getScheduleDayRange(date);
+
+  if (dayOfWeek === null || !dayRange) {
+    throw new AppointmentMutationError("Data ou horario invalido.");
+  }
+
+  const { start: dayStart, end: dayEnd } = dayRange;
 
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${barberId}), hashtext(${date}))`;
 
@@ -319,7 +330,7 @@ async function createCustomerAppointmentInTransaction(
     }
 
     const existingDate = new Date(appointment.date);
-    const existingStartMinutes = existingDate.getHours() * 60 + existingDate.getMinutes();
+    const existingStartMinutes = getScheduleMinutes(existingDate);
 
     if (conflictMode === "SAME_START_ONLY") {
       return selectedStartMinutes === existingStartMinutes;
@@ -536,7 +547,7 @@ export async function cancelAppointmentByCustomer(
         throw new AppointmentMutationError("Esse agendamento nao pode mais ser cancelado.");
       }
 
-      if (appointment.date.getTime() <= Date.now()) {
+      if (isScheduleDateTimePast(appointment.date)) {
         throw new AppointmentMutationError(
           "Esse horario ja passou. Fale com o barbeiro para ajustar o status."
         );

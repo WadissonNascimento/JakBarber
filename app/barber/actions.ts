@@ -19,6 +19,11 @@ import {
 } from "@/lib/mutationResult";
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { prisma } from "@/lib/prisma";
+import {
+  createScheduleDateTimeInput,
+  getCurrentScheduleDateValue,
+  getCurrentScheduleMinutes,
+} from "@/lib/scheduleTime";
 import { enforceRateLimit } from "@/lib/security";
 
 async function requireBarber() {
@@ -69,12 +74,7 @@ function revalidateBarberViews() {
 }
 
 function getTodayValue() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return getCurrentScheduleDateValue();
 }
 
 function getMinutesFromTime(time: string) {
@@ -222,7 +222,7 @@ export async function createWalkInAppointmentAction(
   }
 
   const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = getCurrentScheduleMinutes(now);
   const selectedMinutes = getMinutesFromTime(startTime);
 
   if (selectedMinutes < nowMinutes) {
@@ -402,13 +402,17 @@ export async function createBarberBlockAction(
   formData: FormData
 ): Promise<MutationResult> {
   const barber = await requireBarber();
-  const startDateTime = new Date(String(formData.get("startDateTime") || ""));
-  const endDateTime = new Date(String(formData.get("endDateTime") || ""));
+  const startDateTime = createScheduleDateTimeInput(
+    String(formData.get("startDateTime") || "")
+  );
+  const endDateTime = createScheduleDateTimeInput(
+    String(formData.get("endDateTime") || "")
+  );
   const reason = String(formData.get("reason") || "").trim();
 
   if (
-    Number.isNaN(startDateTime.getTime()) ||
-    Number.isNaN(endDateTime.getTime()) ||
+    !startDateTime ||
+    !endDateTime ||
     startDateTime >= endDateTime
   ) {
     return mutationError("Periodo de bloqueio invalido.");

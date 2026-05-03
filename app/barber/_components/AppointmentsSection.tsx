@@ -16,6 +16,7 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 import { buildAppointmentContactWhatsAppUrl } from "@/lib/whatsapp";
 import { updateAppointmentStatusAction } from "../actions";
 import { toggleAppointmentItemsDeliveredAction } from "../actions";
@@ -33,11 +34,8 @@ function formatDateTime(value: Date) {
   const date = new Date(value);
 
   return {
-    date: date.toLocaleDateString("pt-BR"),
-    time: date.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    date: formatScheduleDate(date),
+    time: formatScheduleTime(date),
   };
 }
 

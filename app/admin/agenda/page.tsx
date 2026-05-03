@@ -20,6 +20,7 @@ import {
   ADMIN_APPOINTMENT_STATUSES,
   getAdminAgendaReport,
 } from "@/lib/adminReports";
+import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 
 type SearchParams = {
   barberId?: string;
@@ -228,13 +229,10 @@ export default async function AdminAgendaPage({
                       className="border-b border-zinc-800 text-sm"
                     >
                       <td className="px-4 py-3">
-                        {date.toLocaleDateString("pt-BR")}
+                        {formatScheduleDate(date)}
                       </td>
                       <td className="px-4 py-3">
-                        {date.toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatScheduleTime(date)}
                       </td>
                       <td className="px-4 py-3">{appointment.barber.name}</td>
                       <td className="px-4 py-3">{appointment.customer.name}</td>

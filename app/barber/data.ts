@@ -9,6 +9,13 @@ import {
   getAppointmentTotalBarberPayout,
 } from "@/lib/appointmentServices";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
+import {
+  createScheduleDayStart,
+  getCurrentScheduleDate,
+  getCurrentScheduleDateValue,
+  getScheduleDateValue,
+  getScheduleDayRange,
+} from "@/lib/scheduleTime";
 
 export type BarberDashboardFilters = {
   view?: "day" | "today" | "upcoming" | "all";
@@ -30,25 +37,19 @@ function matchesSearch(value: string, search: string) {
   return value.toLowerCase().includes(search.toLowerCase());
 }
 
-function getDayRange(baseDate = new Date()) {
-  const start = new Date(baseDate);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(baseDate);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
+function getDayRange(date: string) {
+  return getScheduleDayRange(date) || getScheduleDayRange(getCurrentScheduleDateValue())!;
 }
 
 function getSelectedDate(filters: BarberDashboardFilters) {
   if (filters.date) {
-    const parsed = new Date(`${filters.date}T00:00:00`);
-    if (!Number.isNaN(parsed.getTime())) {
+    const parsed = createScheduleDayStart(filters.date);
+    if (parsed) {
       return parsed;
     }
   }
 
-  return new Date();
+  return createScheduleDayStart(getCurrentScheduleDateValue())!;
 }
 
 export async function getBarberDashboardData(
@@ -57,8 +58,13 @@ export async function getBarberDashboardData(
 ) {
   const view = normalizeDashboardView(filters.view);
   const selectedDate = getSelectedDate(filters);
-  const { start: selectedStart, end: selectedEnd } = getDayRange(selectedDate);
-  const { start: todayStart, end: todayEnd } = getDayRange(new Date());
+  const currentScheduleDate = getCurrentScheduleDate();
+  const { start: selectedStart, end: selectedEnd } = getDayRange(
+    getScheduleDateValue(selectedDate)
+  );
+  const { start: todayStart, end: todayEnd } = getDayRange(
+    getCurrentScheduleDateValue()
+  );
   const rawStatus = filters.status || "ACTIVE";
   const status = rawStatus === "ACTIVE" ? "ACTIVE" : normalizeAppointmentStatus(rawStatus);
 
@@ -71,7 +77,7 @@ export async function getBarberDashboardData(
       ? {
           barberId,
           date: {
-            gte: new Date(),
+            gte: currentScheduleDate,
           },
         }
       : {
@@ -163,7 +169,7 @@ export async function getBarberDashboardData(
         where: {
           barberId,
           date: {
-            gte: new Date(),
+            gte: currentScheduleDate,
           },
           status: {
             notIn: ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"],
@@ -197,7 +203,7 @@ export async function getBarberDashboardData(
         where: {
           barberId,
           endDateTime: {
-            gte: new Date(),
+            gte: currentScheduleDate,
           },
         },
         orderBy: {
@@ -306,9 +312,9 @@ export async function getBarberDashboardData(
     filters: {
       view,
       status,
-      date: view === "day" ? selectedDate.toISOString().slice(0, 10) : "",
+      date: view === "day" ? getScheduleDateValue(selectedDate) : "",
     },
-      summary: {
+    summary: {
       appointmentsToday,
       completedToday,
       clientsToday: new Set(activeTodayAppointments.map((appointment) => appointment.customerId)).size,

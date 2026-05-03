@@ -1,3 +1,5 @@
+import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
+
 function stripPhone(value: string) {
   return value.replace(/\D/g, "");
 }
@@ -29,14 +31,11 @@ export function normalizePhoneToWhatsApp(
 }
 
 function formatAppointmentDate(value: Date) {
-  return new Date(value).toLocaleDateString("pt-BR");
+  return formatScheduleDate(new Date(value));
 }
 
 function formatAppointmentTime(value: Date) {
-  return new Date(value).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatScheduleTime(new Date(value));
 }
 
 export function buildAppointmentContactWhatsAppUrl({

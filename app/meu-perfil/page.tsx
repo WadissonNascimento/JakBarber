@@ -12,6 +12,7 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 import ProfileForm from "./ProfileForm";
 
 export default async function MeuPerfilPage({
@@ -216,7 +217,7 @@ export default async function MeuPerfilPage({
                           Data
                         </p>
                         <p className="mt-2 text-sm text-white">
-                          {new Date(appointment.date).toLocaleDateString("pt-BR")}
+                          {formatScheduleDate(new Date(appointment.date))}
                         </p>
                       </div>
                       <div>
@@ -224,10 +225,7 @@ export default async function MeuPerfilPage({
                           Hora
                         </p>
                         <p className="mt-2 text-sm text-white">
-                          {new Date(appointment.date).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatScheduleTime(new Date(appointment.date))}
                         </p>
                       </div>
                       <div>
