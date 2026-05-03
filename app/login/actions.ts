@@ -6,10 +6,7 @@ import { signIn } from "@/auth";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
-export async function loginAction(
-  _prevState: FormFeedbackState,
-  formData: FormData
-): Promise<FormFeedbackState> {
+async function runLogin(formData: FormData): Promise<FormFeedbackState> {
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
@@ -49,4 +46,21 @@ export async function loginAction(
   }
 
   redirect("/painel");
+}
+
+export async function loginAction(
+  _prevState: FormFeedbackState,
+  formData: FormData
+): Promise<FormFeedbackState> {
+  return runLogin(formData);
+}
+
+export async function loginSubmitAction(formData: FormData) {
+  const result = await runLogin(formData);
+
+  if (result.error) {
+    redirect(`/login?error=${encodeURIComponent(result.error)}`);
+  }
+
+  redirect("/login");
 }

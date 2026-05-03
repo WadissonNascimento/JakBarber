@@ -1,22 +1,16 @@
-"use client";
-
 import Link from "next/link";
-import { useFormState } from "react-dom";
 import AuthSubmitButton from "@/components/AuthSubmitButton";
 import AuthFormMessage from "@/components/AuthFormMessage";
-import { adminLoginAction } from "@/app/admin/login/actions";
-import { initialFormFeedbackState } from "@/lib/formFeedbackState";
+import { adminLoginSubmitAction } from "@/app/admin/login/actions";
 
-export default function AdminLoginForm() {
-  const [state, formAction] = useFormState(
-    adminLoginAction,
-    initialFormFeedbackState
-  );
-  const formState = state ?? initialFormFeedbackState;
-
+export default function AdminLoginForm({
+  errorMessage = null,
+}: {
+  errorMessage?: string | null;
+}) {
   return (
     <form
-      action={formAction}
+      action={adminLoginSubmitAction}
       className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-white"
     >
       <h1 className="text-3xl font-bold">Login do admin</h1>
@@ -25,7 +19,7 @@ export default function AdminLoginForm() {
       </p>
 
       <div className="mt-6">
-        <AuthFormMessage message={formState.error} />
+        <AuthFormMessage message={errorMessage} />
       </div>
 
       <div className="space-y-4">

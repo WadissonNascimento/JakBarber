@@ -6,6 +6,7 @@ export default function LoginPage({
   searchParams?: {
     registered?: string;
     reset?: string;
+    error?: string;
   };
 }) {
   const successMessage =
@@ -14,10 +15,11 @@ export default function LoginPage({
       : searchParams?.reset === "1"
       ? "Senha atualizada com sucesso. Entre com sua nova senha."
       : null;
+  const errorMessage = searchParams?.error || null;
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-8 text-white">
-      <LoginForm successMessage={successMessage} />
+      <LoginForm errorMessage={errorMessage} successMessage={successMessage} />
     </main>
   );
 }

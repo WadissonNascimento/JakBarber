@@ -1,24 +1,19 @@
-"use client";
-
 import Link from "next/link";
-import { useFormState } from "react-dom";
 import AuthSubmitButton from "@/components/AuthSubmitButton";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
-import { loginAction } from "@/app/login/actions";
-import { initialFormFeedbackState } from "@/lib/formFeedbackState";
+import { loginSubmitAction } from "@/app/login/actions";
 
 export default function LoginForm({
+  errorMessage = null,
   successMessage = null,
 }: {
+  errorMessage?: string | null;
   successMessage?: string | null;
 }) {
-  const [state, formAction] = useFormState(loginAction, initialFormFeedbackState);
-  const formState = state ?? initialFormFeedbackState;
-
   return (
     <form
-      action={formAction}
+      action={loginSubmitAction}
       className="surface-card-strong w-full max-w-md rounded-[32px] p-6 shadow-2xl sm:p-8"
     >
       <div className="mb-8 text-center">
@@ -33,7 +28,7 @@ export default function LoginForm({
 
       <div className="space-y-3">
         <FeedbackMessage message={successMessage} tone="success" />
-        <AuthFormMessage message={formState.error} />
+        <AuthFormMessage message={errorMessage} />
       </div>
 
       <div className="space-y-5">

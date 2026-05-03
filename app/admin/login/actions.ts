@@ -7,10 +7,7 @@ import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 
-export async function adminLoginAction(
-  _prevState: FormFeedbackState,
-  formData: FormData
-): Promise<FormFeedbackState> {
+async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
@@ -57,4 +54,21 @@ export async function adminLoginAction(
   }
 
   redirect("/admin");
+}
+
+export async function adminLoginAction(
+  _prevState: FormFeedbackState,
+  formData: FormData
+): Promise<FormFeedbackState> {
+  return runAdminLogin(formData);
+}
+
+export async function adminLoginSubmitAction(formData: FormData) {
+  const result = await runAdminLogin(formData);
+
+  if (result.error) {
+    redirect(`/admin/login?error=${encodeURIComponent(result.error)}`);
+  }
+
+  redirect("/admin/login");
 }
