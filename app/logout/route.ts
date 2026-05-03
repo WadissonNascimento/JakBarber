@@ -25,7 +25,11 @@ export async function GET(request: Request) {
       name,
       value: "",
       expires: new Date(0),
+      maxAge: 0,
       path: "/",
+      secure: name.startsWith("__Secure-") || name.startsWith("__Host-"),
+      httpOnly: true,
+      sameSite: "lax",
     });
   }
 
