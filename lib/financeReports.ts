@@ -58,6 +58,10 @@ function formatWeekdayLabel(date: Date) {
   });
 }
 
+function getDeliveredItems<T extends { isDelivered: boolean }>(items: T[]) {
+  return items.filter((item) => item.isDelivered);
+}
+
 function getPreviousRange(start: Date, end: Date) {
   const duration = end.getTime() - start.getTime() + 1;
   const previousEnd = new Date(start.getTime() - 1);
@@ -182,7 +186,10 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       savedPaidAt: null,
     };
 
-    current.grossRevenue += getAppointmentGrandTotal(appointment.services, appointment.items);
+    current.grossRevenue += getAppointmentGrandTotal(
+      appointment.services,
+      getDeliveredItems(appointment.items)
+    );
     current.commissionTotal += getAppointmentTotalBarberPayout(
       appointment.services,
       appointment.items
@@ -237,7 +244,10 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
   const previousGrossRevenue = previousCompletedAppointments.reduce(
     (sum, appointment) =>
       sum +
-      getAppointmentGrandTotal(appointment.services, appointment.items),
+      getAppointmentGrandTotal(
+        appointment.services,
+        getDeliveredItems(appointment.items)
+      ),
     0
   );
   const previousCommissionTotal = previousCompletedAppointments.reduce(
@@ -314,7 +324,10 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       day: "2-digit",
       month: "2-digit",
     });
-    const grossRevenue = getAppointmentGrandTotal(appointment.services, appointment.items);
+    const grossRevenue = getAppointmentGrandTotal(
+      appointment.services,
+      getDeliveredItems(appointment.items)
+    );
     const commissionTotal = getAppointmentTotalBarberPayout(
       appointment.services,
       appointment.items
@@ -510,7 +523,11 @@ export async function getBarberPayoutSnapshot(input: {
   return {
     grossRevenue: completedAppointments.reduce(
       (sum, appointment) =>
-        sum + getAppointmentGrandTotal(appointment.services, appointment.items),
+        sum +
+        getAppointmentGrandTotal(
+          appointment.services,
+          getDeliveredItems(appointment.items)
+        ),
       0
     ),
     commissionTotal: completedAppointments.reduce(

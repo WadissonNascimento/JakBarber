@@ -42,7 +42,7 @@ export default async function AdminPedidosPage({
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
       <PageHeader
         title="Pedidos"
-        description="Acompanhe os pedidos da loja, confirme pagamentos e registre rastreios."
+        description="Acompanhe os pedidos da loja, atualize status e registre rastreios."
         actions={
           <Link
             href="/admin"

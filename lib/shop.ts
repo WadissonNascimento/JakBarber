@@ -1,7 +1,12 @@
-import { cache } from "react";
+import { cache as reactCache } from "react";
 import { headers } from "next/headers";
 import type { Shop } from "@prisma/client";
 import { basePrisma } from "@/lib/prisma-core";
+
+const cache: typeof reactCache =
+  typeof reactCache === "function"
+    ? reactCache
+    : ((<T extends (...args: unknown[]) => unknown>(callback: T) => callback) as typeof reactCache);
 
 export const DEFAULT_SHOP_ID = "shop_jak_barber";
 export const DEFAULT_SHOP_SLUG = "jak-barber";

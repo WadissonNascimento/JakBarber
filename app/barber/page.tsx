@@ -1,10 +1,3 @@
-import {
-  CalendarRange,
-  Clock3,
-  Scissors,
-  Users,
-} from "lucide-react";
-import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
 import BarberTodayDashboard from "./_components/BarberTodayDashboard";
 import { getBarberDashboardData } from "./data";
 import { requireActiveBarber } from "./guard";
@@ -17,42 +10,6 @@ export default async function BarberPage() {
     view: "day",
     status: "ALL",
   });
-
-  const entries = [
-    {
-      href: "/barber/agenda",
-      icon: CalendarRange,
-      title: "Agenda",
-      description: "Filtros, histórico e status dos atendimentos.",
-      badge: dashboard.summary.appointmentsToday
-        ? `${dashboard.summary.appointmentsToday}`
-        : undefined,
-    },
-    {
-      href: "/barber/servicos",
-      icon: Scissors,
-      title: "Serviços",
-      description: "Crie e ajuste seus serviços exclusivos.",
-      badge: dashboard.services.length ? `${dashboard.services.length}` : undefined,
-    },
-    {
-      href: "/barber/disponibilidade",
-      icon: Clock3,
-      title: "Disponibilidade",
-      description: "Horários da semana, pausas e bloqueios.",
-      badge:
-        dashboard.blocks.length || dashboard.recurringBlocks.length
-          ? `${dashboard.blocks.length + dashboard.recurringBlocks.length}`
-          : undefined,
-    },
-    {
-      href: "/barber/clientes",
-      icon: Users,
-      title: "Clientes",
-      description: "Perfis, contato e anotacoes importantes.",
-      badge: dashboard.clients.length ? `${dashboard.clients.length}` : undefined,
-    },
-  ];
 
   return (
     <div className="min-h-screen">
@@ -80,31 +37,8 @@ export default async function BarberPage() {
           barberName={session.user.name || "Barbeiro"}
           summary={dashboard.summary}
           walkInServices={dashboard.walkInServices}
+          clients={dashboard.clients}
         />
-
-        <div className="mt-6">
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Atalhos</h2>
-              <p className="mt-1 text-sm text-zinc-400">
-                Rotinas que não precisam ficar na frente da agenda.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {entries.map((entry) => (
-            <DashboardEntryCard
-              key={entry.href}
-              href={entry.href}
-              icon={entry.icon}
-              title={entry.title}
-              description={entry.description}
-              badge={entry.badge}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );

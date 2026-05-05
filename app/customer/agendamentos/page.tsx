@@ -13,6 +13,7 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   formatScheduleDate,
   formatScheduleTime,
@@ -108,6 +109,9 @@ export default async function CustomerAppointmentsPage() {
                 >
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
                     <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+                        {formatAppointmentPublicId(appointment.publicId)}
+                      </p>
                       <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
                         Serviços
                       </p>

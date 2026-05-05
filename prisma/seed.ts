@@ -930,6 +930,7 @@ async function createAppointments(
 
       await prisma.appointment.create({
         data: {
+          publicId: appointmentsCreated + 1,
           customerId: customer.id,
           barberId: selectedBarber.id,
           date: appointmentDate,

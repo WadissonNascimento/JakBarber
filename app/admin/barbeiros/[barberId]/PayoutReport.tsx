@@ -82,20 +82,22 @@ export default async function PayoutReport({
   );
 
   const productRows = appointments.flatMap((appointment) =>
-    appointment.items.map((item) => ({
-      id: item.id,
-      appointmentId: appointment.id,
-      time: appointment.date.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      customerName: appointment.customer.name || "Cliente",
-      name: `${item.productNameSnapshot} x${item.quantity}`,
-      gross: item.subtotal,
-      commission: formatCommission(item.commissionTypeSnapshot, item.commissionValueSnapshot),
-      payout: item.barberPayoutSnapshot,
-      type: "Produto",
-    }))
+    appointment.items
+      .filter((item) => item.isDelivered)
+      .map((item) => ({
+        id: item.id,
+        appointmentId: appointment.id,
+        time: appointment.date.toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        customerName: appointment.customer.name || "Cliente",
+        name: `${item.productNameSnapshot} x${item.quantity}`,
+        gross: item.subtotal,
+        commission: formatCommission(item.commissionTypeSnapshot, item.commissionValueSnapshot),
+        payout: item.barberPayoutSnapshot,
+        type: "Produto",
+      }))
   );
 
   const rows = [...serviceRows, ...productRows];

@@ -2,9 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import {
+  CalendarOff,
+  ChevronDown,
+  ListChecks,
+  Plus,
+  Repeat2,
+  Trash2,
+} from "lucide-react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import EmptyState from "@/components/ui/EmptyState";
-import { PremiumDateTimePicker } from "@/components/ui/PremiumFilters";
+import { PremiumDateTimePicker, PremiumTimePicker } from "@/components/ui/PremiumFilters";
 import SectionCard from "@/components/ui/SectionCard";
 import { weekDays } from "@/lib/barberSchedule";
 import { WeeklyAvailabilityForm } from "./WeeklyAvailabilityForm";
@@ -12,12 +20,70 @@ import {
   createBarberBlockAction,
   createRecurringBarberBlockAction,
   deleteBarberBlockAction,
-  deleteRecurringBarberBlockAction,
   saveWeeklyBarberAvailabilityAction,
 } from "../actions";
 import type { getBarberDashboardData } from "../data";
 
 type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
+
+function formatDateTime(value: Date | string) {
+  return new Date(value).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function MobilePanel({
+  title,
+  description,
+  icon,
+  count,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  count?: number;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="group rounded-[26px] border border-white/10 bg-black/20 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 marker:hidden sm:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)]">
+            {icon}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-base font-bold text-white">
+              {title}
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-zinc-400">
+              {description}
+            </span>
+          </span>
+        </div>
+
+        <span className="flex shrink-0 items-center gap-2">
+          {typeof count === "number" ? (
+            <span className="rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-xs font-bold text-zinc-200">
+              {count}
+            </span>
+          ) : null}
+          <ChevronDown className="h-5 w-5 text-zinc-400 transition group-open:rotate-180" />
+        </span>
+      </summary>
+
+      <div className="border-t border-white/10 p-4 pt-4 sm:p-5">{children}</div>
+    </details>
+  );
+}
 
 export function AvailabilitySection({
   availabilities,
@@ -63,26 +129,29 @@ export function AvailabilitySection({
 
   return (
     <SectionCard
-      title="Disponibilidade"
-      description="Abra horários e bloqueie pausas quando precisar."
-      className="rounded-[28px] bg-zinc-900/90"
+      title="Central de disponibilidade"
+      className="rounded-[30px]"
     >
-      <div className="mt-6 space-y-3">
+      <div className="space-y-4">
         <FeedbackMessage message={feedback.message} tone={feedback.tone} />
-      </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <WeeklyAvailabilityForm
           availabilities={availabilities}
+          blocks={blocks}
+          recurringBlocks={recurringBlocks}
           isPending={isPending && pendingKey === "weekly-availability"}
           onSave={(formData) =>
             runAction("weekly-availability", saveWeeklyBarberAvailabilityAction, formData)
           }
         />
 
-        <div className="space-y-4">
+        <MobilePanel
+          title="Bloquear período"
+          description="Folga, almoço, curso ou pausa de um dia específico."
+          icon={<Plus className="h-5 w-5" />}
+        >
           <form
-            className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               const form = event.currentTarget;
@@ -95,98 +164,40 @@ export function AvailabilitySection({
               );
             }}
           >
-            <h3 className="text-lg font-semibold text-white">Bloquear período</h3>
-            <p className="mt-1 text-sm text-zinc-400">
-              Use para folga, pausa, almoço ou qualquer indisponibilidade.
-            </p>
+            <PremiumDateTimePicker name="startDateTime" label="Início" required />
+            <PremiumDateTimePicker name="endDateTime" label="Fim" required />
 
-            <div className="mt-4 space-y-4">
-              <label className="block">
-                <PremiumDateTimePicker
-                  name="startDateTime"
-                  label="Início"
-                  required
-                />
-              </label>
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                Motivo
+              </span>
+              <input
+                name="reason"
+                placeholder="Ex.: almoço, curso, folga"
+                className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60"
+              />
+            </label>
 
-              <label className="block">
-                <PremiumDateTimePicker
-                  name="endDateTime"
-                  label="Fim"
-                  required
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm text-zinc-300">Motivo</span>
-                <input
-                  name="reason"
-                  placeholder="Ex.: almoço, curso, folga"
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={isPending && pendingKey === "create-block"}
-                className="w-full rounded-xl bg-[var(--brand)] px-4 py-3 font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isPending && pendingKey === "create-block"
-                  ? "Bloqueando..."
-                  : "Bloquear horário"}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isPending && pendingKey === "create-block"}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white shadow-[0_16px_34px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <CalendarOff className="h-4 w-4" />
+              {isPending && pendingKey === "create-block"
+                ? "Bloqueando..."
+                : "Bloquear horário"}
+            </button>
           </form>
+        </MobilePanel>
 
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5">
-            <h3 className="text-lg font-semibold text-white">Bloqueios futuros</h3>
-
-            <div className="mt-4 space-y-3">
-              {blocks.length === 0 ? (
-                <EmptyState
-                  title="Nenhum bloqueio futuro"
-                  description="Use bloqueios para almoço, folga, curso ou qualquer pausa pontual."
-                />
-              ) : (
-                blocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"
-                  >
-                    <p className="text-sm font-medium text-white">
-                      {new Date(block.startDateTime).toLocaleString("pt-BR")} até{" "}
-                      {new Date(block.endDateTime).toLocaleString("pt-BR")}
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {block.reason || "Sem motivo informado"}
-                    </p>
-
-                    <button
-                      type="button"
-                      disabled={isPending && pendingKey === `block-${block.id}`}
-                      onClick={() => {
-                        if (!window.confirm("Remover este bloqueio de horário?")) {
-                          return;
-                        }
-
-                        const formData = new FormData();
-                        formData.set("blockId", block.id);
-                        runAction(`block-${block.id}`, deleteBarberBlockAction, formData);
-                      }}
-                      className="mt-3 rounded-xl border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isPending && pendingKey === `block-${block.id}`
-                        ? "Removendo..."
-                        : "Remover bloqueio"}
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
+        <MobilePanel
+          title="Pausa fixa semanal"
+          description="Almoço, intervalo ou bloqueio que se repete toda semana."
+          icon={<Repeat2 className="h-5 w-5" />}
+        >
           <form
-            className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               const form = event.currentTarget;
@@ -199,125 +210,125 @@ export function AvailabilitySection({
               );
             }}
           >
-            <h3 className="text-lg font-semibold text-white">Bloqueio recorrente</h3>
-            <p className="mt-1 text-sm text-zinc-400">
-              Use para almoço, pausa fixa ou horários indisponíveis que se repetem toda semana.
-            </p>
-
-            <div className="mt-4 space-y-4">
-              <label className="block">
-                <span className="mb-2 block text-sm text-zinc-300">Dia da semana</span>
-                <select
-                  name="weekDay"
-                  defaultValue=""
-                  required
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
-                >
-                  <option value="" disabled>
-                    Selecione
-                  </option>
-                  {weekDays.map((day) => (
-                    <option key={day.value} value={day.value}>
-                      {day.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-300">Início</span>
-                  <input
-                    type="time"
-                    name="startTime"
-                    required
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm text-zinc-300">Fim</span>
-                  <input
-                    type="time"
-                    name="endTime"
-                    required
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-2 block text-sm text-zinc-300">Motivo</span>
-                <input
-                  name="reason"
-                  placeholder="Ex.: almoço fixo"
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={isPending && pendingKey === "recurring-block"}
-                className="w-full rounded-xl bg-[var(--brand)] px-4 py-3 font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                Dia da semana
+              </span>
+              <select
+                name="weekDay"
+                defaultValue=""
+                required
+                className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-[var(--brand)]/60"
               >
-                {isPending && pendingKey === "recurring-block"
-                  ? "Criando..."
-                  : "Criar bloqueio recorrente"}
-              </button>
-            </div>
-          </form>
+                <option value="" disabled>
+                  Selecione
+                </option>
+                {weekDays.map((day) => (
+                  <option key={day.value} value={day.value}>
+                    {day.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5">
-            <h3 className="text-lg font-semibold text-white">Bloqueios recorrentes</h3>
-
-            <div className="mt-4 space-y-3">
-              {recurringBlocks.length === 0 ? (
-                <EmptyState
-                  title="Nenhum bloqueio recorrente"
-                  description="Configure pausas fixas da semana para evitar reservas nesses periodos."
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                  Início
+                </span>
+                <PremiumTimePicker
+                  name="startTime"
+                  required
                 />
-              ) : (
-                recurringBlocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"
-                  >
-                    <p className="text-sm font-medium text-white">
-                      {weekDays.find((day) => day.value === block.weekDay)?.label || "Dia"}:{" "}
-                      {block.startTime} até {block.endTime}
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {block.reason || "Sem motivo informado"}
-                    </p>
+              </label>
 
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                  Fim
+                </span>
+                <PremiumTimePicker
+                  name="endTime"
+                  required
+                />
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                Motivo
+              </span>
+              <input
+                name="reason"
+                placeholder="Ex.: almoço fixo"
+                className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isPending && pendingKey === "recurring-block"}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white shadow-[0_16px_34px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Repeat2 className="h-4 w-4" />
+              {isPending && pendingKey === "recurring-block"
+                ? "Criando..."
+                : "Criar pausa fixa"}
+            </button>
+          </form>
+        </MobilePanel>
+
+        <MobilePanel
+          title="Bloqueios futuros"
+          description="Pausas pontuais já cadastradas."
+          icon={<ListChecks className="h-5 w-5" />}
+          count={blocks.length}
+        >
+          <div className="space-y-3">
+            {blocks.length === 0 ? (
+              <EmptyState
+                title="Nenhum bloqueio futuro"
+                description="Quando você criar uma folga ou pausa pontual, ela aparece aqui."
+              />
+            ) : (
+              blocks.map((block) => (
+                <div
+                  key={block.id}
+                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        {formatDateTime(block.startDateTime)} até{" "}
+                        {formatDateTime(block.endDateTime)}
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {block.reason || "Sem motivo informado"}
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      disabled={isPending && pendingKey === `recurring-${block.id}`}
+                      disabled={isPending && pendingKey === `block-${block.id}`}
                       onClick={() => {
-                        if (!window.confirm("Remover este bloqueio recorrente?")) {
+                        if (!window.confirm("Remover este bloqueio de horário?")) {
                           return;
                         }
 
                         const formData = new FormData();
-                        formData.set("recurringBlockId", block.id);
-                        runAction(
-                          `recurring-${block.id}`,
-                          deleteRecurringBarberBlockAction,
-                          formData
-                        );
+                        formData.set("blockId", block.id);
+                        runAction(`block-${block.id}`, deleteBarberBlockAction, formData);
                       }}
-                      className="mt-3 rounded-xl border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-400/35 text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label="Remover bloqueio"
                     >
-                      {isPending && pendingKey === `recurring-${block.id}`
-                        ? "Removendo..."
-                        : "Remover bloqueio recorrente"}
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+        </MobilePanel>
+
       </div>
     </SectionCard>
   );

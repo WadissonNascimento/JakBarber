@@ -66,6 +66,13 @@ export type CreateCustomerAppointmentInput = {
   conflictMode?: "OVERLAP" | "SAME_START_ONLY";
 };
 
+export type AppointmentItemDeliveryDecision = {
+  appointmentItemId: string;
+  isDelivered: boolean;
+};
+
+const FINAL_APPOINTMENT_STATUSES = ["CANCELLED", "COMPLETED", "NO_SHOW"];
+
 function getAppointmentDurationFromServices(
   services: Array<{
     duration: number;
@@ -78,6 +85,27 @@ function getAppointmentDurationFromServices(
       bufferAfter: service.bufferAfter,
     }))
   );
+}
+
+async function getNextAppointmentPublicId(
+  shopId: string,
+  db: AppointmentTransactionClient
+) {
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shopId}), hashtext('appointment_public_id'))`;
+
+  const latestAppointment = await db.appointment.findFirst({
+    where: {
+      shopId,
+    },
+    orderBy: {
+      publicId: "desc",
+    },
+    select: {
+      publicId: true,
+    },
+  });
+
+  return (latestAppointment?.publicId || 0) + 1;
 }
 
 export async function createCustomerAppointment(
@@ -156,8 +184,11 @@ async function createCustomerAppointmentInTransaction(
     throw new AppointmentMutationError("O barbeiro selecionado nao esta mais disponivel.");
   }
 
+  const shopId = barber.shopId;
+
   const availableServices = await db.service.findMany({
     where: {
+      shopId,
       id: {
         in: serviceIds,
       },
@@ -200,8 +231,9 @@ async function createCustomerAppointmentInTransaction(
   );
 
   const selectedProducts = extrasByProductId.size
-    ? await db.extraProduct.findMany({
+      ? await db.extraProduct.findMany({
         where: {
+          shopId,
           id: {
             in: Array.from(extrasByProductId.keys()),
           },
@@ -348,13 +380,17 @@ async function createCustomerAppointmentInTransaction(
     );
   }
 
+  const publicId = await getNextAppointmentPublicId(shopId, db);
+
   const appointment = await db.appointment.create({
     data: {
+      shopId,
+      publicId,
       barberId,
       customerId: input.customerId,
       date: appointmentDate,
       notes,
-      status: "PENDING",
+      status: "CONFIRMED",
       services: {
         create: orderedServices.map((service, index) => {
           const barberCommission = commissionByServiceId.get(service.id);
@@ -365,6 +401,7 @@ async function createCustomerAppointmentInTransaction(
           });
 
           return {
+            shopId,
             serviceId: service.id,
             orderIndex: index,
             nameSnapshot: service.name,
@@ -424,6 +461,7 @@ async function createCustomerAppointmentInTransaction(
         const shopRevenue = Number((unitFinancials.shopRevenue * quantity).toFixed(2));
 
         return {
+          shopId,
           appointmentId: appointment.id,
           extraProductId: product.id,
           productNameSnapshot: product.name,
@@ -443,6 +481,7 @@ async function createCustomerAppointmentInTransaction(
       await registerExtraStockMovement(
         {
           extraProductId: product.id,
+          shopId,
           type: "RESERVE_OUT",
           quantity,
           reason: `Reserva em agendamento ${appointment.id}`,
@@ -470,10 +509,14 @@ export async function updateAppointmentStatusForBarber(
     appointmentId,
     barberId,
     status,
+    cancellationReason,
+    itemDeliveryDecisions,
   }: {
     appointmentId: string;
     barberId: string;
     status: string;
+    cancellationReason?: string | null;
+    itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
   },
   db: AppointmentPrismaClient = prisma
 ) {
@@ -499,7 +542,14 @@ export async function updateAppointmentStatusForBarber(
         {
           appointmentId,
           nextStatus: normalizedStatus,
-          cancellationReason: "Cancelado pelo barbeiro.",
+          cancellationReason:
+            normalizedStatus === "CANCELLED"
+              ? cancellationReason?.trim() || "Cancelado pelo barbeiro."
+              : undefined,
+          itemDeliveryDecisions:
+            normalizedStatus === "COMPLETED"
+              ? itemDeliveryDecisions
+              : undefined,
         },
         tx
       ),
@@ -570,52 +620,63 @@ export async function cancelAppointmentByCustomer(
   );
 }
 
-export async function toggleAppointmentItemsDelivered(
+export async function setAppointmentItemDeliveryStatus(
   {
-    appointmentId,
+    appointmentItemId,
     barberId,
+    isDelivered,
     isAdmin = false,
   }: {
-    appointmentId: string;
+    appointmentItemId: string;
     barberId?: string;
+    isDelivered: boolean;
     isAdmin?: boolean;
   },
   db: AppointmentPrismaClient = prisma
 ) {
   return db.$transaction(async (tx) => {
-    const appointment = await tx.appointment.findUnique({
-      where: { id: appointmentId },
+    const item = await tx.appointmentItem.findUnique({
+      where: { id: appointmentItemId },
       include: {
-        items: true,
+        appointment: true,
       },
     });
 
-    if (!appointment) {
-      throw new AppointmentMutationError("Agendamento nao encontrado.");
+    if (!item) {
+      throw new AppointmentMutationError("Extra do agendamento não encontrado.");
     }
 
-    if (!isAdmin && appointment.barberId !== barberId) {
-      throw new AppointmentMutationError("Agendamento nao encontrado para este barbeiro.");
+    if (!isAdmin && item.appointment.barberId !== barberId) {
+      throw new AppointmentMutationError("Agendamento não encontrado para este barbeiro.");
     }
 
-    if (appointment.items.length === 0) {
-      throw new AppointmentMutationError("Esse agendamento nao possui extras.");
+    const appointmentStatus = normalizeAppointmentStatus(item.appointment.status);
+
+    if (FINAL_APPOINTMENT_STATUSES.includes(appointmentStatus)) {
+      throw new AppointmentMutationError(
+        "Esse atendimento já foi finalizado e não permite alterar extras."
+      );
     }
 
-    const shouldDeliver = appointment.items.some((item) => !item.isDelivered);
+    if (appointmentStatus !== "CONFIRMED") {
+      throw new AppointmentMutationError(
+        "Confirme o agendamento antes de conferir os extras."
+      );
+    }
 
-    await tx.appointmentItem.updateMany({
+    await tx.appointmentItem.update({
       where: {
-        appointmentId,
+        id: item.id,
       },
       data: {
-        isDelivered: shouldDeliver,
-        deliveredAt: shouldDeliver ? new Date() : null,
+        isDelivered,
+        deliveredAt: new Date(),
       },
     });
 
     return {
-      delivered: shouldDeliver,
+      delivered: isDelivered,
+      productName: item.productNameSnapshot,
     };
   });
 }
@@ -625,10 +686,12 @@ async function updateAppointmentStatusWithSideEffects(
     appointmentId,
     nextStatus,
     cancellationReason,
+    itemDeliveryDecisions,
   }: {
     appointmentId: string;
     nextStatus: AppointmentStatus;
     cancellationReason?: string;
+    itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
   },
   db: AppointmentTransactionClient
 ) {
@@ -640,11 +703,90 @@ async function updateAppointmentStatusWithSideEffects(
   });
 
   if (!appointment) {
-    throw new AppointmentMutationError("Agendamento nao encontrado.");
+    throw new AppointmentMutationError("Agendamento não encontrado.");
   }
 
-  if (nextStatus === "CANCELLED" && appointment.status !== "CANCELLED") {
-    for (const item of appointment.items) {
+  const currentStatus = normalizeAppointmentStatus(appointment.status);
+
+  if (currentStatus === nextStatus) {
+    return appointment;
+  }
+
+  if (FINAL_APPOINTMENT_STATUSES.includes(currentStatus)) {
+    throw new AppointmentMutationError("Esse atendimento já foi finalizado.");
+  }
+
+  let appointmentItems = appointment.items;
+
+  if (nextStatus === "COMPLETED" && itemDeliveryDecisions?.length) {
+    const itemIds = new Set(appointment.items.map((item) => item.id));
+    const deliveryDecisionByItemId = new Map<string, boolean>();
+
+    for (const decision of itemDeliveryDecisions) {
+      if (!itemIds.has(decision.appointmentItemId)) {
+        throw new AppointmentMutationError("Retirada inválida para esse atendimento.");
+      }
+
+      deliveryDecisionByItemId.set(
+        decision.appointmentItemId,
+        decision.isDelivered
+      );
+    }
+
+    const reviewedAt = new Date();
+    await Promise.all(
+      appointment.items.map((item) => {
+        if (!deliveryDecisionByItemId.has(item.id)) {
+          return null;
+        }
+
+        return db.appointmentItem.update({
+          where: {
+            id: item.id,
+          },
+          data: {
+            isDelivered: deliveryDecisionByItemId.get(item.id) || false,
+            deliveredAt: reviewedAt,
+          },
+        });
+      })
+    );
+
+    appointmentItems = appointment.items.map((item) => {
+      if (!deliveryDecisionByItemId.has(item.id)) {
+        return item;
+      }
+
+      return {
+        ...item,
+        isDelivered: deliveryDecisionByItemId.get(item.id) || false,
+        deliveredAt: reviewedAt,
+      };
+    });
+  }
+
+  if (
+    nextStatus === "COMPLETED" &&
+    appointmentItems.some((item) => item.deliveredAt === null)
+  ) {
+    throw new AppointmentMutationError(
+      "Marque cada retirada como entregue ou não entregue antes de concluir."
+    );
+  }
+
+  const shouldReturnExtras =
+    nextStatus === "CANCELLED" ||
+    nextStatus === "NO_SHOW" ||
+    nextStatus === "COMPLETED";
+  const returnedItems =
+    nextStatus === "COMPLETED"
+      ? appointmentItems.filter((item) => !item.isDelivered)
+      : shouldReturnExtras
+      ? appointmentItems
+      : [];
+
+  if (returnedItems.length > 0) {
+    for (const item of returnedItems) {
       await db.extraProduct.update({
         where: {
           id: item.extraProductId,
@@ -659,13 +801,34 @@ async function updateAppointmentStatusWithSideEffects(
       await registerExtraStockMovement(
         {
           extraProductId: item.extraProductId,
-          type: "CANCEL_RETURN",
+          shopId: appointment.shopId,
+          type:
+            nextStatus === "COMPLETED"
+              ? "UNDELIVERED_RETURN"
+              : nextStatus === "NO_SHOW"
+              ? "NO_SHOW_RETURN"
+              : "CANCEL_RETURN",
           quantity: item.quantity,
-          reason: `Devolucao por cancelamento do agendamento ${appointment.id}`,
+          reason:
+            nextStatus === "COMPLETED"
+              ? `Devolução de extra não entregue no agendamento ${appointment.id}`
+              : `Devolução por ${nextStatus === "NO_SHOW" ? "não comparecimento" : "cancelamento"} do agendamento ${appointment.id}`,
         },
         db
       );
     }
+  }
+
+  if (nextStatus === "CANCELLED" || nextStatus === "NO_SHOW") {
+    await db.appointmentItem.updateMany({
+      where: {
+        appointmentId,
+      },
+      data: {
+        isDelivered: false,
+        deliveredAt: null,
+      },
+    });
   }
 
   return db.appointment.update({

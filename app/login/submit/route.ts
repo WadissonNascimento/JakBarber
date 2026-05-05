@@ -1,6 +1,8 @@
 import { AuthError } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { signIn } from "@/auth";
+import { getPostLoginRedirect } from "@/lib/authRedirect";
+import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +64,6 @@ export async function POST(request: NextRequest) {
       email,
       password,
       redirect: false,
-      redirectTo: "/painel",
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -73,9 +74,19 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+    select: {
+      role: true,
+    },
+  });
+  const redirectTo = getPostLoginRedirect(user?.role);
+
   if (wantsJson(request)) {
-    return NextResponse.json({ ok: true, redirectTo: "/painel" });
+    return NextResponse.json({ ok: true, redirectTo });
   }
 
-  return NextResponse.redirect(new URL("/painel", request.url), 303);
+  return NextResponse.redirect(new URL(redirectTo, request.url), 303);
 }

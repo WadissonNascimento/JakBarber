@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
 import { getAppointmentServicesOccupiedDuration } from "@/lib/barberSchedule";
 import {
   getAppointmentDisplayName,
@@ -50,6 +49,24 @@ function getSelectedDate(filters: BarberDashboardFilters) {
   }
 
   return createScheduleDayStart(getCurrentScheduleDateValue())!;
+}
+
+function getAppointmentCardItems(
+  items: Array<{
+    id: string;
+    productNameSnapshot: string;
+    quantity: number;
+    isDelivered: boolean;
+    deliveredAt: Date | null;
+  }>
+) {
+  return items.map((item) => ({
+    id: item.id,
+    productNameSnapshot: item.productNameSnapshot,
+    quantity: item.quantity,
+    isDelivered: item.isDelivered,
+    deliveredAt: item.deliveredAt,
+  }));
 }
 
 export async function getBarberDashboardData(
@@ -323,7 +340,12 @@ export async function getBarberDashboardData(
         0
       ),
       completedRevenueToday: completedTodayAppointments.reduce(
-        (sum, appointment) => sum + getAppointmentGrandTotal(appointment.services, appointment.items),
+        (sum, appointment) =>
+          sum +
+          getAppointmentGrandTotal(
+            appointment.services,
+            appointment.items.filter((item) => item.isDelivered)
+          ),
         0
       ),
       barberPayoutToday: completedTodayAppointments.reduce(
@@ -334,6 +356,7 @@ export async function getBarberDashboardData(
       todayServices,
       todayAppointments: normalizedTodayAppointments.map((appointment) => ({
         id: appointment.id,
+        publicId: appointment.publicId,
         date: appointment.date,
         status: appointment.status,
         notes: appointment.notes,
@@ -345,14 +368,14 @@ export async function getBarberDashboardData(
         },
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
-        extrasLabel: getAppointmentItemsLabel(appointment.items),
-        itemsDelivered: appointment.items.length > 0 && appointment.items.every((item) => item.isDelivered),
+        items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
         occupiedDuration: getAppointmentServicesOccupiedDuration(appointment.services),
       })),
       nextAppointments: upcomingAppointments.map((appointment) => ({
         id: appointment.id,
+        publicId: appointment.publicId,
         date: appointment.date,
         status: normalizeAppointmentStatus(appointment.status),
         notes: appointment.notes,
@@ -364,8 +387,7 @@ export async function getBarberDashboardData(
         },
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
-        extrasLabel: getAppointmentItemsLabel(appointment.items),
-        itemsDelivered: appointment.items.length > 0 && appointment.items.every((item) => item.isDelivered),
+        items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
         occupiedDuration: getAppointmentServicesOccupiedDuration(appointment.services),

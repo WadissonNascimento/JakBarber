@@ -16,6 +16,7 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   ADMIN_APPOINTMENT_STATUSES,
   getAdminAgendaReport,
@@ -156,7 +157,7 @@ export default async function AdminAgendaPage({
 
         <SectionCard
           title="Em andamento"
-          description="Pendentes e confirmados aguardando atendimento."
+          description="Agendamentos aguardando atendimento."
         >
           <p className="text-3xl font-semibold text-amber-300">{summary.active}</p>
         </SectionCard>
@@ -207,6 +208,7 @@ export default async function AdminAgendaPage({
             <table className="w-full min-w-[1100px] border-collapse">
               <thead>
                 <tr className="border-b border-zinc-800 text-left text-sm text-zinc-400">
+                  <th className="px-4 py-3">ID</th>
                   <th className="px-4 py-3">Data</th>
                   <th className="px-4 py-3">Hora</th>
                   <th className="px-4 py-3">Barbeiro</th>
@@ -228,6 +230,9 @@ export default async function AdminAgendaPage({
                       key={appointment.id}
                       className="border-b border-zinc-800 text-sm"
                     >
+                      <td className="px-4 py-3 font-semibold text-[var(--brand-strong)]">
+                        {formatAppointmentPublicId(appointment.publicId)}
+                      </td>
                       <td className="px-4 py-3">
                         {formatScheduleDate(date)}
                       </td>

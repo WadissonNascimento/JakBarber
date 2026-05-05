@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import {
+  CalendarDays,
+  ChevronRight,
+  Mail,
+  Phone,
+  Search,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
-import SectionCard from "@/components/ui/SectionCard";
 
 type ClientItem = {
   id: string;
@@ -28,9 +36,27 @@ export default function ClientsDirectoryClient({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <>
-      <SectionCard title="Busca de clientes" description="Encontre por nome, e-mail ou telefone.">
+    <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(18,23,36,0.96),rgba(5,9,16,0.98))] shadow-[0_22px_70px_rgba(0,0,0,0.32)]">
+      <div className="border-b border-white/10 p-4 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)]">
+            <UsersRound className="h-6 w-6" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--brand-strong)]">
+              Diretório
+            </p>
+            <h2 className="mt-1 text-xl font-black text-white">
+              Buscar cliente
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-zinc-400">
+              Encontre por nome, e-mail ou telefone.
+            </p>
+          </div>
+        </div>
+
         <form
+          className="mt-4"
           onSubmit={(event) => {
             event.preventDefault();
             const trimmed = query.trim();
@@ -43,70 +69,138 @@ export default function ClientsDirectoryClient({
             });
           }}
         >
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              name="q"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por nome, email ou telefone"
-              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm outline-none"
-            />
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-xl bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending ? "Buscando..." : "Buscar"}
-            </button>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-2">
+            <div className="flex items-center gap-2">
+              <div className="flex min-h-11 flex-1 items-center gap-2 rounded-xl bg-white/[0.035] px-3">
+                <Search className="h-4 w-4 shrink-0 text-zinc-500" />
+                <input
+                  type="text"
+                  name="q"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Nome, e-mail ou telefone"
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand)] px-4 text-sm font-bold text-white shadow-[0_12px_24px_rgba(37,99,235,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isPending ? "..." : "Buscar"}
+              </button>
+            </div>
           </div>
         </form>
-      </SectionCard>
+      </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-zinc-500">
+              Resultado
+            </p>
+            <p className="mt-1 text-sm font-semibold text-zinc-300">
+              {clients.length} cliente{clients.length === 1 ? "" : "s"} encontrado
+              {clients.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          {search ? (
+            <Link
+              href={pathname}
+              className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              Limpar
+            </Link>
+          ) : null}
+        </div>
+
         {clients.length === 0 ? (
           <EmptyState
             title="Nenhum cliente encontrado"
             description="Revise a busca ou aguarde novos atendimentos para ampliar sua base."
           />
         ) : (
-          clients.map((client) => (
-            <div
-              key={client.id}
-              className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"
-            >
-              <div className="grid gap-4 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-center">
-                <div>
-                  <p className="text-lg font-semibold text-white">{client.name}</p>
-                  <p className="mt-1 text-sm text-zinc-400">
-                    {client.email || client.phone || "Sem contato"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    último atendimento
-                  </p>
-                  <p className="mt-2 text-sm text-white">
-                    {new Date(client.lastAppointment).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    Total de atendimentos
-                  </p>
-                  <p className="mt-2 text-sm text-white">{client.totalAppointments}</p>
-                </div>
-                <Link
-                  href={`/barber/clientes/${client.id}`}
-                  className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                >
-                  Abrir perfil
-                </Link>
-              </div>
-            </div>
-          ))
+          <div className="space-y-3">
+            {clients.map((client) => (
+              <ClientCard key={client.id} client={client} />
+            ))}
+          </div>
         )}
       </div>
-    </>
+    </section>
+  );
+}
+
+function ClientCard({ client }: { client: ClientItem }) {
+  const contact = client.phone || client.email || "Sem contato";
+  const ContactIcon = client.phone ? Phone : client.email ? Mail : UserRound;
+
+  return (
+    <Link
+      href={`/barber/clientes/${client.id}`}
+      className="group block rounded-3xl border border-white/10 bg-black/20 p-4 transition hover:border-[var(--brand)]/35 hover:bg-white/[0.045]"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)]">
+          <UserRound className="h-6 w-6" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-black text-white">
+                {client.name}
+              </h3>
+              <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-sm text-zinc-400">
+                <ContactIcon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{contact}</span>
+              </p>
+            </div>
+            <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-zinc-500 transition group-hover:translate-x-0.5 group-hover:text-[var(--brand-strong)]" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
+        <MiniInfo
+          icon={<CalendarDays className="h-3.5 w-3.5" />}
+          label="Último"
+          value={new Date(client.lastAppointment).toLocaleDateString("pt-BR")}
+        />
+        <MiniInfo
+          icon={<UsersRound className="h-3.5 w-3.5" />}
+          label="Atend."
+          value={String(client.totalAppointments)}
+          compact
+        />
+      </div>
+    </Link>
+  );
+}
+
+function MiniInfo({
+  icon,
+  label,
+  value,
+  compact = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`flex min-h-11 items-center gap-2 px-3 py-2 ${
+        compact ? "border-l border-white/10" : ""
+      }`}
+    >
+      <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+        {icon}
+        {label}
+      </p>
+      <p className="text-sm font-black text-white">{value}</p>
+    </div>
   );
 }

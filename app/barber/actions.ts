@@ -9,7 +9,7 @@ import {
 import {
   AppointmentMutationError,
   createCustomerAppointment,
-  toggleAppointmentItemsDelivered,
+  setAppointmentItemDeliveryStatus,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
 import {
@@ -73,6 +73,21 @@ function revalidateBarberViews() {
   revalidatePath("/admin/barbeiros");
 }
 
+function parseItemDeliveryDecisions(formData: FormData) {
+  return formData
+    .getAll("itemDeliveryDecision")
+    .map((value) => String(value))
+    .map((value) => {
+      const [appointmentItemId, deliveryStatus] = value.split(":");
+
+      return {
+        appointmentItemId: appointmentItemId?.trim() || "",
+        isDelivered: deliveryStatus === "delivered",
+      };
+    })
+    .filter((decision) => decision.appointmentItemId);
+}
+
 function getTodayValue() {
   return getCurrentScheduleDateValue();
 }
@@ -132,9 +147,18 @@ export async function updateAppointmentStatusAction(
   const status = normalizeAppointmentStatus(
     String(formData.get("status") || "")
   );
+  const cancellationReason = String(
+    formData.get("cancellationReason") || ""
+  ).trim();
+  const itemDeliveryDecisions =
+    status === "COMPLETED" ? parseItemDeliveryDecisions(formData) : [];
 
   if (!appointmentId || !APPOINTMENT_STATUSES.includes(status as never)) {
     return mutationError("Status de agendamento invalido.");
+  }
+
+  if (status === "CANCELLED" && !cancellationReason) {
+    return mutationError("Informe o motivo do cancelamento.");
   }
 
   try {
@@ -142,6 +166,8 @@ export async function updateAppointmentStatusAction(
       appointmentId,
       barberId: barber.id,
       status,
+      cancellationReason,
+      itemDeliveryDecisions,
     });
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
@@ -155,20 +181,22 @@ export async function updateAppointmentStatusAction(
   return mutationSuccess("Status do agendamento atualizado.");
 }
 
-export async function toggleAppointmentItemsDeliveredAction(
+export async function setAppointmentItemDeliveryStatusAction(
   formData: FormData
 ): Promise<MutationResult> {
   const barber = await requireBarber();
-  const appointmentId = String(formData.get("appointmentId") || "").trim();
+  const appointmentItemId = String(formData.get("appointmentItemId") || "").trim();
+  const isDelivered = String(formData.get("isDelivered") || "") === "true";
 
-  if (!appointmentId) {
-    return mutationError("Agendamento invalido.");
+  if (!appointmentItemId) {
+    return mutationError("Extra invalido.");
   }
 
   try {
-    const result = await toggleAppointmentItemsDelivered({
-      appointmentId,
+    const result = await setAppointmentItemDeliveryStatus({
+      appointmentItemId,
       barberId: barber.id,
+      isDelivered,
     });
 
     revalidateBarberViews();
@@ -177,8 +205,8 @@ export async function toggleAppointmentItemsDeliveredAction(
 
     return mutationSuccess(
       result.delivered
-        ? "Extras marcados como entregues."
-        : "Entrega dos extras desmarcada."
+        ? `${result.productName} marcado como entregue.`
+        : `${result.productName} marcado como não entregue.`
     );
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
@@ -193,9 +221,15 @@ export async function createWalkInAppointmentAction(
   formData: FormData
 ): Promise<MutationResult> {
   const barber = await requireBarber();
+  const customerId = String(formData.get("customerId") || "").trim();
   const customerName = String(formData.get("customerName") || "").trim();
   const customerPhone = String(formData.get("customerPhone") || "").trim();
-  const serviceId = String(formData.get("serviceId") || "").trim();
+  const serviceIds = formData
+    .getAll("serviceIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const legacyServiceId = String(formData.get("serviceId") || "").trim();
+  const selectedServiceIds = serviceIds.length > 0 ? serviceIds : [legacyServiceId].filter(Boolean);
   const startTime = String(formData.get("startTime") || "").trim();
   const extraNotes = String(formData.get("notes") || "").trim();
 
@@ -211,14 +245,15 @@ export async function createWalkInAppointmentAction(
   }
 
   if (
-    !customerName ||
+    (!customerId && !customerName) ||
     customerName.length > 80 ||
     customerPhone.length > 30 ||
-    !serviceId ||
+    selectedServiceIds.length === 0 ||
+    selectedServiceIds.length > 8 ||
     !/^\d{2}:\d{2}$/.test(startTime) ||
     extraNotes.length > 200
   ) {
-    return mutationError("Preencha cliente, servico e horario corretamente.");
+    return mutationError("Preencha cliente, servicos e horario corretamente.");
   }
 
   const now = new Date();
@@ -229,9 +264,11 @@ export async function createWalkInAppointmentAction(
     return mutationError("Encaixe precisa usar um horario que ainda nao passou.");
   }
 
-  const service = await prisma.service.findFirst({
+  const services = await prisma.service.findMany({
     where: {
-      id: serviceId,
+      id: {
+        in: selectedServiceIds,
+      },
       OR: [{ barberId: barber.id }, { barberId: null }],
       isActive: true,
     },
@@ -240,11 +277,32 @@ export async function createWalkInAppointmentAction(
     },
   });
 
-  if (!service) {
-    return mutationError("Servico indisponivel para encaixe.");
+  if (services.length !== selectedServiceIds.length) {
+    return mutationError("Um ou mais servicos estao indisponiveis para encaixe.");
   }
 
-  const existingCustomer = customerPhone
+  const selectedCustomer = customerId
+    ? await prisma.user.findFirst({
+        where: {
+          id: customerId,
+          role: "CUSTOMER",
+          customerAppointments: {
+            some: {
+              barberId: barber.id,
+            },
+          },
+        },
+        select: {
+          id: true,
+        },
+      })
+    : null;
+
+  if (customerId && !selectedCustomer) {
+    return mutationError("Cliente selecionado nao pertence a sua base.");
+  }
+
+  const existingCustomer = !selectedCustomer && customerPhone
     ? await prisma.user.findFirst({
         where: {
           phone: customerPhone,
@@ -257,6 +315,7 @@ export async function createWalkInAppointmentAction(
     : null;
 
   const customer =
+    selectedCustomer ||
     existingCustomer ||
     (await prisma.user.create({
       data: {
@@ -274,7 +333,7 @@ export async function createWalkInAppointmentAction(
     const appointment = await createCustomerAppointment({
       customerId: customer.id,
       barberId: barber.id,
-      serviceIds: [service.id],
+      serviceIds: selectedServiceIds,
       date: getTodayValue(),
       time: startTime,
       notes: `Encaixe${extraNotes ? ` - ${extraNotes}` : ""}`,

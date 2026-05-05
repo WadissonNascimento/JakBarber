@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { AppointmentsSection } from "../_components/AppointmentsSection";
-import WalkInAppointmentCard from "../_components/WalkInAppointmentCard";
 import { getBarberDashboardData } from "../data";
 import { requireActiveBarber } from "../guard";
 
@@ -20,37 +20,28 @@ export default async function BarberAgendaPage({
 }) {
   const { session } = await requireActiveBarber();
   const dashboard = await getBarberDashboardData(session.user.id, searchParams);
+  const barberName = session.user.name || "Barbeiro";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
+      <Link
+        href="/barber"
+        className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] hover:text-white"
+      >
+        <ArrowLeft className="h-4 w-4 text-[var(--brand-strong)]" />
+        Voltar para o painel
+      </Link>
+
       <PageHeader
-        title="Agenda do barbeiro"
+        title={`Agenda de ${barberName}`}
         description="Horários, clientes e status dos atendimentos."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <WalkInAppointmentCard
-              services={dashboard.walkInServices}
-              activeAppointments={dashboard.summary.todayAppointments.map((appointment) => ({
-                date: appointment.date,
-                status: appointment.status,
-                occupiedDuration: appointment.occupiedDuration,
-              }))}
-            />
-            <Link
-              href="/barber"
-              className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-            >
-              Voltar
-            </Link>
-          </div>
-        }
       />
 
       <div className="mt-6">
         <AppointmentsSection
           appointments={dashboard.appointments}
           filters={dashboard.filters}
-          barberName={session.user.name || "Barbeiro"}
+          barberName={barberName}
         />
       </div>
     </div>

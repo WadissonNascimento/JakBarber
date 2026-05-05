@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Minus, Plus } from "lucide-react";
 
 type FilterOption = {
   value: string;
@@ -367,6 +367,238 @@ function formatDateTimeLabel(value: string) {
   if (!parsedDate) return time;
 
   return `${parsedDate.toLocaleDateString("pt-BR")} ${time || "--:--"}`;
+}
+
+function formatTimeLabel(value: string) {
+  return value || "--:--";
+}
+
+const quickTimeOptions = ["08:00", "09:00", "10:00", "12:00", "14:00", "18:00"];
+
+function clampTimePart(value: number, max: number) {
+  if (value < 0) return max;
+  if (value > max) return 0;
+  return value;
+}
+
+function normalizeMinute(value: number) {
+  return clampTimePart(value, 55);
+}
+
+function toTimePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+export function PremiumTimePicker({
+  name,
+  label,
+  value,
+  defaultValue = "",
+  disabled = false,
+  required = false,
+  className = "",
+  onChange,
+}: BaseFilterProps & {
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+}) {
+  const initial = value ?? defaultValue;
+  const [internalValue, setInternalValue] = useState(initial);
+  const [open, setOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const selectedValue = value ?? internalValue;
+  const [draftHour, setDraftHour] = useState(
+    selectedValue ? selectedValue.slice(0, 2) : "08"
+  );
+  const [draftMinute, setDraftMinute] = useState(
+    selectedValue ? selectedValue.slice(3, 5) : "00"
+  );
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value);
+      if (value) {
+        setDraftHour(value.slice(0, 2));
+        setDraftMinute(value.slice(3, 5));
+      }
+    }
+  }, [value]);
+
+  function commitValue(nextHour = draftHour, nextMinute = draftMinute) {
+    const nextValue = `${nextHour}:${nextMinute}`;
+    setInternalValue(nextValue);
+    onChange?.(nextValue);
+    setOpen(false);
+  }
+
+  function moveHour(offset: number) {
+    setDraftHour((current) => toTimePart(clampTimePart(Number(current) + offset, 23)));
+  }
+
+  function moveMinute(offset: number) {
+    setDraftMinute((current) => toTimePart(normalizeMinute(Number(current) + offset)));
+  }
+
+  function selectQuickTime(time: string) {
+    setDraftHour(time.slice(0, 2));
+    setDraftMinute(time.slice(3, 5));
+  }
+
+  const dialog =
+    open && !disabled && isMounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-label={label || "Selecionar horário"}
+            onClick={() => setOpen(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#050b16] p-4 text-white shadow-[0_24px_90px_rgba(0,0,0,0.7)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+                  {label || "Horário"}
+                </p>
+                <p className="mt-2 text-5xl font-black tracking-[-0.05em]">
+                  {draftHour}
+                  <span className="mx-1 text-[var(--brand-strong)]">:</span>
+                  {draftMinute}
+                </p>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                    Hora
+                  </p>
+                  <div className="mt-3 grid grid-cols-[44px_1fr_44px] items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => moveHour(-1)}
+                      className="flex h-11 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                      aria-label="Diminuir hora"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <div className="text-center text-3xl font-black tracking-tight">
+                      {draftHour}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => moveHour(1)}
+                      className="flex h-11 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                      aria-label="Aumentar hora"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                    Minuto
+                  </p>
+                  <div className="mt-3 grid grid-cols-[44px_1fr_44px] items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => moveMinute(-5)}
+                      className="flex h-11 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                      aria-label="Diminuir minuto"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <div className="text-center text-3xl font-black tracking-tight">
+                      {draftMinute}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => moveMinute(5)}
+                      className="flex h-11 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                      aria-label="Aumentar minuto"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                  Atalhos
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {quickTimeOptions.map((time) => (
+                    <button
+                      key={time}
+                      type="button"
+                      onClick={() => selectQuickTime(time)}
+                      className={`min-h-10 rounded-xl border px-2 text-sm font-bold transition ${
+                        `${draftHour}:${draftMinute}` === time
+                          ? "border-[var(--brand)]/55 bg-[var(--brand-muted)] text-[var(--brand-strong)]"
+                          : "border-white/10 bg-black/20 text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="min-h-11 rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => commitValue()}
+                  className="min-h-11 rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <div className={`relative ${className}`.trim()}>
+      {label ? (
+        <p className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+          {label}
+        </p>
+      ) : null}
+      {name ? <input type="hidden" name={name} value={selectedValue} required={required} /> : null}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm font-semibold outline-none transition ${
+          disabled
+            ? "cursor-not-allowed border-white/10 bg-black/10 text-zinc-500"
+            : "border-white/10 bg-black/25 text-white hover:border-[var(--brand)]/45 focus:border-[var(--brand)]/60"
+        }`}
+      >
+        <span>{formatTimeLabel(selectedValue)}</span>
+        <Clock3 className="h-4 w-4 shrink-0 text-zinc-400" />
+      </button>
+
+      {dialog}
+    </div>
+  );
 }
 
 export function PremiumDateTimePicker({

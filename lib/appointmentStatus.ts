@@ -18,21 +18,23 @@ export function normalizeAppointmentStatus(status: string) {
 
 export function appointmentStatusLabel(status: string) {
   switch (normalizeAppointmentStatus(status)) {
+    case "PENDING":
     case "CONFIRMED":
-      return "Confirmado";
+      return "Agendado";
     case "COMPLETED":
-      return "Concluido";
+      return "Concluído";
     case "CANCELLED":
       return "Cancelado";
     case "NO_SHOW":
-      return "Nao compareceu";
+      return "Não compareceu";
     default:
-      return "Pendente";
+      return "Agendado";
   }
 }
 
 export function appointmentStatusColor(status: string) {
   switch (normalizeAppointmentStatus(status)) {
+    case "PENDING":
     case "CONFIRMED":
       return "text-green-400";
     case "COMPLETED":
@@ -48,6 +50,7 @@ export function appointmentStatusColor(status: string) {
 
 export function appointmentStatusVariant(status: string) {
   switch (normalizeAppointmentStatus(status)) {
+    case "PENDING":
     case "CONFIRMED":
     case "COMPLETED":
       return "success";

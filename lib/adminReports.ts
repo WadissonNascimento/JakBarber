@@ -10,6 +10,7 @@ import {
   appointmentStatusLabel,
   normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { orderStatusLabel } from "@/lib/orderStatus";
 import {
   formatScheduleDate,
@@ -218,6 +219,7 @@ export function buildAgendaCsv(
   appointments: Awaited<ReturnType<typeof getAdminAgendaReport>>["appointments"]
 ) {
   const header = [
+    "ID",
     "Data",
     "Hora",
     "Barbeiro",
@@ -231,6 +233,7 @@ export function buildAgendaCsv(
   ];
 
   const rows = appointments.map((appointment) => [
+    formatAppointmentPublicId(appointment.publicId),
     formatDate(appointment.date),
     formatTime(appointment.date),
     appointment.barber.name || appointment.barber.email || "Barbeiro",

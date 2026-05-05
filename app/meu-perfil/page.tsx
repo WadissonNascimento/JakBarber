@@ -12,6 +12,7 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 import ProfileForm from "./ProfileForm";
 
@@ -196,6 +197,9 @@ export default async function MeuPerfilPage({
                   >
                     <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                       <div className="min-w-0">
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
+                          {formatAppointmentPublicId(appointment.publicId)}
+                        </p>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                           {index === 0 ? "último atendimento" : "Atendimento"}
                         </p>

@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
 import { appointmentStatusLabel } from "@/lib/appointmentStatus";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   formatScheduleTime,
   getCurrentScheduleDate,
@@ -227,7 +228,7 @@ export default async function AdminPage() {
             <div className="mt-4 space-y-3">
               {nextAppointments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-400">
-                  Nenhum horário pendente para hoje.
+                  Nenhum horário agendado para hoje.
                 </div>
               ) : (
                 nextAppointments.map((appointment) => (
@@ -239,6 +240,9 @@ export default async function AdminPage() {
                       <div>
                         <p className="text-2xl font-bold text-white">
                           {formatScheduleTime(new Date(appointment.date))}
+                        </p>
+                        <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                          {formatAppointmentPublicId(appointment.publicId)}
                         </p>
                         <p className="mt-2 font-semibold text-white">
                           {appointment.customer.name || "Cliente"}

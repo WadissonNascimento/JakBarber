@@ -7,7 +7,9 @@ import {
   createCustomerAppointment,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
+import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
 import { getBookingAvailability } from "@/lib/bookingAvailability";
+import { createScheduleDate } from "@/lib/scheduleTime";
 
 function getNextBusinessDay(baseDate = new Date()) {
   const date = new Date(baseDate);
@@ -180,7 +182,7 @@ test("customer can book and conclude an appointment", async () => {
 
     assert.equal(appointment.customerId, customer.id);
     assert.equal(appointment.barberId, barber.id);
-    assert.equal(appointment.status, "PENDING");
+    assert.equal(appointment.status, "CONFIRMED");
     assert.equal(appointment.services.length, 2);
     assert.equal(appointment.services[0].nameSnapshot, `Corte Teste ${runId}`);
     assert.equal(appointment.services[1].nameSnapshot, `Barba Teste ${runId}`);
@@ -315,7 +317,7 @@ test("customer cannot create concurrent appointment for the same barber and time
     const appointmentCount = await db.appointment.count({
       where: {
         barberId: barber.id,
-        date: new Date(`${date}T16:00:00`),
+        date: createScheduleDate(date, "16:00")!,
         status: {
           in: ["PENDING", "CONFIRMED"],
         },
@@ -369,7 +371,7 @@ test("booking availability respects recurring blocks and ignores cancelled appoi
         barberId: barber.id,
         serviceIds: [corte.id],
         date,
-        now: new Date(`${date}T08:00:00`),
+        now: createScheduleDate(date, "08:00")!,
       },
       db
     );
@@ -443,6 +445,128 @@ test("customer can reserve extras and stock returns on cancellation", async () =
 
     assert.equal(restoredProducts.find((product) => product.id === pomada.id)?.stock, 4);
     assert.equal(restoredProducts.find((product) => product.id === bebida.id)?.stock, 6);
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("barber reviews extras before completing and payout uses delivered items only", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte, pomada, bebida } = await createFixture(db, runId);
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+
+    await db.extraProduct.updateMany({
+      where: {
+        id: {
+          in: [pomada.id, bebida.id],
+        },
+      },
+      data: {
+        commissionType: "PERCENT",
+        commissionValue: 50,
+      },
+    });
+
+    const appointment = await createCustomerAppointment(
+      {
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        extras: [
+          { extraProductId: pomada.id, quantity: 1 },
+          { extraProductId: bebida.id, quantity: 2 },
+        ],
+        date,
+        time: "12:00",
+      },
+      db
+    );
+
+    await updateAppointmentStatusForBarber(
+      {
+        appointmentId: appointment.id,
+        barberId: barber.id,
+        status: "CONFIRMED",
+      },
+      db
+    );
+
+    await assert.rejects(
+      () =>
+        updateAppointmentStatusForBarber(
+          {
+            appointmentId: appointment.id,
+            barberId: barber.id,
+            status: "COMPLETED",
+          },
+          db
+        ),
+      AppointmentMutationError
+    );
+
+    const booked = await db.appointment.findUniqueOrThrow({
+      where: { id: appointment.id },
+      include: {
+        items: true,
+      },
+    });
+    const deliveredItem = booked.items.find((item) => item.extraProductId === pomada.id)!;
+    const notDeliveredItem = booked.items.find((item) => item.extraProductId === bebida.id)!;
+
+    await updateAppointmentStatusForBarber(
+      {
+        appointmentId: appointment.id,
+        barberId: barber.id,
+        status: "COMPLETED",
+        itemDeliveryDecisions: [
+          {
+            appointmentItemId: deliveredItem.id,
+            isDelivered: true,
+          },
+          {
+            appointmentItemId: notDeliveredItem.id,
+            isDelivered: false,
+          },
+        ],
+      },
+      db
+    );
+
+    const completed = await db.appointment.findUniqueOrThrow({
+      where: { id: appointment.id },
+      include: {
+        items: true,
+        services: true,
+      },
+    });
+    const products = await db.extraProduct.findMany({
+      where: {
+        id: {
+          in: [pomada.id, bebida.id],
+        },
+      },
+    });
+    const servicePayout = completed.services.reduce(
+      (sum, service) => sum + service.barberPayoutSnapshot,
+      0
+    );
+    const deliveredPayout =
+      completed.items.find((item) => item.extraProductId === pomada.id)?.barberPayoutSnapshot ||
+      0;
+
+    assert.equal(completed.status, "COMPLETED");
+    assert.equal(completed.items.find((item) => item.extraProductId === pomada.id)?.isDelivered, true);
+    assert.equal(completed.items.find((item) => item.extraProductId === bebida.id)?.isDelivered, false);
+    assert.equal(products.find((product) => product.id === pomada.id)?.stock, 3);
+    assert.equal(products.find((product) => product.id === bebida.id)?.stock, 6);
+    assert.equal(
+      getAppointmentTotalBarberPayout(completed.services, completed.items),
+      servicePayout + deliveredPayout
+    );
   } finally {
     await cleanup();
     await db.$disconnect();

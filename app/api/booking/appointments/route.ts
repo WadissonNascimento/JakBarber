@@ -5,6 +5,7 @@ import {
   AppointmentMutationError,
   createCustomerAppointment,
 } from "@/lib/appointmentMutations";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   enforceRateLimit,
   logSecurityEvent,
@@ -82,8 +83,9 @@ export async function POST(request: Request) {
     revalidatePath("/agendar");
 
     return NextResponse.json({
-      message: "Agendamento confirmado com sucesso.",
+      message: "Agendamento realizado com sucesso.",
       appointmentId: appointment.id,
+      appointmentCode: formatAppointmentPublicId(appointment.publicId),
     });
   } catch (error) {
     if (error instanceof Error && error.message === "PAYLOAD_TOO_LARGE") {

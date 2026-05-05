@@ -3,7 +3,9 @@
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
+import { getPostLoginRedirect } from "@/lib/authRedirect";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
+import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
 async function runLogin(formData: FormData): Promise<FormFeedbackState> {
@@ -45,7 +47,16 @@ async function runLogin(formData: FormData): Promise<FormFeedbackState> {
     throw error;
   }
 
-  redirect("/painel");
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+    select: {
+      role: true,
+    },
+  });
+
+  redirect(getPostLoginRedirect(user?.role));
 }
 
 export async function loginAction(

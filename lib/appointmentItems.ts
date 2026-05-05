@@ -8,6 +8,7 @@ export type AppointmentItemSummary = {
   unitPrice: number;
   subtotal: number;
   isDelivered: boolean;
+  deliveredAt: Date | null;
 };
 
 export function getAppointmentItemsSummary(
@@ -19,6 +20,7 @@ export function getAppointmentItemsSummary(
     unitPrice: number;
     subtotal: number;
     isDelivered: boolean;
+    deliveredAt: Date | null;
   }>
 ): AppointmentItemSummary[] {
   return items.map((item) => ({
@@ -29,6 +31,7 @@ export function getAppointmentItemsSummary(
     unitPrice: item.unitPrice,
     subtotal: item.subtotal,
     isDelivered: item.isDelivered,
+    deliveredAt: item.deliveredAt,
   }));
 }
 
@@ -43,17 +46,25 @@ export function getAppointmentItemsTotal(
 export function getAppointmentItemsBarberPayoutTotal(
   items: Array<{
     barberPayoutSnapshot: number;
+    isDelivered?: boolean;
   }>
 ) {
-  return items.reduce((sum, item) => sum + item.barberPayoutSnapshot, 0);
+  return items.reduce(
+    (sum, item) => sum + (item.isDelivered ? item.barberPayoutSnapshot : 0),
+    0
+  );
 }
 
 export function getAppointmentItemsShopRevenueTotal(
   items: Array<{
     shopRevenueSnapshot: number;
+    isDelivered?: boolean;
   }>
 ) {
-  return items.reduce((sum, item) => sum + item.shopRevenueSnapshot, 0);
+  return items.reduce(
+    (sum, item) => sum + (item.isDelivered ? item.shopRevenueSnapshot : 0),
+    0
+  );
 }
 
 export function getAppointmentItemsLabel(

@@ -1,7 +1,6 @@
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import AppChrome from "@/components/AppChrome";
 import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
@@ -88,7 +87,8 @@ export default async function RootLayout({
     session?.user?.role === "CUSTOMER"
       ? session.user.role
       : null;
-  const hideFooter = role === "ADMIN" || role === "BARBER";
+  const brandName = shop.name || "Jak Barber";
+  const logoPath = shop.logoPath || "/logo.png";
 
   return (
     <html lang="pt-BR">
@@ -97,28 +97,19 @@ export default async function RootLayout({
       >
         <ClientRuntimeGuard />
         <CartProvider>
-          <div className="flex min-h-screen flex-col">
-            <Header
-              brandName={shop.name || "Jak Barber"}
-              logoPath={shop.logoPath || "/logo.png"}
-              publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
-              role={role}
-              userName={session?.user?.name || null}
-            />
-            <main className="flex-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-              {children}
-            </main>
-            {hideFooter ? null : (
-              <Footer
-                brandName={shop.name || "Jak Barber"}
-                logoPath={shop.logoPath || "/logo.png"}
-                whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
-                instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
-                addressLine={shop.addressLine || "Osasco, SP"}
-                businessHours={shop.businessHours || "Terca a domingo, das 09h as 20h"}
-              />
-            )}
-          </div>
+          <AppChrome
+            brandName={brandName}
+            logoPath={logoPath}
+            publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
+            role={role}
+            userName={session?.user?.name || null}
+            whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
+            instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
+            addressLine={shop.addressLine || "Osasco, SP"}
+            businessHours={shop.businessHours || "Terca a domingo, das 09h as 20h"}
+          >
+            {children}
+          </AppChrome>
         </CartProvider>
       </body>
     </html>

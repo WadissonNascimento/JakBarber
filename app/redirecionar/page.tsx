@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getPostLoginRedirect } from "@/lib/authRedirect";
 import { redirect } from "next/navigation";
 
 export default async function RedirecionarPage() {
@@ -8,19 +9,5 @@ export default async function RedirecionarPage() {
     redirect("/login");
   }
 
-  const role = session.user.role;
-
-  if (role === "ADMIN") {
-    redirect("/painel");
-  }
-
-  if (role === "BARBER") {
-    redirect("/barber");
-  }
-
-  if (role === "CUSTOMER") {
-    redirect("/customer");
-  }
-
-  redirect("/login");
+  redirect(getPostLoginRedirect(session.user.role));
 }

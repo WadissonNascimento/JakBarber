@@ -87,6 +87,7 @@ export function getAppointmentTotalBarberPayout(
   }>,
   items: Array<{
     barberPayoutSnapshot: number;
+    isDelivered?: boolean;
   }> = []
 ) {
   return getAppointmentBarberPayoutTotal(services) + getAppointmentItemsBarberPayoutTotal(items);
@@ -98,6 +99,7 @@ export function getAppointmentTotalShopRevenue(
   }>,
   items: Array<{
     shopRevenueSnapshot: number;
+    isDelivered?: boolean;
   }> = []
 ) {
   return getAppointmentShopRevenueTotal(services) + getAppointmentItemsShopRevenueTotal(items);

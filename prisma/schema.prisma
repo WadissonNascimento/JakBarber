@@ -208,6 +208,7 @@ model Service {
 model Appointment {
   id         String   @id @default(cuid())
   shopId     String   @default("shop_jak_barber")
+  publicId   Int
   customerId String
   barberId   String
   date       DateTime
@@ -225,6 +226,7 @@ model Appointment {
   review   Review?
 
   @@unique([id, shopId])
+  @@unique([shopId, publicId])
   @@index([shopId, customerId])
   @@index([shopId, barberId, status])
   @@index([shopId, date])

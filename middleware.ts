@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { NextResponse } from "next/server";
+import { getPostLoginRedirect } from "@/lib/authRedirect";
 
 const { auth } = NextAuth(authConfig);
 
@@ -37,27 +38,15 @@ export default auth((req) => {
   }
 
   if (isLoggedIn && isAuthPage) {
-    if (role === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin", req.url));
-    }
-
-    if (role === "BARBER") {
-      return NextResponse.redirect(new URL("/barber", req.url));
-    }
-
-    return NextResponse.redirect(new URL("/customer", req.url));
+    return NextResponse.redirect(
+      new URL(getPostLoginRedirect(role), req.url)
+    );
   }
 
   if (isLoggedIn && isPainelRoot) {
-    if (role === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin", req.url));
-    }
-
-    if (role === "BARBER") {
-      return NextResponse.redirect(new URL("/barber", req.url));
-    }
-
-    return NextResponse.redirect(new URL("/customer", req.url));
+    return NextResponse.redirect(
+      new URL(getPostLoginRedirect(role), req.url)
+    );
   }
 
   if (pathname.startsWith("/admin") && !isAuthPage && role !== "ADMIN") {

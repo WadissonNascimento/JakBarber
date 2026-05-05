@@ -52,6 +52,7 @@ type PeriodSlots = {
 };
 
 type BookingDetails = {
+  appointmentCode: string | null;
   date: string;
   time: string;
   barberName: string;
@@ -350,14 +351,18 @@ export default function BookingClient({
         }),
       });
 
-      const data = (await response.json()) as { message?: string };
+      const data = (await response.json()) as {
+        message?: string;
+        appointmentCode?: string;
+      };
 
       if (!response.ok) {
         throw new Error(data.message || "Não foi possível concluir o agendamento.");
       }
 
-      setBookingSuccess(data.message || "Agendamento confirmado com sucesso.");
+      setBookingSuccess(data.message || "Agendamento realizado com sucesso.");
       setBookingDetails({
+        appointmentCode: data.appointmentCode || null,
         date: selectedDate,
         time,
         barberName: selectedBarber?.name || "Barbeiro",
@@ -1037,7 +1042,7 @@ function BookingSuccessDialog({
     }
   );
   const whatsappMessage = encodeURIComponent(
-    `Ola! Acabei de confirmar meu agendamento para ${formattedDate} as ${details.time} com ${details.barberName}.`
+    `Ola! Acabei de agendar meu horário para ${formattedDate} as ${details.time} com ${details.barberName}.`
   );
   const whatsappHref = whatsappNumber
     ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
@@ -1065,7 +1070,7 @@ function BookingSuccessDialog({
 
         <div className="mt-4 text-center">
           <p className="text-xs uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-            Agendamento confirmado
+            Agendamento realizado
           </p>
           <h2 id="booking-success-title" className="mt-2 text-2xl font-bold">
             Horário reservado
@@ -1076,6 +1081,9 @@ function BookingSuccessDialog({
         </div>
 
         <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
+          {details.appointmentCode ? (
+            <ConfirmationRow label="Agendamento" value={details.appointmentCode} />
+          ) : null}
           <ConfirmationRow label="Data" value={formattedDate} />
           <ConfirmationRow label="Horário" value={details.time} />
           <ConfirmationRow label="Barbeiro" value={details.barberName} />

@@ -22,7 +22,7 @@ export default function LoginForm({
         </p>
         <h1 className="text-4xl font-bold">Entrar</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Entre para abrir seu painel e acompanhar seus horários.
+          Entre para acessar sua conta e acompanhar seus horários.
         </p>
       </div>
 

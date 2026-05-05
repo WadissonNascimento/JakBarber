@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getPostLoginRedirect } from "@/lib/authRedirect";
 import { redirect } from "next/navigation";
 
 export default async function PainelPage() {
@@ -8,13 +9,5 @@ export default async function PainelPage() {
     redirect("/login");
   }
 
-  if (session.user.role === "ADMIN") {
-    redirect("/admin");
-  }
-
-  if (session.user.role === "BARBER") {
-    redirect("/barber");
-  }
-
-  redirect("/customer");
+  redirect(getPostLoginRedirect(session.user.role));
 }
