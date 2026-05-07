@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { getActiveBarberForSession } from "@/lib/barberAccess";
 import { redirect } from "next/navigation";
 
 export async function requireActiveBarber() {
@@ -9,23 +9,7 @@ export async function requireActiveBarber() {
     redirect("/login");
   }
 
-  if (session.user.role !== "BARBER") {
-    redirect("/painel");
-  }
-
-  const activeBarber = await prisma.user.findFirst({
-    where: {
-      id: session.user.id,
-      role: "BARBER",
-      isActive: true,
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-    },
-  });
+  const activeBarber = await getActiveBarberForSession(session.user);
 
   if (!activeBarber) {
     redirect("/login");

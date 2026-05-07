@@ -1,15 +1,16 @@
 import BarberTodayDashboard from "./_components/BarberTodayDashboard";
-import { getBarberDashboardData } from "./data";
+import BarberProfileSettings from "./_components/BarberProfileSettings";
+import { getBarberTodayDashboardData } from "./data";
 import { requireActiveBarber } from "./guard";
-import BarberPhotoUploader from "@/components/BarberPhotoUploader";
-import { updateOwnBarberPhotoAction } from "./actions";
+import {
+  updateOwnBarberContactAction,
+  updateOwnBarberPhotoAction,
+} from "./actions";
 
 export default async function BarberPage() {
-  const { session, barber } = await requireActiveBarber();
-  const dashboard = await getBarberDashboardData(session.user.id, {
-    view: "day",
-    status: "ALL",
-  });
+  const { barber } = await requireActiveBarber();
+  const dashboard = await getBarberTodayDashboardData(barber.id);
+  const barberName = barber.name || "Barbeiro";
 
   return (
     <div className="min-h-screen">
@@ -20,21 +21,24 @@ export default async function BarberPage() {
               Painel do barbeiro
             </p>
             <p className="mt-1 truncate text-sm text-zinc-400">
-              {session.user.name || "Barbeiro"}
+              {barberName}
             </p>
           </div>
         </div>
 
         <div className="mb-4 max-w-xl">
-          <BarberPhotoUploader
-            action={updateOwnBarberPhotoAction}
+          <BarberProfileSettings
+            photoAction={updateOwnBarberPhotoAction}
+            contactAction={updateOwnBarberContactAction}
             currentImage={barber.image}
-            name={barber.name || "Barbeiro"}
+            name={barberName}
+            email={barber.email}
+            phone={barber.phone}
           />
         </div>
 
         <BarberTodayDashboard
-          barberName={session.user.name || "Barbeiro"}
+          barberName={barberName}
           summary={dashboard.summary}
           walkInServices={dashboard.walkInServices}
           clients={dashboard.clients}

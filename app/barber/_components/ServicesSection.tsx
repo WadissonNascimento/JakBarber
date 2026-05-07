@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import EmptyState from "@/components/ui/EmptyState";
 import SectionCard from "@/components/ui/SectionCard";
@@ -26,7 +26,7 @@ export function ServicesSection({
         {services.length === 0 ? (
           <EmptyState
             title="Nenhum serviço liberado"
-            description="Assim que o admin cadastrar serviços gerais ou exclusivos para vocé, eles vão aparecer aqui."
+            description="Assim que o admin cadastrar serviços gerais ou exclusivos para você, eles vão aparecer aqui."
           />
         ) : (
           services.map((service) => (
@@ -51,7 +51,7 @@ export function ServicesSection({
                 </div>
 
                 <div className="grid min-w-[180px] gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-300">
-                  <InfoRow label="Preco" value={`R$ ${service.price.toFixed(2).replace(".", ",")}`} />
+                  <InfoRow label="Preço" value={`R$ ${service.price.toFixed(2).replace(".", ",")}`} />
                   <InfoRow label="Duração" value={`${service.duration} min`} />
                   <InfoRow
                     label="Intervalo"

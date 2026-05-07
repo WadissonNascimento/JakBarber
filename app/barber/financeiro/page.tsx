@@ -1,11 +1,9 @@
-import Link from "next/link";
 import {
-  ArrowLeft,
   CalendarDays,
-  ReceiptText,
   ShoppingBag,
   Wallet,
 } from "lucide-react";
+import BackLink from "@/components/ui/BackLink";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
@@ -14,8 +12,8 @@ import {
   getAppointmentGrandTotal,
   getAppointmentTotalBarberPayout,
 } from "@/lib/appointmentServices";
+import { appointmentForBarberSelect } from "@/lib/appointmentSelects";
 import { prisma } from "@/lib/prisma";
-import { getCurrentScheduleDateValue, getScheduleDayRange } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import { requireActiveBarber } from "../guard";
 import BarberFinanceFilters from "./BarberFinanceFilters";
@@ -36,18 +34,13 @@ export default async function BarberFinancePage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
-      <Link
-        href="/barber"
-        className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4 text-[var(--brand-strong)]" />
-        Voltar para o painel
-      </Link>
+      <BackLink href="/barber" area="Painel" className="mb-5" />
 
       <PageHeader
         eyebrow="Meu financeiro"
         title={`Financeiro de ${barber.name || "Barbeiro"}`}
         description="Consulte seus repasses por período e veja quanto cada atendimento gerou para você."
+        variant="plain"
       />
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
@@ -75,7 +68,7 @@ export default async function BarberFinancePage({
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid gap-3 sm:grid-cols-2">
           <FinanceMetricCard
             icon={<Wallet />}
             label="Repasse confirmado"
@@ -91,7 +84,7 @@ export default async function BarberFinancePage({
             tone="amber"
           />
           <FinanceMetricCard
-            icon={<ReceiptText />}
+            icon={<Wallet />}
             label="Total vendido"
             value={formatCurrency(data.summary.completedGross)}
             helper="Atendimentos concluídos"
@@ -110,22 +103,22 @@ export default async function BarberFinancePage({
               Atendimentos
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Atendimentos de hoje com serviços, retiradas entregues e repasse.
+              Atendimentos do período com serviços, retiradas entregues e repasse.
             </p>
           </div>
           <span className="shrink-0 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-bold text-zinc-300">
-            {data.todayAppointments.length}
+            {data.appointments.length}
           </span>
         </div>
 
         <div className="mt-4 space-y-3">
-          {data.todayAppointments.length === 0 ? (
+          {data.appointments.length === 0 ? (
             <EmptyState
-              title="Nenhum repasse para hoje"
-              description="Quando houver atendimento hoje, o detalhamento aparece aqui."
+              title="Nenhum repasse no período"
+              description="Ajuste o filtro para consultar outros atendimentos concluídos."
             />
           ) : (
-            data.todayAppointments.map((appointment) => (
+            data.appointments.map((appointment) => (
               <FinanceAppointmentCard
                 key={appointment.id}
                 appointment={appointment}
@@ -140,11 +133,6 @@ export default async function BarberFinancePage({
 
 async function getBarberFinanceData(barberId: string, searchParams: SearchParams) {
   const range = resolveFinanceRange(searchParams);
-  const todayRange =
-    getScheduleDayRange(getCurrentScheduleDateValue()) || {
-      start: new Date(),
-      end: new Date(),
-    };
   const appointments = await prisma.appointment.findMany({
     where: {
       barberId,
@@ -154,11 +142,7 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
       },
       status: { in: ["COMPLETED", "DONE"] },
     },
-    include: {
-      customer: true,
-      services: true,
-      items: true,
-    },
+    select: appointmentForBarberSelect,
     orderBy: {
       date: "desc",
     },
@@ -237,10 +221,6 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
       completedCount: completedAppointments.length,
     },
     appointments: normalizedAppointments,
-    todayAppointments: normalizedAppointments.filter(
-      (appointment) =>
-        appointment.date >= todayRange.start && appointment.date <= todayRange.end
-    ),
   };
 }
 
@@ -257,6 +237,10 @@ function FinanceMetricCard({
   helper: string;
   tone: "emerald" | "sky" | "amber" | "neutral";
 }) {
+  if (label === "Total vendido") {
+    return null;
+  }
+
   const toneClass =
     tone === "emerald"
       ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"

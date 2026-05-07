@@ -24,17 +24,11 @@ export default function FinanceHistoryFilters({
   function applyFilters(next: typeof filters) {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
 
-    if (next.historyStart) {
-      params.set("historyStart", next.historyStart);
-    } else {
-      params.delete("historyStart");
-    }
+    if (next.historyStart) params.set("historyStart", next.historyStart);
+    else params.delete("historyStart");
 
-    if (next.historyEnd) {
-      params.set("historyEnd", next.historyEnd);
-    } else {
-      params.delete("historyEnd");
-    }
+    if (next.historyEnd) params.set("historyEnd", next.historyEnd);
+    else params.delete("historyEnd");
 
     startTransition(() => {
       router.replace(
@@ -45,11 +39,10 @@ export default function FinanceHistoryFilters({
   }
 
   return (
-    <form className="flex flex-wrap items-end gap-3">
-      <div>
+    <form className="grid gap-2 sm:min-w-[21rem]">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <PremiumDatePicker
           name="historyStart"
-          label="De"
           value={filters.historyStart}
           onChange={(value) => {
             const next = {
@@ -61,12 +54,9 @@ export default function FinanceHistoryFilters({
             applyFilters(next);
           }}
         />
-      </div>
-
-      <div>
+        <span className="text-xs text-zinc-500">até</span>
         <PremiumDatePicker
           name="historyEnd"
-          label="Até"
           value={filters.historyEnd}
           onChange={(value) => {
             const next = {
@@ -80,8 +70,8 @@ export default function FinanceHistoryFilters({
         />
       </div>
 
-      <p className="pb-1 text-xs text-zinc-500">
-        {isPending ? "Atualizando lista..." : "A lista muda automaticamente ao trocar as datas."}
+      <p className="text-xs text-zinc-500">
+        {isPending ? "Atualizando lista..." : "A lista muda ao trocar as datas."}
       </p>
     </form>
   );

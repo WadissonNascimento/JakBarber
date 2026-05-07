@@ -10,13 +10,22 @@ import {
   PRODUCT_CATEGORY_OPTIONS,
   getProductCategoryLabel,
 } from "@/lib/productCategories";
-import { prepareProductImageUpload } from "@/lib/productImageClient";
+import { sanitizeTextInput, sanitizeTextareaInput } from "@/lib/inputSanitization";
+import {
+  prepareProductImageUpload,
+  prepareSecondaryProductImageUpload,
+} from "@/lib/productImageClient";
 import {
   deleteProduct,
   toggleProduct,
   updateProductFromForm,
   updateProductImage,
 } from "@/app/actions/productActions";
+
+type PreparedImageUpload = {
+  file: File;
+  previewUrl: string;
+};
 
 type ProductCardClientProps = {
   product: {
@@ -28,31 +37,13 @@ type ProductCardClientProps = {
     isActive: boolean;
     stock: number;
     imageUrl: string | null;
-    stockMovements: Array<{
-      id: string;
-      createdAt: Date;
-      type: string;
-      quantity: number;
-      reason: string | null;
-    }>;
   };
 };
 
-function stockMovementTypeLabel(type: string) {
-  switch (type) {
-    case "IN":
-      return "Entrada";
-    case "OUT":
-      return "Saida";
-    default:
-      return type;
-  }
-}
-
-export default function ProductCardClient({
-  product,
-}: ProductCardClientProps) {
+export default function ProductCardClient({ product }: ProductCardClientProps) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isActive, setIsActive] = useState(product.isActive);
   const [imageUrl, setImageUrl] = useState(product.imageUrl);
   const [draft, setDraft] = useState({
@@ -60,12 +51,9 @@ export default function ProductCardClient({
     description: product.description || "",
     category: product.category,
     price: product.price.toFixed(2),
-    stock: String(product.stock),
   });
-  const [imageUpload, setImageUpload] = useState<{
-    file: File;
-    previewUrl: string;
-  } | null>(null);
+  const [imageUpload, setImageUpload] = useState<PreparedImageUpload | null>(null);
+  const [secondaryUploads, setSecondaryUploads] = useState<PreparedImageUpload[]>([]);
   const [feedback, setFeedback] = useState<{
     message: string | null;
     tone: "success" | "error" | "info";
@@ -81,16 +69,24 @@ export default function ProductCardClient({
     };
   }, [imageUpload]);
 
+  useEffect(() => {
+    return () => {
+      secondaryUploads.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
+    };
+  }, [secondaryUploads]);
+
   function runAction(
     key: string,
     action: () => Promise<void | { message?: string; deleted?: boolean; imageUrl?: string }>,
-    successMessage: string | (() => string)
+    successMessage: string | (() => string),
+    onSuccess?: () => void
   ) {
     setPendingKey(key);
 
     startTransition(async () => {
       try {
         const actionResult = await action();
+
         if (actionResult?.deleted === false) {
           setIsActive(false);
           setImageUrl(null);
@@ -110,18 +106,15 @@ export default function ProductCardClient({
         setFeedback({
           message:
             actionResult?.message ||
-            (typeof successMessage === "function"
-              ? successMessage()
-              : successMessage),
+            (typeof successMessage === "function" ? successMessage() : successMessage),
           tone: "success",
         });
+        onSuccess?.();
         router.refresh();
       } catch (error) {
         setFeedback({
           message:
-            error instanceof Error
-              ? error.message
-              : "Não foi possível atualizar o produto.",
+            error instanceof Error ? error.message : "Não foi possível atualizar o produto.",
           tone: "error",
         });
       } finally {
@@ -130,294 +123,513 @@ export default function ProductCardClient({
     });
   }
 
-  return (
-    <div className="space-y-3">
-      <div className="space-y-3">
-        <FeedbackMessage message={feedback.message} tone={feedback.tone} />
-      </div>
+  const categoryLabel = getProductCategoryLabel(draft.category);
+  const visibleImage = imageUpload?.previewUrl || imageUrl;
 
-      <div className="grid gap-4 md:grid-cols-[140px_1fr_auto]">
-        <div className="relative h-28 overflow-hidden rounded-xl bg-zinc-950">
-          {imageUpload?.previewUrl ? (
-            <img
-              src={imageUpload.previewUrl}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
-          ) : imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover"
-            />
+  return (
+    <article className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        onClick={() => {
+          setIsOpen((current) => !current);
+          if (isOpen) {
+            setIsEditing(false);
+          }
+        }}
+        className="grid w-full grid-cols-[5.5rem_1fr] items-center gap-3.5 px-4 py-4 text-left transition hover:bg-white/[0.035] sm:grid-cols-[6rem_1fr_auto]"
+      >
+        <ProductImage imageUrl={visibleImage} name={draft.name} compact />
+
+        <div className="min-w-0">
+          <p className="line-clamp-2 text-base font-semibold leading-5 text-white">
+            {draft.name}
+          </p>
+          <p className="mt-1 truncate text-sm leading-5 text-zinc-400">
+            {categoryLabel}
+          </p>
+          <p className="mt-0.5 whitespace-nowrap text-sm font-semibold leading-5 text-zinc-300">
+            R$ {Number(draft.price || 0).toFixed(2)}
+          </p>
+        </div>
+
+        <div className="col-span-2 flex shrink-0 items-center justify-between gap-2 border-t border-white/10 pt-3 sm:col-span-1 sm:border-0 sm:pt-0">
+          <StatusBadge variant={isActive ? "success" : "neutral"}>
+            {isActive ? "Ativo" : "Oculto"}
+          </StatusBadge>
+          <span className="text-lg text-zinc-500">{isOpen ? "-" : "+"}</span>
+        </div>
+      </button>
+
+      {isOpen ? (
+        <div className="border-t border-white/10 px-3.5 pb-3.5 pt-3.5">
+          <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+          {isEditing ? (
+            <div className="mt-3 space-y-3">
+              <form
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const formData = new FormData();
+                  formData.set("productId", product.id);
+                  formData.set("name", sanitizeTextInput(draft.name, { maxLength: 120 }));
+                  formData.set("description", sanitizeTextareaInput(draft.description, 500));
+                  formData.set("category", draft.category);
+                  formData.set("price", draft.price);
+                  formData.set("stock", String(product.stock));
+
+                  runAction(
+                    "details",
+                    () => updateProductFromForm(formData),
+                    "Produto atualizado com sucesso.",
+                    () => setIsEditing(false)
+                  );
+                }}
+              >
+                <div className="grid gap-2 sm:grid-cols-[1fr_13rem]">
+                  <Field label="Nome">
+                    <input
+                      value={draft.name}
+                      maxLength={120}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, name: event.target.value }))
+                      }
+                      className="service-edit-control"
+                    />
+                  </Field>
+
+                  <Field label="Categoria">
+                    <select
+                      value={draft.category}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          category: event.target.value,
+                        }))
+                      }
+                      className="service-edit-control"
+                    >
+                      {PRODUCT_CATEGORY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+
+                <Field label="Descrição">
+                  <textarea
+                    value={draft.description}
+                    maxLength={500}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
+                    rows={2}
+                    className="service-edit-control min-h-20"
+                  />
+                </Field>
+
+                <div className="grid gap-2">
+                  <Field label="Preço">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.price}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, price: event.target.value }))
+                      }
+                      className="service-edit-control"
+                    />
+                  </Field>
+                </div>
+
+                <div className="service-action-stack">
+                  <div className="service-action-row service-action-row-primary">
+                    <button
+                      type="submit"
+                      disabled={isPending && pendingKey === "details"}
+                      className="btn-primary"
+                    >
+                      {isPending && pendingKey === "details" ? "Salvando..." : "Salvar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="btn-secondary"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <form
+                className="rounded-2xl border border-white/10 bg-black/20 p-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const formData = new FormData(event.currentTarget);
+
+                  if (!imageUpload) {
+                    setFeedback({
+                      message: "Selecione uma nova imagem para enviar.",
+                      tone: "error",
+                    });
+                    return;
+                  }
+
+                  formData.set("image", imageUpload.file);
+
+                  runAction(
+                    "image",
+                    () => updateProductImage(formData),
+                    "Imagem atualizada com sucesso."
+                  );
+                }}
+              >
+                <input type="hidden" name="productId" value={product.id} />
+
+                <div className="grid grid-cols-[4rem_1fr] gap-3 sm:grid-cols-[4.5rem_1fr] sm:items-center">
+                  <ProductImage imageUrl={visibleImage} name={draft.name} />
+
+                  <div className="min-w-0">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                      Imagem principal de capa
+                    </p>
+                    <input
+                      id={`product-image-${product.id}`}
+                      name="image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={async (event) => {
+                        const file = event.currentTarget.files?.[0];
+
+                        if (!file) {
+                          setImageUpload(null);
+                          return;
+                        }
+
+                        try {
+                          const prepared = await prepareProductImageUpload(file);
+                          setImageUpload((current) => {
+                            if (current?.previewUrl) {
+                              URL.revokeObjectURL(current.previewUrl);
+                            }
+
+                            return prepared;
+                          });
+                          setFeedback({ message: null, tone: "success" });
+                        } catch (error) {
+                          event.currentTarget.value = "";
+                          setImageUpload(null);
+                          setFeedback({
+                            message:
+                              error instanceof Error
+                                ? error.message
+                                : "Não foi possível preparar a imagem.",
+                            tone: "error",
+                          });
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <div className="grid gap-2">
+                      <label
+                        htmlFor={`product-image-${product.id}`}
+                        className="btn-primary min-h-10 w-full cursor-pointer rounded-xl shadow-none"
+                      >
+                        Escolher imagem
+                      </label>
+                      <p className="truncate text-xs text-zinc-500">
+                        {imageUpload?.file.name || "Nenhuma imagem selecionada"}
+                      </p>
+                      <button
+                        type="submit"
+                        disabled={isPending && pendingKey === "image"}
+                        className="btn-secondary min-h-10 whitespace-nowrap"
+                      >
+                        {isPending && pendingKey === "image" ? "Enviando..." : "Trocar capa"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                <div className="block min-w-0">
+                  <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                    Imagens secundárias
+                  </span>
+                  <input
+                    id={`product-secondary-images-${product.id}`}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={async (event) => {
+                      const files = Array.from(event.currentTarget.files || []);
+
+                      if (!files.length) {
+                        setSecondaryUploads((current) => {
+                          current.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
+                          return [];
+                        });
+                        return;
+                      }
+
+                      try {
+                        const preparedUploads = await Promise.all(
+                          files
+                            .slice(0, 6)
+                            .map((file) => prepareSecondaryProductImageUpload(file))
+                        );
+
+                        setSecondaryUploads((current) => {
+                          const nextUploads = [...current, ...preparedUploads];
+                          const visibleUploads = nextUploads.slice(0, 6);
+                          nextUploads
+                            .slice(6)
+                            .forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
+                          return visibleUploads;
+                        });
+                        event.currentTarget.value = "";
+                        setFeedback({ message: null, tone: "success" });
+                      } catch (error) {
+                        event.currentTarget.value = "";
+                        setSecondaryUploads((current) => {
+                          current.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
+                          return [];
+                        });
+                        setFeedback({
+                          message:
+                            error instanceof Error
+                              ? error.message
+                              : "Não foi possível preparar as imagens secundárias.",
+                          tone: "error",
+                        });
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  <div className="grid gap-2">
+                    <label
+                      htmlFor={`product-secondary-images-${product.id}`}
+                      className="btn-primary min-h-10 w-full cursor-pointer rounded-xl shadow-none"
+                    >
+                      Escolher imagens
+                    </label>
+                    <p className="truncate text-xs text-zinc-500">
+                      {secondaryUploads.length
+                        ? `${secondaryUploads.length} imagem(ns) selecionada(s)`
+                        : "Nenhuma imagem selecionada"}
+                    </p>
+                  </div>
+                </div>
+
+                {secondaryUploads.length ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {secondaryUploads.map((upload, index) => (
+                      <div
+                        key={`${upload.file.name}-${index}`}
+                        className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-[#edf1f7]"
+                      >
+                        <img
+                          src={upload.previewUrl}
+                          loading="lazy"
+                          decoding="async"
+                          alt={`Imagem secundária ${index + 1}`}
+                          className="h-full w-full object-contain"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Remover imagem secundária ${index + 1}`}
+                          onClick={() => {
+                            setSecondaryUploads((current) => {
+                              const target = current[index];
+                              if (target) {
+                                URL.revokeObjectURL(target.previewUrl);
+                              }
+
+                              return current.filter(
+                                (_, currentIndex) => currentIndex !== index
+                              );
+                            });
+                          }}
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-black/75 text-sm font-bold leading-none text-white shadow-lg"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <p className="mt-2 text-xs text-zinc-500">
+                  Seleção preparada para a próxima etapa de exibição do catálogo.
+                </p>
+              </div>
+
+              <div className="service-action-row service-action-row-danger">
+                <button
+                  type="button"
+                  disabled={isPending && pendingKey === "toggle"}
+                  onClick={() =>
+                    runAction(
+                      "toggle",
+                      async () => {
+                        const updatedProduct = await toggleProduct(product.id);
+                        setIsActive(updatedProduct.isActive);
+                      },
+                      () => (isActive ? "Produto ocultado." : "Produto ativado.")
+                    )
+                  }
+                  className={isActive ? "btn-warning-soft" : "btn-secondary"}
+                >
+                  {isPending && pendingKey === "toggle"
+                    ? "Salvando..."
+                    : isActive
+                    ? "Ocultar"
+                    : "Ativar"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isPending && pendingKey === "delete"}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Excluir produto do catálogo? Esta ação remove o item definitivamente."
+                      )
+                    ) {
+                      return;
+                    }
+
+                    runAction(
+                      "delete",
+                      () => deleteProduct(product.id),
+                      "Produto excluído com sucesso."
+                    );
+                  }}
+                  className="btn-danger"
+                >
+                  {isPending && pendingKey === "delete" ? "Excluindo..." : "Excluir"}
+                </button>
+              </div>
+            </div>
           ) : (
-            <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-              Sem imagem
+            <div className="mt-3">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <SummaryTile label="Preço" value={`R$ ${Number(draft.price || 0).toFixed(2)}`} />
+                <SummaryTile label="Categoria" value={categoryLabel} />
+              </div>
+
+              {draft.description ? (
+                <p className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-400">
+                  {draft.description}
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="btn-secondary"
+                >
+                  Editar
+                </button>
+              </div>
             </div>
           )}
         </div>
+      ) : null}
+    </article>
+  );
+}
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge variant={isActive ? "success" : "neutral"}>
-              {isActive ? "Ativo" : "Oculto"}
-            </StatusBadge>
-            <StatusBadge variant="info">
-              {getProductCategoryLabel(draft.category)}
-            </StatusBadge>
-            <StatusBadge
-              variant={
-                Number(draft.stock) === 0
-                  ? "danger"
-                  : Number(draft.stock) <= 3
-                  ? "warning"
-                  : "info"
-              }
-            >
-              Estoque: {draft.stock}
-            </StatusBadge>
-          </div>
-
-          <form
-            className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-950/70 p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const formData = new FormData();
-              formData.set("productId", product.id);
-              formData.set("name", draft.name);
-              formData.set("description", draft.description);
-              formData.set("category", draft.category);
-              formData.set("price", draft.price);
-              formData.set("stock", draft.stock);
-
-              runAction(
-                "details",
-                () => updateProductFromForm(formData),
-                "Produto atualizado com sucesso."
-              );
-            }}
-          >
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="space-y-2 text-sm text-zinc-300">
-                <span>Nome</span>
-                <input
-                  value={draft.name}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, name: event.target.value }))
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-                />
-              </label>
-              <label className="space-y-2 text-sm text-zinc-300">
-                <span>Categoria</span>
-                <select
-                  value={draft.category}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      category: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-                >
-                  {PRODUCT_CATEGORY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Descrição</span>
-              <textarea
-                value={draft.description}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, description: event.target.value }))
-                }
-                rows={3}
-                className="min-h-24 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-              />
-            </label>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="space-y-2 text-sm text-zinc-300">
-                <span>Preco</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={draft.price}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, price: event.target.value }))
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-                />
-              </label>
-              <label className="space-y-2 text-sm text-zinc-300">
-                <span>Estoque</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={draft.stock}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, stock: event.target.value }))
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-                />
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isPending && pendingKey === "details"}
-              className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending && pendingKey === "details" ? "Salvando..." : "Salvar dados"}
-            </button>
-          </form>
-
-          <form
-            className="flex flex-wrap items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const formData = new FormData(event.currentTarget);
-
-              if (!imageUpload) {
-                setFeedback({
-                  message: "Selecione uma nova imagem para enviar.",
-                  tone: "error",
-                });
-                return;
-              }
-
-              formData.set("image", imageUpload.file);
-
-              runAction(
-                "image",
-                () => updateProductImage(formData),
-                "Imagem atualizada com sucesso."
-              );
-            }}
-          >
-            <input type="hidden" name="productId" value={product.id} />
-            <input
-              name="image"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={async (event) => {
-                const file = event.currentTarget.files?.[0];
-
-                if (!file) {
-                  setImageUpload(null);
-                  return;
-                }
-
-                try {
-                  const prepared = await prepareProductImageUpload(file);
-                  setImageUpload((current) => {
-                    if (current?.previewUrl) {
-                      URL.revokeObjectURL(current.previewUrl);
-                    }
-
-                    return prepared;
-                  });
-                  setFeedback({ message: null, tone: "success" });
-                } catch (error) {
-                  event.currentTarget.value = "";
-                  setImageUpload(null);
-                  setFeedback({
-                    message:
-                      error instanceof Error
-                        ? error.message
-                        : "Não foi possível preparar a imagem.",
-                    tone: "error",
-                  });
-                }
-              }}
-              className="max-w-full text-sm text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-white"
-            />
-            <button
-              type="submit"
-              disabled={isPending && pendingKey === "image"}
-              className="rounded-lg bg-sky-600 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending && pendingKey === "image"
-                ? "Enviando..."
-                : "Trocar imagem"}
-            </button>
-          </form>
-
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-            <p className="text-sm font-medium text-white">
-              Ultimas movimentacoes
-            </p>
-            <div className="mt-2 space-y-1 text-sm text-zinc-400">
-              {product.stockMovements.length === 0 ? (
-                <p>Nenhuma movimentacao registrada ainda.</p>
-              ) : (
-                product.stockMovements.map((movement) => (
-                  <p key={movement.id}>
-                    {new Date(movement.createdAt).toLocaleDateString("pt-BR")} -{" "}
-                    {stockMovementTypeLabel(movement.type)} {movement.quantity}
-                    {movement.reason ? ` - ${movement.reason}` : ""}
-                  </p>
-                ))
-              )}
-            </div>
-          </div>
+function ProductImage({
+  imageUrl,
+  name,
+  compact = false,
+}: {
+  imageUrl: string | null;
+  name: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`relative shrink-0 overflow-hidden rounded-2xl bg-black/20 ${
+        compact ? "h-20 w-20 sm:h-24 sm:w-24" : "h-16 w-16"
+      }`}
+    >
+      {imageUrl ? (
+        imageUrl.startsWith("blob:") ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <Image
+            src={imageUrl}
+            alt={name}
+            fill
+            sizes={compact ? "(max-width: 640px) 80px, 96px" : "64px"}
+            className="object-cover"
+          />
+        )
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-500">
+          Sem imagem
         </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={isPending && pendingKey === "toggle"}
-            onClick={() =>
-              runAction(
-                "toggle",
-                async () => {
-                  const updatedProduct = await toggleProduct(product.id);
-                  setIsActive(updatedProduct.isActive);
-                },
-                () => (isActive ? "Produto ocultado." : "Produto ativado.")
-              )
-            }
-            className="rounded bg-yellow-600 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPending && pendingKey === "toggle"
-              ? "Salvando..."
-              : isActive
-              ? "Ocultar"
-              : "Ativar"}
-          </button>
-
-          <button
-            type="button"
-            disabled={isPending && pendingKey === "delete"}
-            onClick={() => {
-              if (
-                !window.confirm(
-                  "Excluir produto? Se houver histórico, ele será apenas ocultado para preservar pedidos."
-                )
-              ) {
-                return;
-              }
-
-              runAction(
-                "delete",
-                () => deleteProduct(product.id),
-                "Produto excluido com sucesso."
-              );
-            }}
-            className="rounded bg-red-600 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPending && pendingKey === "delete" ? "Excluindo..." : "Excluir"}
-          </button>
-        </div>
-      </div>
+      )}
     </div>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-black/20 p-2.5">
+      <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+        {label}
+      </p>
+      <p
+        className={`mt-1 truncate text-sm font-bold ${
+          accent ? "text-[var(--brand-strong)]" : "text-white"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

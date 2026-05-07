@@ -18,7 +18,14 @@ import {
   type MutationResult,
 } from "@/lib/mutationResult";
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
+import { getActiveBarberForSession } from "@/lib/barberAccess";
+import { sanitizeEmailInput } from "@/lib/inputSanitization";
 import { prisma } from "@/lib/prisma";
+import {
+  BRAZILIAN_PHONE_EXAMPLE,
+  isValidBrazilianPhone,
+  normalizeBrazilianPhoneForSubmit,
+} from "@/lib/phone";
 import {
   createScheduleDateTimeInput,
   getCurrentScheduleDateValue,
@@ -29,24 +36,11 @@ import { enforceRateLimit } from "@/lib/security";
 async function requireBarber() {
   const session = await auth();
 
-  if (!session?.user?.id || session.user.role !== "BARBER") {
+  if (!session?.user?.id) {
     throw new Error("Nao autorizado.");
   }
 
-  const barber = await prisma.user.findFirst({
-    where: {
-      id: session.user.id,
-      role: "BARBER",
-      isActive: true,
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      isActive: true,
-    },
-  });
+  const barber = await getActiveBarberForSession(session.user);
 
   if (!barber) {
     throw new Error("Barbeiro inativo ou nao autorizado.");
@@ -137,6 +131,69 @@ export async function updateOwnBarberPhotoAction(
       error instanceof Error ? error.message : "Nao foi possivel atualizar a foto."
     );
   }
+}
+
+export async function updateOwnBarberContactAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const barber = await requireBarber();
+  const email = sanitizeEmailInput(formData.get("email")?.toString() || "");
+  const rawPhone = formData.get("phone")?.toString() || "";
+  const phone = rawPhone.trim()
+    ? normalizeBrazilianPhoneForSubmit(rawPhone)
+    : "";
+
+  const rateLimit = await enforceRateLimit({
+    scope: "barber:contact",
+    identifier: barber.id,
+    limit: 8,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return mutationError("Muitas alteracoes em pouco tempo. Aguarde e tente novamente.");
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return mutationError("Informe um e-mail valido.");
+  }
+
+  if (rawPhone.trim() && !isValidBrazilianPhone(phone)) {
+    return mutationError(`Use um telefone no formato ${BRAZILIAN_PHONE_EXAMPLE}.`);
+  }
+
+  const emailOwner = await prisma.user.findFirst({
+    where: {
+      email,
+      NOT: {
+        id: barber.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (emailOwner) {
+    return mutationError("Este e-mail ja esta em uso.");
+  }
+
+  await prisma.user.update({
+    where: {
+      id: barber.id,
+    },
+    data: {
+      email,
+      phone: phone || null,
+    },
+  });
+
+  revalidateBarberViews();
+  revalidatePath("/barber");
+  revalidatePath("/admin/barbeiros");
+  revalidatePath(`/admin/barbeiros/${barber.id}`);
+
+  return mutationSuccess("Contato atualizado com sucesso.");
 }
 
 export async function updateAppointmentStatusAction(

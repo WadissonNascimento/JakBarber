@@ -4,10 +4,14 @@ const globalForPrisma = global as unknown as {
   prismaBase: PrismaClient | undefined;
 };
 
+const shouldLogQueries =
+  process.env.PRISMA_QUERY_LOG === "1" ||
+  process.env.PRISMA_QUERY_LOG?.toLowerCase() === "true";
+
 export const basePrisma =
   globalForPrisma.prismaBase ||
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query"] : [],
+    log: shouldLogQueries ? ["query"] : [],
   });
 
 if (process.env.NODE_ENV !== "production") {

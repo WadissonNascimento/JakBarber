@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { PremiumSelect } from "@/components/ui/PremiumFilters";
+import { formatBrazilianPhone } from "@/lib/phone";
 import { updateCustomerProfileAction } from "./actions";
 
 type BarberOption = {
@@ -62,7 +64,8 @@ export default function ProfileForm({
           name="name"
           defaultValue={customer.name || ""}
           required
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm outline-none"
+          maxLength={120}
+          className="form-control text-sm"
         />
       </label>
 
@@ -71,16 +74,16 @@ export default function ProfileForm({
         <input
           value={customer.email || ""}
           readOnly
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-400 outline-none"
+          className="form-control text-sm"
         />
       </label>
 
       <label className="block">
         <span className="mb-2 block text-sm text-zinc-300">Telefone</span>
-        <input
+        <PhoneInput
           name="phone"
-          defaultValue={customer.phone || ""}
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm outline-none"
+          defaultValue={formatBrazilianPhone(customer.phone)}
+          className="form-control text-sm"
         />
       </label>
 
@@ -105,8 +108,9 @@ export default function ProfileForm({
           name="allergies"
           rows={3}
           defaultValue={profile?.allergies || ""}
+          maxLength={500}
           placeholder="Ex.: sensibilidade a determinados produtos"
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm outline-none"
+          className="form-control text-sm"
         />
       </label>
 
@@ -116,15 +120,16 @@ export default function ProfileForm({
           name="preferences"
           rows={3}
           defaultValue={profile?.preferences || ""}
+          maxLength={500}
           placeholder="Ex.: estilo de corte, acabamento, horário favorito"
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm outline-none"
+          className="form-control text-sm"
         />
       </label>
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn-primary w-full"
       >
         {isPending ? "Salvando..." : "Salvar perfil"}
       </button>

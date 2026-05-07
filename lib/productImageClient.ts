@@ -15,16 +15,26 @@ function validateProductImage(file: File) {
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
     throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
   }
-
-  if (file.size > MAX_IMAGE_SIZE) {
-    throw new Error("A imagem deve ter no maximo 2MB.");
-  }
 }
 
-async function canvasToBlob(canvas: HTMLCanvasElement) {
+async function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
   return new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/webp", 0.82);
+    canvas.toBlob(resolve, "image/webp", quality);
   });
+}
+
+async function compressCanvasToProductBlob(canvas: HTMLCanvasElement) {
+  const qualities = [0.82, 0.72, 0.62, 0.52, 0.42];
+
+  for (const quality of qualities) {
+    const blob = await canvasToBlob(canvas, quality);
+
+    if (blob && blob.size <= MAX_IMAGE_SIZE) {
+      return blob;
+    }
+  }
+
+  return canvasToBlob(canvas, 0.34);
 }
 
 function getBackgroundReference(data: Uint8ClampedArray, width: number, height: number) {
@@ -276,7 +286,7 @@ export async function prepareProductImageUpload(file: File) {
   drawStandardizedProduct(context, bitmap, bounds, OUTPUT_IMAGE_SIZE);
   bitmap.close();
 
-  const blob = await canvasToBlob(canvas);
+  const blob = await compressCanvasToProductBlob(canvas);
   const uploadFile =
     blob && blob.size <= MAX_IMAGE_SIZE
       ? new File([blob], "image.webp", { type: "image/webp" })
@@ -287,7 +297,47 @@ export async function prepareProductImageUpload(file: File) {
   }
 
   return {
-    file,
+    file: uploadFile,
+    previewUrl: URL.createObjectURL(uploadFile),
+  };
+}
+
+export async function prepareSecondaryProductImageUpload(file: File) {
+  validateProductImage(file);
+
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  const maxSize = OUTPUT_IMAGE_SIZE;
+  const scale = Math.min(maxSize / bitmap.width, maxSize / bitmap.height, 1);
+
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    bitmap.close();
+    return {
+      file,
+      previewUrl: URL.createObjectURL(file),
+    };
+  }
+
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const blob = await compressCanvasToProductBlob(canvas);
+  const uploadFile =
+    blob && blob.size <= MAX_IMAGE_SIZE
+      ? new File([blob], "image.webp", { type: "image/webp" })
+      : file;
+
+  if (uploadFile.size > MAX_IMAGE_SIZE) {
+    throw new Error("A imagem comprimida ainda ficou acima de 2MB.");
+  }
+
+  return {
+    file: uploadFile,
     previewUrl: URL.createObjectURL(uploadFile),
   };
 }

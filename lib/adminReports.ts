@@ -4,6 +4,7 @@ import {
   getAppointmentGrandTotal,
 } from "@/lib/appointmentServices";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
+import { appointmentForAdminSelect } from "@/lib/appointmentSelects";
 import { prisma } from "@/lib/prisma";
 import {
   APPOINTMENT_STATUSES,
@@ -119,12 +120,7 @@ export function buildOrdersReportQuery(filters: AdminOrdersFilters) {
 export async function getAdminAgendaReport(filters: AdminAgendaFilters) {
   const appointments = await prisma.appointment.findMany({
     where: buildAgendaReportQuery(filters),
-    include: {
-      barber: true,
-      customer: true,
-      items: true,
-      services: true,
-    },
+    select: appointmentForAdminSelect,
     orderBy: {
       date: "asc",
     },

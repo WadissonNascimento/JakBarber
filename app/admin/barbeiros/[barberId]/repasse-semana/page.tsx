@@ -9,7 +9,7 @@ export default function BarberWeekPayoutPage({
   return (
     <PayoutReport
       barberId={params.barberId}
-      title="Repasse da semana"
+      title="Repasse da semana atual"
       description="Serviços e produtos concluídos nesta semana, com comissão individual."
       range={getWeekRange()}
     />

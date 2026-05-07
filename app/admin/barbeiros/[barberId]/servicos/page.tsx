@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import { prisma } from "@/lib/prisma";
 import ServiceCommissionListClient from "./ServiceCommissionListClient";
@@ -47,19 +48,12 @@ export default async function BarberServicesPage({
   });
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 text-white">
+    <DashboardShell>
       <PageHeader
         eyebrow={barber.name || "Barbeiro"}
         title="Serviços"
         description="Serviços que este barbeiro pode executar e suas comissões individuais."
-        actions={
-          <Link
-            href={`/admin/barbeiros/${barber.id}`}
-            className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-sky-400/30 hover:bg-sky-500/10"
-          >
-            Voltar
-          </Link>
-        }
+        actions={<BackLink href={`/admin/barbeiros/${barber.id}`} area="Perfil" />}
       />
 
       <ServiceCommissionListClient
@@ -80,6 +74,6 @@ export default async function BarberServicesPage({
             : null,
         }))}
       />
-    </div>
+    </DashboardShell>
   );
 }

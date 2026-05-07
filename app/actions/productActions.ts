@@ -290,41 +290,12 @@ export async function deleteProduct(id: string) {
     where: { id },
     select: {
       id: true,
-      isActive: true,
       imagePath: true,
-      _count: {
-        select: {
-          orderItems: true,
-          stockMovements: true,
-        },
-      },
     },
   });
 
   if (!product) {
     throw new Error("Produto nao encontrado.");
-  }
-
-  if (
-    product._count.orderItems > 0 || product._count.stockMovements > 0
-  ) {
-    await prisma.product.update({
-      where: { id },
-      data: {
-        isActive: false,
-        imageUrl: null,
-        imagePath: null,
-      },
-    });
-
-    await deleteProductImage(product.imagePath);
-    revalidateProductViews();
-    return {
-      deleted: false,
-      message: product.isActive
-        ? "Produto ocultado para preservar historico de pedidos e estoque."
-        : "Produto ja estava oculto. Historico preservado.",
-    };
   }
 
   await prisma.product.delete({

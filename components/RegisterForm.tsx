@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
 import { useFormState } from "react-dom";
 import { registerCustomerAction } from "@/app/register/actions";
 import FeedbackMessage from "@/components/FeedbackMessage";
+import PhoneInput from "@/components/ui/PhoneInput";
 import SubmitButton from "@/components/SubmitButton";
 import { initialFormFeedbackState } from "@/lib/formFeedbackState";
 
@@ -43,7 +44,7 @@ export default function RegisterForm() {
         </p>
         <h1 className="text-4xl font-bold">Criar conta</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Crie sua conta de cliente para agendar. Antes de finalizar, vocé confirma um código enviado por e-mail.
+          Crie sua conta de cliente para agendar. Antes de finalizar, você confirma um código enviado por e-mail.
         </p>
       </div>
 
@@ -91,13 +92,11 @@ export default function RegisterForm() {
           >
             Telefone
           </label>
-          <input
+          <PhoneInput
             id="phone"
             name="phone"
-            type="tel"
             required
             className={inputClassName}
-            placeholder="Seu telefone"
           />
         </div>
 

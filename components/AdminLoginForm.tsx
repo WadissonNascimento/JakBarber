@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import ReliableSubmitButton from "@/components/ReliableSubmitButton";
 
@@ -47,7 +47,7 @@ export default function AdminLoginForm({
       </div>
 
       <p className="mt-5 text-sm text-zinc-400">
-        Se preferir, vocé também pode usar o login comum em{" "}
+        Se preferir, você também pode usar o login comum em{" "}
         <Link href="/login" className="text-sky-300 hover:underline">
           /login
         </Link>

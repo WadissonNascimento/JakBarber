@@ -1,7 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { auth } from "@/auth";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
 import PageHeader from "@/components/ui/PageHeader";
@@ -23,6 +26,8 @@ import CancelAppointmentButton from "./CancelAppointmentButton";
 import ReviewForm from "./ReviewForm";
 
 export default async function CustomerAppointmentsPage() {
+  noStore();
+
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -50,7 +55,7 @@ export default async function CustomerAppointmentsPage() {
   const whatsappNumber = process.env.BARBER_WHATSAPP_NUMBER || "";
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 text-white">
+    <DashboardShell>
       <PageHeader
         title="Meus agendamentos"
         description="Veja seus horários e acompanhe o andamento de cada atendimento em uma página so."
@@ -58,16 +63,11 @@ export default async function CustomerAppointmentsPage() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/agendar"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:opacity-90"
+              className="btn-primary"
             >
               Novo agendamento
             </Link>
-            <Link
-              href="/customer"
-              className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-            >
-              Voltar ao painel
-            </Link>
+            <BackLink href="/customer" area="Painel" />
           </div>
         }
       />
@@ -79,7 +79,7 @@ export default async function CustomerAppointmentsPage() {
         {appointments.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento por enquanto"
-            description="Quando vocé reservar seu primeiro horário, ele aparecerá aqui."
+            description="Quando você reservar seu primeiro horário, ele aparecerá aqui."
             actionLabel="Agendar agora"
             actionHref="/agendar"
           />
@@ -105,7 +105,7 @@ export default async function CustomerAppointmentsPage() {
               return (
                 <div
                   key={appointment.id}
-                  className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5"
+                  className="dashboard-panel p-5"
                 >
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
                     <div className="min-w-0">
@@ -150,7 +150,7 @@ export default async function CustomerAppointmentsPage() {
                     />
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/20 p-4">
+                  <div className="dashboard-subpanel mt-4 p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Total</p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {getAppointmentGrandTotal(
@@ -193,7 +193,7 @@ export default async function CustomerAppointmentsPage() {
 
                   {canReview ? (
                     appointment.review ? (
-                      <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+                      <div className="dashboard-subpanel mt-4 p-4">
                         <p className="text-sm font-semibold text-white">
                           Avaliação enviada
                         </p>
@@ -211,7 +211,7 @@ export default async function CustomerAppointmentsPage() {
           </div>
         )}
       </SectionCard>
-    </div>
+    </DashboardShell>
   );
 }
 
@@ -236,7 +236,7 @@ function InfoBlock({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-black/20 p-4">
+    <div className="dashboard-subpanel p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</p>
       <p className="mt-2 text-sm text-white">{value}</p>
     </div>

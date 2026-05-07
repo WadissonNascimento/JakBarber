@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import { confirmOrder, deleteOrder, saveTrackingCode } from "@/app/actions/orderActions";
+import { sanitizeTextInput } from "@/lib/inputSanitization";
 
 export default function OrderActionPanel({
   orderId,
@@ -62,7 +63,7 @@ export default function OrderActionPanel({
             onClick={() =>
               runAction("confirm", () => confirmOrder(orderId), "Pedido confirmado com sucesso.")
             }
-            className="rounded bg-green-600 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary"
           >
             {isPending && pendingKey === "confirm" ? "Aceitando..." : "Aceitar"}
           </button>
@@ -74,7 +75,7 @@ export default function OrderActionPanel({
           onClick={() =>
             runAction("delete", () => deleteOrder(orderId), "Pedido excluido com sucesso.")
           }
-          className="rounded bg-red-600 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-danger"
         >
           {isPending && pendingKey === "delete" ? "Excluindo..." : "Excluir"}
         </button>
@@ -86,7 +87,7 @@ export default function OrderActionPanel({
           event.preventDefault();
           runAction(
             "tracking",
-            () => saveTrackingCode(orderId, code),
+            () => saveTrackingCode(orderId, sanitizeTextInput(code, { maxLength: 80 })),
             "Código de rastreio salvo com sucesso."
           );
         }}
@@ -96,12 +97,13 @@ export default function OrderActionPanel({
           value={code}
           onChange={(event) => setCode(event.target.value)}
           placeholder="Código de rastreio"
-          className="min-w-[240px] rounded bg-black px-3 py-2 text-white outline-none"
+          maxLength={80}
+          className="form-control min-w-[240px]"
         />
         <button
           type="submit"
           disabled={isPending && pendingKey === "tracking"}
-          className="rounded bg-sky-600 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary"
         >
           {isPending && pendingKey === "tracking" ? "Salvando..." : "Salvar rastreio"}
         </button>

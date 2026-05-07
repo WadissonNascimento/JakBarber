@@ -6,6 +6,10 @@ import {
   getAppointmentTotalBarberPayout,
   getAppointmentTotalShopRevenue,
 } from "@/lib/appointmentServices";
+import {
+  appointmentForFinanceSelect,
+  appointmentForTotalsSelect,
+} from "@/lib/appointmentSelects";
 
 export type FinancePeriod = "week" | "month" | "custom";
 
@@ -99,11 +103,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
           lte: range.end,
         },
       },
-      include: {
-        barber: true,
-        items: true,
-        services: true,
-      },
+      select: appointmentForFinanceSelect,
       orderBy: {
         date: "asc",
       },
@@ -115,10 +115,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
           lte: comparisonRange.end,
         },
       },
-      include: {
-        items: true,
-        services: true,
-      },
+      select: appointmentForTotalsSelect,
     }),
     prisma.barberPayout.findMany({
       where: {
@@ -510,10 +507,7 @@ export async function getBarberPayoutSnapshot(input: {
         lte: input.periodEnd,
       },
     },
-    include: {
-      items: true,
-      services: true,
-    },
+    select: appointmentForTotalsSelect,
   });
 
   const completedAppointments = appointments.filter(

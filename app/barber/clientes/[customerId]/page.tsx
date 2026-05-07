@@ -1,8 +1,6 @@
-import Link from "next/link";
-import { auth } from "@/auth";
-import { notFound, redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
+import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarDays,
   Clock3,
   HeartPulse,
@@ -16,6 +14,7 @@ import {
   UserRound,
   Wallet,
 } from "lucide-react";
+import BackLink from "@/components/ui/BackLink";
 import EmptyState from "@/components/ui/EmptyState";
 import SectionCard from "@/components/ui/SectionCard";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -28,10 +27,11 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
-import { prisma } from "@/lib/prisma";
+import { formatBrazilianPhone } from "@/lib/phone";
 import { formatCurrency } from "@/lib/utils";
 import { ClientNoteForm } from "../../_components/ClientNoteForm";
 import { getBarberClientProfile } from "../../data";
+import { requireActiveBarber } from "../../guard";
 
 export default async function BarberClientProfilePage({
   params,
@@ -39,32 +39,11 @@ export default async function BarberClientProfilePage({
   params: { customerId: string };
   searchParams?: { feedback?: string; tone?: string };
 }) {
-  const session = await auth();
+  noStore();
 
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  const { barber } = await requireActiveBarber();
 
-  if (session.user.role !== "BARBER") {
-    redirect("/painel");
-  }
-
-  const activeBarber = await prisma.user.findFirst({
-    where: {
-      id: session.user.id,
-      role: "BARBER",
-      isActive: true,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!activeBarber) {
-    redirect("/login");
-  }
-
-  const profile = await getBarberClientProfile(session.user.id, params.customerId);
+  const profile = await getBarberClientProfile(barber.id, params.customerId);
 
   if (!profile) {
     notFound();
@@ -77,16 +56,11 @@ export default async function BarberClientProfilePage({
     ? `https://wa.me/${profile.customer.phone.replace(/\D/g, "")}`
     : null;
   const emailHref = profile.customer.email ? `mailto:${profile.customer.email}` : null;
+  const formattedPhone = formatBrazilianPhone(profile.customer.phone);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
-      <Link
-        href="/barber/clientes"
-        className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4 text-[var(--brand-strong)]" />
-        Voltar para clientes
-      </Link>
+      <BackLink href="/barber/clientes" area="Clientes" className="mb-5" />
 
       <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(18,23,36,0.96),rgba(5,9,16,0.98))] shadow-[0_22px_70px_rgba(0,0,0,0.32)]">
         <div className="border-b border-white/10 p-5 sm:p-6">
@@ -111,7 +85,7 @@ export default async function BarberClientProfilePage({
             <ContactButton
               href={phoneHref}
               icon={<Phone className="h-4 w-4" />}
-              label={profile.customer.phone || "Sem telefone"}
+              label={formattedPhone || "Sem telefone"}
             />
             <ContactButton
               href={whatsappHref}

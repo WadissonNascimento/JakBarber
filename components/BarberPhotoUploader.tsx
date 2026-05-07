@@ -13,6 +13,7 @@ type BarberPhotoUploaderProps = {
   currentImage: string | null;
   name: string;
   compact?: boolean;
+  embedded?: boolean;
 };
 
 export default function BarberPhotoUploader({
@@ -21,6 +22,7 @@ export default function BarberPhotoUploader({
   currentImage,
   name,
   compact = false,
+  embedded = false,
 }: BarberPhotoUploaderProps) {
   const [image, setImage] = useState(currentImage);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -52,15 +54,19 @@ export default function BarberPhotoUploader({
 
       if (result.ok && data?.image) {
         setImage(data.image);
-        inputRef.current?.form?.reset();
+        if (inputRef.current) {
+          inputRef.current.value = "";
+        }
       }
     });
   }
 
   return (
-    <form
+    <div
       className={
-        compact
+        embedded
+          ? "flex items-center justify-between gap-3 border-b border-white/10 pb-4"
+          : compact
           ? "flex items-center justify-between gap-3 rounded-[20px] border border-white/10 bg-black/20 p-3"
           : "rounded-2xl border border-white/10 bg-black/20 p-4"
       }
@@ -166,6 +172,6 @@ export default function BarberPhotoUploader({
           </div>
         </div>
       ) : null}
-    </form>
+    </div>
   );
 }

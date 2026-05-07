@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { LogoutButton } from "@/components/LogoutButton";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import SectionCard from "@/components/ui/SectionCard";
@@ -79,25 +81,20 @@ export default async function MeuPerfilPage({
   const profile = customer?.customerProfile;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 text-white">
+    <DashboardShell>
       <PageHeader
         title="Meu perfil"
         description="Veja seus dados, preferências e histórico de serviços."
         actions={
           <div className="flex items-center gap-3">
-            <Link
-              href="/customer"
-              className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-            >
-              Voltar ao painel
-            </Link>
+            <BackLink href="/customer" area="Painel" />
             <LogoutButton />
           </div>
         }
       />
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[380px_1fr]">
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
+        <section className="dashboard-panel p-5 sm:p-6">
           <h2 className="text-xl font-semibold">Informações pessoais</h2>
 
           <ProfileForm
@@ -119,19 +116,19 @@ export default async function MeuPerfilPage({
           />
 
           <div className="mt-6 grid gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+            <div className="dashboard-subpanel p-4">
               <p className="text-sm text-zinc-400">Total de atendimentos</p>
               <p className="mt-1 text-2xl font-semibold">{appointments.length}</p>
             </div>
 
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+            <div className="dashboard-subpanel p-4">
               <p className="text-sm text-zinc-400">Serviço favorito</p>
               <p className="mt-1 text-lg font-semibold">
                 {favoriteService || "Ainda indefinido"}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+            <div className="dashboard-subpanel p-4">
               <p className="text-sm text-zinc-400">Barbeiro preferido</p>
               <p className="mt-1 text-lg font-semibold">
                 {profile?.preferredBarber?.name || "Não informado"}
@@ -146,7 +143,7 @@ export default async function MeuPerfilPage({
             description="Informações que ajudam a personalizar melhor seus próximos atendimentos."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+              <div className="dashboard-subpanel p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                   Alergias ou cuidados
                 </p>
@@ -154,7 +151,7 @@ export default async function MeuPerfilPage({
                   {profile?.allergies || "Nenhuma observação registrada"}
                 </p>
               </div>
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+              <div className="dashboard-subpanel p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                   Preferências
                 </p>
@@ -171,7 +168,7 @@ export default async function MeuPerfilPage({
             actions={
               <Link
                 href="/agendar"
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:opacity-90"
+                className="btn-primary"
               >
                 Novo agendamento
               </Link>
@@ -191,8 +188,8 @@ export default async function MeuPerfilPage({
                     key={appointment.id}
                     className={`rounded-2xl border p-4 ${
                       index === 0
-                        ? "border-sky-500/30 bg-sky-500/10"
-                        : "border-zinc-800 bg-zinc-950/70"
+                        ? "border-[var(--brand)]/35 bg-[var(--brand-muted)]"
+                        : "border-white/10 bg-black/20"
                     }`}
                   >
                     <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
@@ -254,6 +251,6 @@ export default async function MeuPerfilPage({
           </SectionCard>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }

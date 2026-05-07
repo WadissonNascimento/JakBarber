@@ -8,7 +8,7 @@ import {
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import PageHeader from "@/components/ui/PageHeader";
+import DashboardShell from "@/components/ui/DashboardShell";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
 
 export default async function CustomerPage() {
@@ -63,15 +63,33 @@ export default async function CustomerPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#18233b_0%,#0b0e16_45%,#06070b_100%)]">
-      <div className="mx-auto max-w-6xl px-4 py-10 text-white">
-        <PageHeader
-          eyebrow="Minha Conta"
-          title="Painel do cliente"
-          description="Tudo que vocé precisa antes e depois do atendimento."
-        />
+    <div className="min-h-screen">
+      <DashboardShell>
+        <section className="dashboard-panel p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+                Minha conta
+              </p>
+              <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
+                Painel do cliente
+              </h1>
+              <p className="mt-2 text-sm text-zinc-400">
+                Tudo que voce precisa antes e depois do atendimento.
+              </p>
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+            <div className="dashboard-subpanel p-4 sm:min-w-[220px]">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                Agendamentos
+              </p>
+              <p className="mt-3 text-2xl font-bold text-white">{appointmentsCount}</p>
+              <p className="mt-1 text-xs text-zinc-400">historico completo</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {entries.map((entry) => (
             <DashboardEntryCard
               key={entry.href}
@@ -83,7 +101,7 @@ export default async function CustomerPage() {
             />
           ))}
         </div>
-      </div>
+      </DashboardShell>
     </div>
   );
 }

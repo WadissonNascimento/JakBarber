@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import PageHeader from "@/components/ui/PageHeader";
-import SectionCard from "@/components/ui/SectionCard";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import AdminReviewsClient from "./AdminReviewsClient";
 
 export default async function AdminReviewsPage() {
@@ -37,27 +36,22 @@ export default async function AdminReviewsPage() {
   });
 
   return (
-    <main className="page-shell max-w-6xl text-white">
-      <PageHeader
-        eyebrow="Admin"
-        title="Avaliações"
-        description="Publique, oculte ou remova avaliações exibidas no site."
-        actions={
-          <Link
-            href="/admin"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold transition hover:bg-white/5"
-          >
-            Voltar ao admin
-          </Link>
-        }
-      />
+    <DashboardShell>
+      <section className="dashboard-panel p-4 sm:p-5">
+        <div className="border-b border-white/10 pb-5">
+          <BackLink href="/admin" area="Admin" />
 
-      <SectionCard
-        title="Avaliações dos clientes"
-        description="Somente avaliações públicas aparecem na home e na página de avaliações."
-      >
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+            Painel admin
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-white">Avaliações</h1>
+          <p className="mt-2 text-sm leading-6 text-zinc-400">
+            Controle os comentários exibidos no site sem alterar os atendimentos.
+          </p>
+        </div>
+
         <AdminReviewsClient reviews={reviews} />
-      </SectionCard>
-    </main>
+      </section>
+    </DashboardShell>
   );
 }

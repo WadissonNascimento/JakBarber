@@ -1,6 +1,7 @@
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
 import SectionCard from "@/components/ui/SectionCard";
+import { formatBrazilianPhone } from "@/lib/phone";
 import { saveClientNoteAction } from "../actions";
 import type { getBarberDashboardData } from "../data";
 
@@ -60,7 +61,7 @@ export function ClientsSection({
                     {client.name}
                   </Link>
                   <p className="mt-1 text-sm text-zinc-400">
-                    {client.phone || client.email || "Contato não informado"}
+                    {formatBrazilianPhone(client.phone) || client.email || "Contato não informado"}
                   </p>
                   <Link
                     href={`/barber/clientes/${client.id}`}
@@ -100,13 +101,14 @@ export function ClientsSection({
                       name="note"
                       defaultValue={client.note}
                       rows={3}
+                      maxLength={500}
                       placeholder="Preferências, alergias, estilo recorrente..."
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none"
+                      className="form-control text-sm"
                     />
                   </label>
                   <button
                     type="submit"
-                    className="mt-3 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    className="btn-secondary mt-3"
                   >
                     Salvar observação
                   </button>

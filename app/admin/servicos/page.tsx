@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import AdminServicesClient from "./AdminServicesClient";
 
 export default async function AdminServicosPage() {
@@ -38,28 +39,30 @@ export default async function AdminServicosPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 text-white">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <DashboardShell size="wide">
+      <section className="dashboard-panel p-4 sm:p-6">
+        <div className="mb-5">
+          <BackLink href="/admin" area="Admin" />
+        </div>
+
         <div>
-          <h1 className="text-3xl font-bold">Serviços e comissões</h1>
-          <p className="text-zinc-400">
-            O admin controla os percentuais de repasse de todos os serviços, gerais e exclusivos.
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+            Painel admin
+          </p>
+          <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">
+            Serviços e comissões
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+            Controle serviços gerais, serviços exclusivos e percentuais de repasse.
           </p>
         </div>
 
-        <Link
-          href="/admin"
-          className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-        >
-          Voltar ao admin
-        </Link>
-      </div>
-
-      <AdminServicesClient
-        globalServices={globalServices}
-        barberServices={barberServices}
-        barbers={barbers}
-      />
-    </div>
+        <AdminServicesClient
+          globalServices={globalServices}
+          barberServices={barberServices}
+          barbers={barbers}
+        />
+      </section>
+    </DashboardShell>
   );
 }

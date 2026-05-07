@@ -6,7 +6,10 @@ export default async function HomePage() {
     where: {
       isVisible: true,
     },
-    include: {
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
       customer: {
         select: {
           name: true,

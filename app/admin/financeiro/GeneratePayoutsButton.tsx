@@ -51,7 +51,7 @@ export default function GeneratePayoutsButton({
             }
           });
         }}
-        className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn-primary"
       >
         {isPending ? "Salvando..." : "Salvar repasses"}
       </button>

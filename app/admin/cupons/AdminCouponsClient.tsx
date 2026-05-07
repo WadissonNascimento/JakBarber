@@ -89,14 +89,16 @@ export default function AdminCouponsClient({
               <input
                 name="code"
                 required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                maxLength={40}
+                className="form-control"
               />
             </Field>
 
             <Field label="Descrição">
               <input
                 name="description"
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                maxLength={180}
+                className="form-control"
               />
             </Field>
 
@@ -119,7 +121,7 @@ export default function AdminCouponsClient({
                   step="0.01"
                   name="discountValue"
                   required
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                  className="form-control"
                 />
               </Field>
             </div>
@@ -131,7 +133,7 @@ export default function AdminCouponsClient({
                   min="0"
                   step="0.01"
                   name="minOrderTotal"
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                  className="form-control"
                 />
               </Field>
 
@@ -141,7 +143,7 @@ export default function AdminCouponsClient({
                   min="0"
                   step="0.01"
                   name="maxDiscount"
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                  className="form-control"
                 />
               </Field>
             </div>
@@ -153,7 +155,7 @@ export default function AdminCouponsClient({
                   min="1"
                   step="1"
                   name="usageLimit"
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                  className="form-control"
                 />
               </Field>
 
@@ -167,26 +169,35 @@ export default function AdminCouponsClient({
             <button
               type="submit"
               disabled={isPending && pendingKey === "create-coupon"}
-              className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary w-full"
             >
               {isPending && pendingKey === "create-coupon" ? "Criando..." : "Criar cupom"}
             </button>
           </form>
         </SectionCard>
 
-        <div className="space-y-4">
+        <SectionCard
+          title="Cupons cadastrados"
+          description="Regras promocionais ativas, pausadas ou expiradas."
+        >
           {coupons.length === 0 ? (
             <EmptyState
               title="Nenhum cupom cadastrado"
               description="Os cupons promocionais aparecerão aqui."
             />
           ) : (
-            coupons.map((coupon) => (
-              <SectionCard
-                key={coupon.id}
-                title={coupon.code}
-                description={`${coupon.discountType === "PERCENT" ? `${coupon.discountValue}%` : `R$ ${coupon.discountValue.toFixed(2)}`} de desconto`}
-              >
+            <div className="space-y-3">
+              {coupons.map((coupon) => (
+                <article key={coupon.id} className="dashboard-subpanel p-4 sm:p-5">
+                  <div className="mb-4 border-b border-white/10 pb-4">
+                    <h3 className="text-lg font-semibold text-white">{coupon.code}</h3>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {coupon.discountType === "PERCENT"
+                        ? `${coupon.discountValue}%`
+                        : `R$ ${coupon.discountValue.toFixed(2)}`}{" "}
+                      de desconto
+                    </p>
+                  </div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
                   <div>
                     <p>Usos: {coupon.timesUsed}{coupon.usageLimit ? ` / ${coupon.usageLimit}` : ""}</p>
@@ -208,7 +219,7 @@ export default function AdminCouponsClient({
                         formData.set("couponId", coupon.id);
                         runAction(`toggle-${coupon.id}`, toggleCouponAction, formData);
                       }}
-                      className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="btn-secondary"
                     >
                       {isPending && pendingKey === `toggle-${coupon.id}`
                         ? "Salvando..."
@@ -229,7 +240,7 @@ export default function AdminCouponsClient({
                         formData.set("couponId", coupon.id);
                         runAction(`delete-${coupon.id}`, deleteCouponAction, formData);
                       }}
-                      className="rounded-xl border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="btn-danger"
                     >
                       {isPending && pendingKey === `delete-${coupon.id}`
                         ? "Excluindo..."
@@ -255,7 +266,8 @@ export default function AdminCouponsClient({
                     <input
                       name="description"
                       defaultValue={coupon.description || ""}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                      maxLength={180}
+                      className="form-control"
                     />
                   </Field>
 
@@ -277,7 +289,7 @@ export default function AdminCouponsClient({
                       step="0.01"
                       name="discountValue"
                       defaultValue={coupon.discountValue}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                      className="form-control"
                     />
                   </Field>
 
@@ -288,7 +300,7 @@ export default function AdminCouponsClient({
                       step="0.01"
                       name="minOrderTotal"
                       defaultValue={coupon.minOrderTotal}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                      className="form-control"
                     />
                   </Field>
 
@@ -299,7 +311,7 @@ export default function AdminCouponsClient({
                       step="0.01"
                       name="maxDiscount"
                       defaultValue={coupon.maxDiscount || ""}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                      className="form-control"
                     />
                   </Field>
 
@@ -310,7 +322,7 @@ export default function AdminCouponsClient({
                       step="1"
                       name="usageLimit"
                       defaultValue={coupon.usageLimit || ""}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none"
+                      className="form-control"
                     />
                   </Field>
 
@@ -329,7 +341,7 @@ export default function AdminCouponsClient({
                     <button
                       type="submit"
                       disabled={isPending && pendingKey === `update-${coupon.id}`}
-                      className="rounded-xl bg-white px-4 py-3 font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
+                      className="btn-primary"
                     >
                       {isPending && pendingKey === `update-${coupon.id}`
                         ? "Salvando..."
@@ -337,10 +349,11 @@ export default function AdminCouponsClient({
                     </button>
                   </div>
                 </form>
-              </SectionCard>
-            ))
+                </article>
+              ))}
+            </div>
           )}
-        </div>
+        </SectionCard>
       </div>
     </>
   );

@@ -13,12 +13,12 @@ import FeedbackMessage from "@/components/FeedbackMessage";
 import { getCurrentScheduleDate } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import { buildAppointmentContactWhatsAppUrl } from "@/lib/whatsapp";
-import type { getBarberDashboardData } from "../data";
+import type { getBarberTodayDashboardData } from "../data";
 import BarberAppointmentActions from "./BarberAppointmentActions";
 import BarberAppointmentCard from "./BarberAppointmentCard";
 import WalkInAppointmentCard from "./WalkInAppointmentCard";
 
-type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
+type BarberTodayDashboardData = Awaited<ReturnType<typeof getBarberTodayDashboardData>>;
 
 function formatTodayLabel() {
   return new Date().toLocaleDateString("pt-BR", {
@@ -35,9 +35,9 @@ export default function BarberTodayDashboard({
   clients,
 }: {
   barberName: string;
-  summary: BarberDashboardData["summary"];
-  walkInServices: BarberDashboardData["walkInServices"];
-  clients: BarberDashboardData["clients"];
+  summary: BarberTodayDashboardData["summary"];
+  walkInServices: BarberTodayDashboardData["walkInServices"];
+  clients: BarberTodayDashboardData["clients"];
 }) {
   const [appointments, setAppointments] = useState(summary.todayAppointments);
   const [feedback, setFeedback] = useState<{
@@ -84,7 +84,7 @@ export default function BarberTodayDashboard({
   return (
     <section className="max-w-full space-y-5 overflow-hidden">
       <div className="max-w-full overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
               Hoje
@@ -96,30 +96,30 @@ export default function BarberTodayDashboard({
               {formatTodayLabel()}
             </p>
           </div>
+        </div>
 
-          <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[260px]">
-            <QuickLink href="/barber/agenda" icon={<CalendarRange />}>
-              Agenda
-            </QuickLink>
-            <QuickLink href="/barber/disponibilidade" icon={<Clock3 />}>
-              Disponibilidade
-            </QuickLink>
-            <QuickLink href="/barber/clientes" icon={<Users />}>
-              Clientes
-            </QuickLink>
-            <WalkInAppointmentCard
-              services={walkInServices}
-              clients={clients}
-              activeAppointments={summary.todayAppointments.map((appointment) => ({
-                date: appointment.date,
-                status: appointment.status,
-                occupiedDuration: appointment.occupiedDuration,
-              }))}
-            />
-            <QuickLink href="/barber/financeiro" icon={<DollarSign />}>
-              Meu financeiro
-            </QuickLink>
-          </div>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <QuickLink href="/barber/agenda" icon={<CalendarRange />}>
+            Agenda
+          </QuickLink>
+          <QuickLink href="/barber/disponibilidade" icon={<Clock3 />}>
+            Disponibilidade
+          </QuickLink>
+          <QuickLink href="/barber/clientes" icon={<Users />}>
+            Clientes
+          </QuickLink>
+          <WalkInAppointmentCard
+            services={walkInServices}
+            clients={clients}
+            activeAppointments={summary.todayAppointments.map((appointment) => ({
+              date: appointment.date,
+              status: appointment.status,
+              occupiedDuration: appointment.occupiedDuration,
+            }))}
+          />
+          <QuickLink href="/barber/financeiro" icon={<DollarSign />}>
+            Meu financeiro
+          </QuickLink>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -223,7 +223,7 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)]"
+      className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)]"
     >
       <span className="h-4 w-4 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
         {icon}

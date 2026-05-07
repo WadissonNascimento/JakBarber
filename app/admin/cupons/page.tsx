@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import AdminCouponsClient from "./AdminCouponsClient";
 
@@ -23,21 +24,14 @@ export default async function AdminCouponsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 text-white">
+    <DashboardShell size="wide">
       <PageHeader
         title="Cupons"
         description="Crie descontos promocionais para a loja e acompanhe o uso de cada código."
-        actions={
-          <Link
-            href="/admin"
-            className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-          >
-            Voltar ao admin
-          </Link>
-        }
+        actions={<BackLink href="/admin" area="Admin" />}
       />
 
       <AdminCouponsClient coupons={coupons} />
-    </div>
+    </DashboardShell>
   );
 }

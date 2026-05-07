@@ -95,7 +95,11 @@ export async function createAppointmentAction(
 
   revalidatePath("/customer");
   revalidatePath("/customer/agendamentos");
+  revalidatePath("/meu-perfil");
   revalidatePath("/barber");
+  revalidatePath("/barber/agenda");
+  revalidatePath("/barber/clientes");
+  revalidatePath(`/barber/clientes/${session.user.id}`);
   revalidatePath("/admin/agenda");
   revalidatePath("/agendar");
 

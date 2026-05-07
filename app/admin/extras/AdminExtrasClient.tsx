@@ -1,9 +1,11 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
-import SectionCard from "@/components/ui/SectionCard";
+import EmptyState from "@/components/ui/EmptyState";
+import SummaryStatsPanel from "@/components/ui/SummaryStatsPanel";
 import {
   EXTRA_CATEGORY_OPTIONS,
   getExtraCategoryLabel,
@@ -12,26 +14,21 @@ import { prepareProductImageUpload } from "@/lib/productImageClient";
 import { createExtraProductFromForm } from "@/app/actions/extraProductActions";
 import ExtraProductCardClient from "./ExtraProductCardClient";
 
+type ExtraItem = {
+  id: string;
+  name: string;
+  description: null | string;
+  category: string;
+  price: number;
+  commissionType: string;
+  commissionValue: number;
+  isActive: boolean;
+  stock: number;
+  imageUrl: null | string;
+};
+
 type AdminExtrasClientProps = {
-  extras: Array<{
-    id: string;
-    name: string;
-    description: null | string;
-    category: string;
-    price: number;
-    commissionType: string;
-    commissionValue: number;
-    isActive: boolean;
-    stock: number;
-    imageUrl: null | string;
-    stockMovements: Array<{
-      id: string;
-      createdAt: Date;
-      type: string;
-      quantity: number;
-      reason: null | string;
-    }>;
-  }>;
+  extras: ExtraItem[];
 };
 
 export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
@@ -44,36 +41,53 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
     file: File;
     previewUrl: string;
   } | null>(null);
+  const [newCommissionType, setNewCommissionType] = useState("PERCENT");
+
+  useEffect(() => {
+    return () => {
+      if (imageUpload?.previewUrl) {
+        URL.revokeObjectURL(imageUpload.previewUrl);
+      }
+    };
+  }, [imageUpload]);
 
   const activeExtras = extras.filter((extra) => extra.isActive).length;
   const lowStockExtras = extras.filter((extra) => extra.stock > 0 && extra.stock <= 3).length;
   const outOfStockExtras = extras.filter((extra) => extra.stock === 0).length;
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <SectionCard title="Extras ativos" description="Itens liberados no agendamento.">
-          <p className="text-3xl font-semibold text-white">{activeExtras}</p>
-        </SectionCard>
-        <SectionCard title="Estoque baixo" description="Itens com 3 unidades ou menos.">
-          <p className="text-3xl font-semibold text-amber-300">{lowStockExtras}</p>
-        </SectionCard>
-        <SectionCard title="Sem estoque" description="Não aparecem para o cliente.">
-          <p className="text-3xl font-semibold text-rose-300">{outOfStockExtras}</p>
-        </SectionCard>
-      </div>
+    <div className="mt-5 space-y-5 border-t border-white/10 pt-5">
+      <SummaryStatsPanel
+        title="Resumo dos extras"
+        description="Situação dos itens vendidos junto ao atendimento."
+        stats={[
+          {
+            label: "Extras ativos",
+            value: activeExtras,
+            helper: "Liberados no agendamento",
+          },
+          {
+            label: "Estoque baixo",
+            value: lowStockExtras,
+            helper: "3 unidades ou menos",
+            tone: "warning",
+          },
+          {
+            label: "Sem estoque",
+            value: outOfStockExtras,
+            helper: "Indisponíveis agora",
+            tone: "danger",
+          },
+        ]}
+      />
 
-      <SectionCard
-        title="Extras do agendamento"
-        description="Cadastre bebidas, pomadas, gel e itens simples usados no atendimento."
-      >
-        <FeedbackMessage message={feedback.message} tone={feedback.tone} />
-
+      <section className="dashboard-subpanel p-3.5 sm:p-5">
         <form
-          className="mt-4 grid gap-4"
+          className="space-y-3.5"
           onSubmit={(event) => {
             event.preventDefault();
-            const formData = new FormData(event.currentTarget);
+            const form = event.currentTarget;
+            const formData = new FormData(form);
 
             if (imageUpload) {
               formData.set("image", imageUpload.file);
@@ -92,7 +106,8 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
                   }
                   return null;
                 });
-                event.currentTarget.reset();
+                form.reset();
+                setNewCommissionType("PERCENT");
               } catch (error) {
                 setFeedback({
                   message:
@@ -105,22 +120,51 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
             });
           }}
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Nome</span>
+          <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+          <div className="grid gap-3 md:grid-cols-[1fr_13rem] md:items-end">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+                Cadastro
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-white">Novo extra</h2>
+            </div>
+
+            {imageUpload ? (
+              <div className="grid grid-cols-[3.5rem_1fr] items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-2">
+                <div className="relative h-14 w-14 overflow-hidden rounded-xl bg-black/20">
+                  <Image
+                    src={imageUpload.previewUrl}
+                    alt="Preview do extra"
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <p className="truncate text-xs font-semibold text-zinc-300">
+                  Imagem pronta
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[1fr_13rem]">
+            <Field label="Nome">
               <input
                 name="name"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-                placeholder="Ex.: Agua sem gas"
+                maxLength={120}
+                className="service-edit-control"
+                placeholder="Ex.: Água sem gás"
               />
-            </label>
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Categoria</span>
+            </Field>
+
+            <Field label="Categoria">
               <select
                 name="category"
                 defaultValue="OTHER"
-                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
+                className="service-edit-control"
               >
                 {EXTRA_CATEGORY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -128,70 +172,69 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
           </div>
 
-          <label className="space-y-2 text-sm text-zinc-300">
-            <span>Descrição</span>
-            <textarea
-              name="description"
-              rows={2}
-              className="min-h-20 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-              placeholder="Opcional"
-            />
-          </label>
+          <input type="hidden" name="description" value="" />
 
-          <div className="grid gap-4 md:grid-cols-4">
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Preco</span>
+          <div className="service-edit-row service-edit-row-extra">
+            <Field label="Preço">
               <input
                 name="price"
                 type="number"
                 min="0"
                 step="0.01"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
+                className="service-edit-control"
                 placeholder="0.00"
               />
-            </label>
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Estoque</span>
+            </Field>
+
+            <Field label="Estoque">
               <input
                 name="stock"
                 type="number"
                 min="0"
                 step="1"
                 required
-                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
+                className="service-edit-control"
                 placeholder="0"
               />
-            </label>
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Comissão</span>
+            </Field>
+
+            <Field label="Tipo">
               <select
                 name="commissionType"
-                defaultValue="PERCENT"
-                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
+                value={newCommissionType}
+                onChange={(event) => setNewCommissionType(event.target.value)}
+                className="service-edit-control"
               >
                 <option value="PERCENT">Percentual</option>
                 <option value="FIXED">Valor fixo</option>
               </select>
-            </label>
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Valor comissão</span>
-              <input
-                name="commissionValue"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue="0"
-                required
-                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white"
-                placeholder="0"
-              />
-            </label>
-            <label className="space-y-2 text-sm text-zinc-300">
-              <span>Imagem opcional</span>
+            </Field>
+
+            <Field label="Comissão">
+              <div className="input-with-suffix">
+                <input
+                  name="commissionValue"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue="0"
+                  required
+                  className="service-edit-control input-with-suffix-control"
+                  placeholder="0"
+                />
+                <span className="input-suffix">
+                  {newCommissionType === "FIXED" ? "R$" : "%"}
+                </span>
+              </div>
+            </Field>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <Field label="Imagem opcional">
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -222,59 +265,59 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
                     });
                   }
                 }}
-                className="max-w-full text-sm text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-white"
+                className="max-w-full text-sm text-zinc-300 file:mr-3 file:rounded-xl file:border-0 file:bg-[var(--brand)] file:px-3 file:py-2 file:text-white"
               />
-            </label>
+            </Field>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="btn-primary w-full sm:w-auto"
+            >
+              {isPending ? "Salvando..." : "Cadastrar"}
+            </button>
           </div>
-
-          {imageUpload ? (
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Preview da imagem
-              </p>
-              <div className="relative mt-3 h-24 w-24 overflow-hidden rounded-2xl">
-                <Image
-                  src={imageUpload.previewUrl}
-                  alt="Preview do extra"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-            </div>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPending ? "Salvando..." : "Cadastrar extra"}
-          </button>
         </form>
-      </SectionCard>
+      </section>
 
-      <SectionCard
-        title="Lista atual de extras"
-        description="Gerencie o que fica disponível para o cliente no agendamento."
-      >
+      <section className="border-t border-white/10 pt-5">
+        <div className="mb-3">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
+            Itens
+          </p>
+          <h2 className="mt-1 text-xl font-bold text-white">Lista de extras</h2>
+        </div>
+
         {extras.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-zinc-500">
-            Nenhum extra cadastrado ainda.
-          </div>
+          <EmptyState
+            title="Nenhum extra cadastrado"
+            description="Cadastre o primeiro item vendido junto ao atendimento."
+          />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             {extras.map((extra) => (
-              <div key={extra.id} className="space-y-2">
-                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-                  {getExtraCategoryLabel(extra.category)}
-                </div>
-                <ExtraProductCardClient extra={extra} />
-              </div>
+              <ExtraProductCardClient key={extra.id} extra={extra} />
             ))}
           </div>
         )}
-      </SectionCard>
+      </section>
     </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

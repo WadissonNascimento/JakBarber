@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import NewProductForm from "./NewProductForm";
 
 export default async function NovoProduto() {
@@ -10,18 +11,26 @@ export default async function NovoProduto() {
   if (session.user.role !== "ADMIN") redirect("/painel");
 
   return (
-    <div className="mx-auto max-w-2xl p-6 text-white">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">Novo Produto</h1>
-        <Link
-          href="/admin/produtos"
-          className="rounded-xl border border-zinc-700 px-4 py-2 text-sm"
-        >
-          Voltar
-        </Link>
-      </div>
+    <DashboardShell size="narrow">
+      <section className="dashboard-panel p-4 sm:p-6">
+        <div className="mb-5">
+          <BackLink href="/admin/produtos" area="Produtos" />
+        </div>
 
-      <NewProductForm />
-    </div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+            Painel admin
+          </p>
+          <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">
+            Novo produto
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+            Cadastre um item do catálogo com imagem, preço e estoque.
+          </p>
+        </div>
+
+        <NewProductForm />
+      </section>
+    </DashboardShell>
   );
 }

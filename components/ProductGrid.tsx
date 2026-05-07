@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { formatCurrency } from "@/lib/utils";
@@ -40,7 +40,7 @@ export function ProductGrid({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-lg border border-white/10 bg-white/[0.04] px-5 py-4">
+      <div className="dashboard-panel px-5 py-4">
         <div>
           <h2 className="text-2xl font-semibold text-white">
             Catélogo disponível
@@ -55,7 +55,7 @@ export function ProductGrid({
         {products.map((product) => (
           <div
             key={product.id}
-            className="group overflow-hidden rounded-[14px] border border-white/10 bg-[#111622] shadow-[0_16px_36px_rgba(0,0,0,0.24)] transition hover:border-sky-400/20"
+            className="group overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] shadow-[0_16px_36px_rgba(0,0,0,0.24)] transition hover:border-[var(--brand)]/35"
           >
             <div className="relative aspect-square overflow-hidden border-b border-white/10 bg-[#edf1f7]">
               <div className="absolute left-2 top-2 z-10 flex flex-wrap gap-2 sm:left-4 sm:top-4">
@@ -98,7 +98,7 @@ export function ProductGrid({
 
               <div className="mt-3 sm:mt-4">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 sm:text-xs">
-                  Preco
+                  Preço
                 </p>
                 <p className="mt-1 text-[18px] font-bold text-white sm:text-2xl">
                   {formatCurrency(product.price)}
@@ -113,12 +113,12 @@ export function ProductGrid({
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-[10px] bg-[var(--brand)] px-3 py-3 text-center text-[12px] font-semibold leading-5 text-white transition hover:brightness-110 sm:px-4 sm:text-sm"
+                    className="btn-primary w-full px-3 py-3 text-center text-[12px] leading-5 sm:px-4 sm:text-sm"
                   >
                     Entrar em contato com o vendedor
                   </a>
                 ) : (
-                  <span className="block rounded-lg border border-white/10 px-4 py-3 text-center text-sm text-zinc-400">
+                  <span className="block rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-zinc-400">
                     Consulte disponibilidade na barbearia
                   </span>
                 )}

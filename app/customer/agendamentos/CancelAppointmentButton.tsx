@@ -44,7 +44,7 @@ export default function CancelAppointmentButton({
         type="button"
         onClick={() => setIsDialogOpen(true)}
         disabled={disabled || isPending}
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        className="btn-danger w-full sm:w-auto"
       >
         <span>{isPending ? "Cancelando..." : "Cancelar agendamento"}</span>
       </button>
@@ -59,7 +59,7 @@ export default function CancelAppointmentButton({
           aria-modal="true"
           aria-labelledby="cancel-appointment-title"
         >
-          <div className="w-full max-w-[420px] rounded-2xl border border-white/10 bg-[#080d18] p-5 text-white shadow-2xl shadow-black/60 sm:p-6">
+          <div className="dashboard-panel w-full max-w-[420px] p-5 text-white sm:p-6">
             <div className="text-center">
               <h2
                 id="cancel-appointment-title"
@@ -77,7 +77,7 @@ export default function CancelAppointmentButton({
                 type="button"
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isPending}
-                className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-secondary"
               >
                 Voltar
               </button>
@@ -85,7 +85,7 @@ export default function CancelAppointmentButton({
                 type="button"
                 onClick={cancelAppointment}
                 disabled={isPending}
-                className="rounded-xl border border-red-500/40 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-danger"
               >
                 {isPending ? "Cancelando..." : "Cancelar"}
               </button>

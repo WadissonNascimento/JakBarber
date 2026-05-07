@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import DashboardShell from "@/components/ui/DashboardShell";
+import EmptyState from "@/components/ui/EmptyState";
 import { ProductGrid } from "@/components/ProductGrid";
 import { getCurrentShop } from "@/lib/shop";
 
@@ -19,34 +21,45 @@ export default async function ProdutosPage() {
     orderBy: {
       createdAt: "desc",
     },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      imageUrl: true,
+      stock: true,
+    },
   });
 
   return (
-    <main className="relative min-h-screen bg-[#030712] text-white">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_35%),radial-gradient(circle_at_bottom,_rgba(37,99,235,0.12),_transparent_30%)]" />
-
-      <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 sm:pt-14">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold sm:text-5xl">
+    <main className="min-h-screen text-white">
+      <DashboardShell>
+        <section className="dashboard-panel p-4 sm:p-6">
+          <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+            Cliente
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
             Arsenal do barbeiro
           </h1>
-
-          <p className="mt-4 max-w-2xl text-sm text-zinc-300 sm:text-base">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Produtos selecionados para rotina, bancada e revenda.
           </p>
-        </div>
+        </section>
 
-        {products.length === 0 ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-zinc-300">
-            Nenhum produto no catálogo no momento.
-          </div>
-        ) : (
-          <ProductGrid
-            products={products}
-            whatsappNumber={shop.whatsappNumber || "5511961971267"}
-          />
-        )}
-      </section>
+        <section className="mt-5">
+          {products.length === 0 ? (
+            <EmptyState
+              title="Nenhum produto no catalogo"
+              description="Quando houver produtos ativos em estoque, eles aparecem aqui."
+            />
+          ) : (
+            <ProductGrid
+              products={products}
+              whatsappNumber={shop.whatsappNumber || "5511961971267"}
+            />
+          )}
+        </section>
+      </DashboardShell>
     </main>
   );
 }

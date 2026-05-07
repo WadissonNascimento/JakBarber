@@ -13,7 +13,12 @@ export default async function ServicosPage() {
       isActive: true,
     },
     orderBy: [{ barberId: "asc" }, { name: "asc" }],
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      duration: true,
       barber: {
         select: {
           name: true,

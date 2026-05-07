@@ -13,9 +13,9 @@ export type HomeReview = {
 };
 
 const corteImages = [
-  "/cortes/corte1.png",
-  "/cortes/corte2.png",
-  "/cortes/corte3.png",
+  "/cortes/corte1.webp",
+  "/cortes/corte2.webp",
+  "/cortes/corte3.webp",
 ];
 
 function formatReviewName(name: string) {
@@ -158,6 +158,7 @@ export default function HomeClient({
                         src={src}
                         alt={`Corte ${index + 1}`}
                         fill
+                        sizes="(max-width: 1024px) 100vw, 560px"
                         priority={index === 0}
                         className={`object-cover transition-all duration-700 ease-out ${
                           current === index

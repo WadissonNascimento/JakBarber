@@ -23,6 +23,7 @@ import {
   getCurrentScheduleMinutes,
   getScheduleMinutes,
 } from "@/lib/scheduleTime";
+import { formatBrazilianPhone, maskBrazilianPhone } from "@/lib/phone";
 import { formatCurrency } from "@/lib/utils";
 import { createWalkInAppointmentAction } from "../actions";
 import type { getBarberDashboardData } from "../data";
@@ -271,7 +272,7 @@ export default function WalkInAppointmentCard({
     }
 
     setCustomerName(customer.name);
-    setCustomerPhone(customer.phone || "");
+    setCustomerPhone(formatBrazilianPhone(customer.phone));
     setClientSearch("");
     setIsClientPickerOpen(false);
   }
@@ -325,10 +326,10 @@ export default function WalkInAppointmentCard({
         type="button"
         disabled={isDisabled}
         onClick={openWalkInModal}
-        className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Plus className="h-4 w-4 text-[var(--brand-strong)]" />
-        <span>Criar encaixe</span>
+        <span className="min-w-0 truncate">Criar encaixe</span>
       </button>
 
       {mounted && isOpen
@@ -386,7 +387,7 @@ export default function WalkInAppointmentCard({
                         setPendingFormData(formData);
                         setPendingSummary({
                           customerName: submittedCustomerName || "Cliente",
-                          customerPhone: String(formData.get("customerPhone") || "").trim(),
+                          customerPhone: formatBrazilianPhone(String(formData.get("customerPhone") || "")),
                           serviceName,
                           startTime: selectedStartTime || startTime,
                           notes,
@@ -422,9 +423,9 @@ export default function WalkInAppointmentCard({
                           <input
                             name="customerPhone"
                             value={customerPhone}
-                            onChange={(event) => setCustomerPhone(event.target.value)}
-                            maxLength={30}
-                            placeholder="Opcional"
+                            onChange={(event) => setCustomerPhone(maskBrazilianPhone(event.target.value))}
+                            maxLength={15}
+                            placeholder="(11) 96590-0713"
                             className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
                           />
                         </label>
@@ -445,7 +446,7 @@ export default function WalkInAppointmentCard({
                             </span>
                             <span className="mt-1 block truncate text-xs text-zinc-500">
                               {selectedCustomer
-                                ? selectedCustomer.phone || selectedCustomer.email || "Sem contato"
+                                ? formatBrazilianPhone(selectedCustomer.phone) || selectedCustomer.email || "Sem contato"
                                 : "Buscar na sua base ou preencher manualmente"}
                             </span>
                           </span>
@@ -807,7 +808,7 @@ function ClientPickerPopup({
                         {client.name}
                       </span>
                       <span className="mt-1 block truncate text-xs text-zinc-400">
-                        {client.phone || client.email || "Sem contato"}
+                        {formatBrazilianPhone(client.phone) || client.email || "Sem contato"}
                       </span>
                     </span>
                     {selected ? (
@@ -880,7 +881,7 @@ function WalkInConfirmPopup({
 
         <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
           <SummaryRow label="Cliente" value={summary.customerName} />
-          <SummaryRow label="Telefone" value={summary.customerPhone || "Não informado"} />
+          <SummaryRow label="Telefone" value={formatBrazilianPhone(summary.customerPhone) || "Não informado"} />
           <SummaryRow label="Serviços" value={summary.serviceName} />
           <SummaryRow label="Horário" value={summary.startTime} />
           <SummaryRow label="Duração" value={`${duration || 0} min`} />

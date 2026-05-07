@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import SectionCard from "@/components/ui/SectionCard";
 import StatusBadge from "@/components/ui/StatusBadge";
+import SummaryStatsPanel from "@/components/ui/SummaryStatsPanel";
 import {
   ADMIN_ORDER_STATUSES,
   getAdminOrdersReport,
@@ -39,18 +42,11 @@ export default async function AdminPedidosPage({
   ).toString();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 text-white">
+    <DashboardShell>
       <PageHeader
         title="Pedidos"
         description="Acompanhe os pedidos da loja, atualize status e registre rastreios."
-        actions={
-          <Link
-            href="/admin"
-            className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-          >
-            Voltar ao admin
-          </Link>
-        }
+        actions={<BackLink href="/admin" area="Admin" />}
       />
 
       <SectionCard
@@ -69,41 +65,39 @@ export default async function AdminPedidosPage({
         />
       </SectionCard>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <SectionCard title="Pedidos" description="Total dentro do filtro atual.">
-          <p className="text-3xl font-semibold text-white">{summary.total}</p>
-        </SectionCard>
-
-        <SectionCard
-          title="Receita"
-          description="Valor total sem considerar pedidos cancelados."
-        >
-          <p className="text-3xl font-semibold text-emerald-300">
-            {summary.revenue.toLocaleString("pt-BR", {
+      <SummaryStatsPanel
+        className="mt-6"
+        title="Resumo dos pedidos"
+        description="Total, receita e status dentro do filtro atual."
+        stats={[
+          {
+            label: "Pedidos",
+            value: summary.total,
+            helper: "Total dentro do filtro atual",
+          },
+          {
+            label: "Receita",
+            value: summary.revenue.toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
-            })}
-          </p>
-        </SectionCard>
-
-        <SectionCard
-          title="Pendentes"
-          description="Pedidos aguardando confirmação."
-        >
-          <p className="text-3xl font-semibold text-amber-300">
-            {summary.pending}
-          </p>
-        </SectionCard>
-
-        <SectionCard
-          title="Atendidos"
-          description="Pedidos enviados ou entregues."
-        >
-          <p className="text-3xl font-semibold text-sky-300">
-            {summary.fulfilled}
-          </p>
-        </SectionCard>
-      </div>
+            }),
+            helper: "Sem considerar pedidos cancelados",
+            tone: "success",
+          },
+          {
+            label: "Pendentes",
+            value: summary.pending,
+            helper: "Pedidos aguardando confirmação",
+            tone: "warning",
+          },
+          {
+            label: "Atendidos",
+            value: summary.fulfilled,
+            helper: "Pedidos enviados ou entregues",
+            tone: "info",
+          },
+        ]}
+      />
 
       <div className="mt-6 space-y-4">
         {orders.length === 0 ? (
@@ -112,33 +106,40 @@ export default async function AdminPedidosPage({
             description="Os novos pedidos da loja aparecerão aqui automaticamente."
           />
         ) : (
-          <>
-            <div className="flex justify-end">
+          <SectionCard
+            title="Lista de pedidos"
+            description="Pedidos encontrados no filtro atual, com status e rastreio."
+            actions={
               <Link
                 href={
                   exportParams
                     ? `/admin/pedidos/export?${exportParams}`
                     : "/admin/pedidos/export"
                 }
-                className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
+                className="btn-secondary"
               >
                 Exportar CSV
               </Link>
-            </div>
-
-            {orders.map((order) => (
-              <SectionCard
-                key={order.id}
-                title={order.customer.name || order.customer.email || "Cliente sem nome"}
-                description={`Total do pedido: R$ ${order.total.toFixed(2)}`}
-              >
-              <div className="flex flex-wrap justify-between gap-4">
-                <div className="space-y-2">
-                  <div>
+            }
+          >
+            <div className="space-y-3">
+              {orders.map((order) => (
+                <article key={order.id} className="dashboard-subpanel p-4 sm:p-5">
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {order.customer.name || order.customer.email || "Cliente sem nome"}
+                      </h3>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        Total do pedido: R$ {order.total.toFixed(2)}
+                      </p>
+                    </div>
                     <StatusBadge variant={orderStatusVariant[order.status] || "neutral"}>
                       {orderStatusLabel[order.status]}
                     </StatusBadge>
                   </div>
+                  <div className="flex flex-wrap justify-between gap-4">
+                    <div className="space-y-2 text-sm text-zinc-300">
                   <p>
                     <b>Endereco:</b> {order.shippingAddress || "Não informado"}
                   </p>
@@ -160,27 +161,28 @@ export default async function AdminPedidosPage({
                   <p>
                     <b>Rastreio:</b> {order.trackingCode || "Não informado"}
                   </p>
-                </div>
+                    </div>
 
-                <OrderActionPanel
-                  orderId={order.id}
-                  status={order.status}
-                  trackingCode={order.trackingCode}
-                />
-              </div>
+                    <OrderActionPanel
+                      orderId={order.id}
+                      status={order.status}
+                      trackingCode={order.trackingCode}
+                    />
+                  </div>
 
-              <div className="mt-4">
-                {order.items.map((item) => (
-                  <p key={item.id}>
-                    {item.productNameSnapshot} x{item.quantity}
-                  </p>
-                ))}
-              </div>
-              </SectionCard>
-            ))}
-          </>
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-zinc-300">
+                    {order.items.map((item) => (
+                      <p key={item.id}>
+                        {item.productNameSnapshot} x{item.quantity}
+                      </p>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
         )}
       </div>
-    </div>
+    </DashboardShell>
   );
 }

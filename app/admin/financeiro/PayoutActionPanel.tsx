@@ -15,8 +15,8 @@ type PayoutStatus = "OPEN" | "CLOSED" | "PAID";
 type Size = "sm" | "md";
 
 const buttonClassBySize: Record<Size, string> = {
-  sm: "rounded-lg px-3 py-2 text-xs font-semibold",
-  md: "rounded-xl px-4 py-2 text-sm font-semibold",
+  sm: "min-h-10 px-3 py-2 text-xs",
+  md: "px-4 py-2 text-sm",
 };
 
 export default function PayoutActionPanel({
@@ -75,7 +75,7 @@ export default function PayoutActionPanel({
             type="button"
             disabled={isPending && pendingKey === "close"}
             onClick={() => runAction("close", closeBarberPayoutAction)}
-            className={`${buttonBase} border border-zinc-700 text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60`}
+            className={`btn-secondary ${buttonBase}`}
           >
             {isPending && pendingKey === "close"
               ? "Salvando..."
@@ -90,7 +90,7 @@ export default function PayoutActionPanel({
             type="button"
             disabled={isPending && pendingKey === "paid"}
             onClick={() => runAction("paid", markBarberPayoutAsPaidAction)}
-            className={`${buttonBase} bg-[var(--brand)] text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60`}
+            className={`btn-primary ${buttonBase}`}
           >
             {isPending && pendingKey === "paid"
               ? "Salvando..."
@@ -105,7 +105,7 @@ export default function PayoutActionPanel({
             type="button"
             disabled={isPending && pendingKey === "reopen"}
             onClick={() => runAction("reopen", reopenBarberPayoutAction)}
-            className={`${buttonBase} border border-zinc-700 text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60`}
+            className={`btn-secondary ${buttonBase}`}
           >
             {isPending && pendingKey === "reopen" ? "Salvando..." : "Revisar de novo"}
           </button>
@@ -116,7 +116,7 @@ export default function PayoutActionPanel({
             type="button"
             disabled={isPending && pendingKey === "delete"}
             onClick={() => runAction("delete", deleteBarberPayoutAction)}
-            className={`${buttonBase} border border-red-700 text-red-300 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-60`}
+            className={`btn-danger ${buttonBase}`}
           >
             {isPending && pendingKey === "delete" ? "Excluindo..." : "Excluir"}
           </button>

@@ -71,7 +71,7 @@ export default function OrdersFilters({
         <button
           type="submit"
           disabled={isPending}
-          className="w-full rounded-xl bg-white px-5 py-3 font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary w-full"
         >
           {isPending ? "Filtrando..." : "Filtrar"}
         </button>

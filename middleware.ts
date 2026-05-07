@@ -9,6 +9,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const pathname = req.nextUrl.pathname;
   const role = req.auth?.user?.role;
+  const isHomePage = pathname === "/";
 
   const isAuthPage =
     pathname === "/login" ||
@@ -43,7 +44,11 @@ export default auth((req) => {
     );
   }
 
-  if (isLoggedIn && isPainelRoot) {
+  if (
+    isLoggedIn &&
+    (isPainelRoot || isHomePage) &&
+    (role === "ADMIN" || role === "BARBER")
+  ) {
     return NextResponse.redirect(
       new URL(getPostLoginRedirect(role), req.url)
     );
@@ -53,7 +58,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/painel", req.url));
   }
 
-  if (pathname.startsWith("/barber") && role !== "BARBER") {
+  if (pathname.startsWith("/barber") && role !== "BARBER" && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/painel", req.url));
   }
 
@@ -66,6 +71,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
+    "/",
     "/login",
     "/login/:path*",
     "/cadastro",

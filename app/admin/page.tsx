@@ -3,22 +3,25 @@ import {
   Coins,
   DollarSign,
   MessageSquareText,
+  PackagePlus,
   PackageSearch,
   Scissors,
+  UserRound,
   UsersRound,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
-import { appointmentStatusLabel } from "@/lib/appointmentStatus";
-import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
-  formatScheduleTime,
-  getCurrentScheduleDate,
   getCurrentScheduleDateValue,
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
+import { ensureAdminBarberProfile } from "@/lib/barberAccess";
+import {
+  appointmentForAdminSelect,
+  appointmentForTotalsSelect,
+} from "@/lib/appointmentSelects";
 import { formatCurrency } from "@/lib/utils";
 
 function getTodayRange() {
@@ -36,8 +39,10 @@ export default async function AdminPage() {
     redirect("/painel");
   }
 
+  await ensureAdminBarberProfile(session.user.shopId);
+
+  const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange();
-  const currentScheduleDate = getCurrentScheduleDate();
   const [
     activeBarbers,
     activeProducts,
@@ -68,6 +73,9 @@ export default async function AdminPage() {
     prisma.pendingRegistration.count({
       where: {
         role: "BARBER",
+        expiresAt: {
+          gt: now,
+        },
       },
     }),
     prisma.review.count({
@@ -82,11 +90,7 @@ export default async function AdminPage() {
           lte: todayEnd,
         },
       },
-      include: {
-        barber: true,
-        customer: true,
-        services: true,
-      },
+      select: appointmentForAdminSelect,
       orderBy: {
         date: "asc",
       },
@@ -101,9 +105,7 @@ export default async function AdminPage() {
           in: ["COMPLETED", "DONE"],
         },
       },
-      include: {
-        services: true,
-      },
+      select: appointmentForTotalsSelect,
     }),
   ]);
   const todayRevenue = completedTodayAppointments.reduce(
@@ -115,15 +117,17 @@ export default async function AdminPage() {
       ),
     0
   );
-  const nextAppointments = todayAppointments
-    .filter(
-      (appointment) =>
-        new Date(appointment.date).getTime() >= currentScheduleDate.getTime() &&
-        !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(appointment.status)
-    )
-    .slice(0, 3);
+  const canceledTodayAppointments = todayAppointments.filter((appointment) =>
+    ["CANCELED", "CANCELLED", "NO_SHOW"].includes(appointment.status)
+  ).length;
 
   const entries = [
+    {
+      href: "/barber",
+      icon: UserRound,
+      title: "Atuar como barbeiro",
+      description: "Agenda, encaixes e financeiro do Jackson.",
+    },
     {
       href: "/admin/agenda",
       icon: CalendarRange,
@@ -147,8 +151,14 @@ export default async function AdminPage() {
       href: "/admin/produtos",
       icon: PackageSearch,
       title: "Produtos",
-      description: "Catélogo, estoque e itens ativos do Arsenal.",
+      description: "Catálogo visual e itens ativos do Arsenal.",
       badge: activeProducts ? `${activeProducts}` : undefined,
+    },
+    {
+      href: "/admin/extras",
+      icon: PackagePlus,
+      title: "Extras",
+      description: "Itens vendidos junto ao atendimento.",
     },
     {
       href: "/admin/avaliacoes",
@@ -182,12 +192,12 @@ export default async function AdminPage() {
             </p>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
             <AdminMetric
               icon={<CalendarRange />}
               label="Atendimentos"
               value={`${todayAppointments.length}`}
-              helper={`${completedTodayAppointments.length} concluídos`}
+              helper={`${completedTodayAppointments.length} concluídos · ${canceledTodayAppointments} cancelados`}
             />
             <AdminMetric
               icon={<UsersRound />}
@@ -201,100 +211,34 @@ export default async function AdminPage() {
               value={formatCurrency(todayRevenue)}
               helper="atendimentos concluídos"
             />
-            <AdminMetric
-              icon={<Coins />}
-              label="Repasses"
-              value={`${openPayouts}`}
-              helper="em aberto"
-            />
           </div>
         </section>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Próximos horários</h2>
-                <p className="mt-1 text-sm text-zinc-400">O que ainda vem hoje.</p>
-              </div>
-              <a
-                href="/admin/agenda"
-                className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)]"
-              >
-                Ver agenda
-              </a>
-            </div>
+        <section className="mt-10">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-3xl font-bold text-white">Rotinas do admin</h2>
+            <p className="max-w-sm text-base leading-7 text-zinc-400">
+              Acesse quando precisar ajustar alguma parte da barbearia.
+            </p>
+          </div>
 
-            <div className="mt-4 space-y-3">
-              {nextAppointments.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-400">
-                  Nenhum horário agendado para hoje.
-                </div>
-              ) : (
-                nextAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-2xl font-bold text-white">
-                          {formatScheduleTime(new Date(appointment.date))}
-                        </p>
-                        <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
-                          {formatAppointmentPublicId(appointment.publicId)}
-                        </p>
-                        <p className="mt-2 font-semibold text-white">
-                          {appointment.customer.name || "Cliente"}
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-400">
-                          {appointment.barber.name || "Barbeiro"}
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300">
-                        {appointmentStatusLabel(appointment.status)}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur sm:p-5">
-            <h2 className="text-xl font-semibold text-white">Pendencias</h2>
-            <div className="mt-4 space-y-3">
-              <AdminAction href="/admin/financeiro" label="Repasses para conferir" value={openPayouts} />
-              <AdminAction href="/admin/barbeiros" label="Convites de barbeiro" value={pendingInvites} />
-              <AdminAction href="/admin/produtos" label="Produtos ativos" value={activeProducts} />
-            </div>
-          </section>
-        </div>
-
-        <div className="mt-5">
-          <h2 className="text-xl font-semibold text-white">Rotinas do admin</h2>
-          <p className="mt-1 text-sm text-zinc-400">
-            Acesse quando precisar ajustar alguma parte da barbearia.
-          </p>
-        </div>
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {entries.map((entry) => (
-            <DashboardEntryCard
-              key={entry.href}
-              href={entry.href}
-              icon={entry.icon}
-              title={entry.title}
-              description={entry.description}
-              badge={entry.badge}
-            />
-          ))}
-        </div>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {entries.map((entry) => (
+              <DashboardEntryCard
+                key={entry.href}
+                href={entry.href}
+                icon={entry.icon}
+                title={entry.title}
+                description={entry.description}
+                badge={entry.badge}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
 }
-
 function AdminMetric({
   icon,
   label,
@@ -307,37 +251,17 @@ function AdminMetric({
   helper: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-zinc-500">
-        <span className="h-4 w-4 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
-          {icon}
-        </span>
-        {label}
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(4.25rem,auto)] items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3.5 py-3.5">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.13em] text-zinc-500">
+          <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
+            {icon}
+          </span>
+          <span className="truncate">{label}</span>
+        </div>
+        <p className="mt-1.5 truncate text-xs leading-4 text-zinc-400">{helper}</p>
       </div>
-      <p className="mt-3 text-2xl font-bold text-white">{value}</p>
-      <p className="mt-1 text-xs text-zinc-400">{helper}</p>
+      <p className="text-right text-2xl font-bold leading-none text-white">{value}</p>
     </div>
-  );
-}
-
-function AdminAction({
-  href,
-  label,
-  value,
-}: {
-  href: string;
-  label: string;
-  value: number;
-}) {
-  return (
-    <a
-      href={href}
-      className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)]"
-    >
-      <span className="text-sm font-medium text-white">{label}</span>
-      <span className="rounded-full bg-[var(--brand-muted)] px-3 py-1 text-xs font-semibold text-[var(--brand-strong)]">
-        {value}
-      </span>
-    </a>
   );
 }

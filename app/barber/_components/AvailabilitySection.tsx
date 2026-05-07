@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import EmptyState from "@/components/ui/EmptyState";
+import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
 import { PremiumDateTimePicker, PremiumTimePicker } from "@/components/ui/PremiumFilters";
 import SectionCard from "@/components/ui/SectionCard";
 import { weekDays } from "@/lib/barberSchedule";
@@ -51,7 +52,8 @@ function MobilePanel({
   defaultOpen?: boolean;
 }) {
   return (
-    <details
+    <ExclusiveDetails
+      group="barber-availability-panels"
       open={defaultOpen}
       className="group rounded-[26px] border border-white/10 bg-black/20 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
     >
@@ -81,7 +83,7 @@ function MobilePanel({
       </summary>
 
       <div className="border-t border-white/10 p-4 pt-4 sm:p-5">{children}</div>
-    </details>
+    </ExclusiveDetails>
   );
 }
 

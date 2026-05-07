@@ -9,6 +9,7 @@ import { normalizeProductImageUrl } from "@/lib/productImageUrl";
 import {
   getExtraCategoryLabel,
 } from "@/lib/extraCategories";
+import { sanitizeTextareaInput } from "@/lib/inputSanitization";
 import { formatCurrency } from "@/lib/utils";
 
 type BarberOption = {
@@ -347,7 +348,7 @@ export default function BookingClient({
           })),
           date: selectedDate,
           time,
-          notes,
+          notes: sanitizeTextareaInput(notes, 280),
         }),
       });
 
@@ -1463,7 +1464,7 @@ function BookingConfirmationDialog({
           </span>
           <textarea
             value={notes}
-            onChange={(event) => setNotes(event.target.value.slice(0, 280))}
+            onChange={(event) => setNotes(sanitizeTextareaInput(event.target.value, 280))}
             disabled={isSubmitting}
             rows={3}
             maxLength={280}

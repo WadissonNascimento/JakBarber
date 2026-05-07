@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import PageHeader from "@/components/ui/PageHeader";
+import BackLink from "@/components/ui/BackLink";
+import DashboardShell from "@/components/ui/DashboardShell";
 import { normalizeProductImageUrl } from "@/lib/extraProductImages";
 import AdminExtrasClient from "./AdminExtrasClient";
 
@@ -13,36 +13,35 @@ export default async function AdminExtrasPage() {
   if (session.user.role !== "ADMIN") redirect("/painel");
 
   const extras = await prisma.extraProduct.findMany({
-    include: {
-      stockMovements: {
-        orderBy: { createdAt: "desc" },
-        take: 3,
-      },
-    },
     orderBy: [{ category: "asc" }, { name: "asc" }],
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 text-white">
-      <PageHeader
-        title="Extras"
-        description="Bebidas e itens simples vendidos junto ao atendimento."
-        actions={
-          <Link
-            href="/admin"
-            className="rounded-xl border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800"
-          >
-            Voltar
-          </Link>
-        }
-      />
+    <DashboardShell size="wide">
+      <section className="dashboard-panel p-4 sm:p-6">
+        <div className="mb-5">
+          <BackLink href="/admin" area="Admin" />
+        </div>
 
-      <AdminExtrasClient
-        extras={extras.map((extra) => ({
-          ...extra,
-          imageUrl: normalizeProductImageUrl(extra.imageUrl),
-        }))}
-      />
-    </div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+            Painel admin
+          </p>
+          <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">
+            Extras
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+            Bebidas e itens vendidos junto ao atendimento.
+          </p>
+        </div>
+
+        <AdminExtrasClient
+          extras={extras.map((extra) => ({
+            ...extra,
+            imageUrl: normalizeProductImageUrl(extra.imageUrl),
+          }))}
+        />
+      </section>
+    </DashboardShell>
   );
 }

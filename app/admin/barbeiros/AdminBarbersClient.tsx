@@ -1,12 +1,13 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import EmptyState from "@/components/ui/EmptyState";
-import SectionCard from "@/components/ui/SectionCard";
+import PhoneInput from "@/components/ui/PhoneInput";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { formatBrazilianPhone } from "@/lib/phone";
 import { createBarberAction } from "./actions";
 
 type BarberItem = {
@@ -74,13 +75,12 @@ export default function AdminBarbersClient({
   }
 
   return (
-    <div className="mt-6 space-y-8">
+    <div className="mt-6 space-y-5 border-t border-white/10 pt-5">
       <FeedbackMessage message={feedback.message} tone={feedback.tone} />
 
-      <SectionCard
-        title="Equipe atual de Barbeiros"
-        className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(9,12,20,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.10)]"
-      >
+      <section className="dashboard-subpanel p-4">
+        <h2 className="text-xl font-bold text-white">Equipe atual de Barbeiros</h2>
+        <div className="mt-4">
         {barbers.length === 0 ? (
           <EmptyState
             title="Nenhum barbeiro cadastrado"
@@ -100,6 +100,8 @@ export default function AdminBarbersClient({
                     <img
                       src={barber.image}
                       alt={barber.name || "Barbeiro"}
+                      loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -132,17 +134,19 @@ export default function AdminBarbersClient({
             ))}
           </div>
         )}
-      </SectionCard>
+        </div>
+      </section>
 
-      <SectionCard
-        title="Convites pendentes"
-        description="Acessos enviados que ainda não foram confirmados."
-        className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(180deg,rgba(15,22,36,0.98),rgba(9,12,20,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.08)]"
-      >
+      <section className="dashboard-subpanel p-4">
+        <h2 className="text-xl font-bold text-white">Convites pendentes</h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          Acessos enviados que ainda não foram confirmados.
+        </p>
+        <div className="mt-4">
         {pendingBarbers.length === 0 ? (
           <EmptyState
             title="Nenhum convite pendente"
-            description="Quando vocé enviar um novo convite, ele aparecerá aqui até a confirmação."
+            description="Quando você enviar um novo convite, ele aparecerá aqui até a confirmação."
           />
         ) : (
           <div className="space-y-3">
@@ -157,7 +161,7 @@ export default function AdminBarbersClient({
                 </div>
                 <p className="mt-2 break-all text-sm text-zinc-300">{barber.email}</p>
                 <p className="text-sm text-zinc-400">
-                  {barber.phone || "Telefone não informado"}
+                  {formatBrazilianPhone(barber.phone) || "Telefone não informado"}
                 </p>
                 <p className="mt-3 text-xs uppercase tracking-[0.18em] text-zinc-500">
                   Expira em {new Date(barber.expiresAt).toLocaleString("pt-BR")}
@@ -166,14 +170,13 @@ export default function AdminBarbersClient({
             ))}
           </div>
         )}
-      </SectionCard>
+        </div>
+      </section>
 
-      <SectionCard
-        title="Cadastrar novo barbeiro"
-        className="overflow-hidden rounded-[30px] border border-sky-500/20 bg-[linear-gradient(180deg,rgba(16,26,46,0.96),rgba(10,15,28,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.14)]"
-      >
+      <section className="dashboard-subpanel p-4">
+        <h2 className="text-xl font-bold text-white">Cadastrar novo barbeiro</h2>
         <form
-          className="grid gap-3 md:grid-cols-2"
+          className="mt-4 grid gap-3 md:grid-cols-2"
           onSubmit={(event) => {
             event.preventDefault();
             const form = event.currentTarget;
@@ -187,7 +190,8 @@ export default function AdminBarbersClient({
               name="name"
               type="text"
               required
-              className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white outline-none transition placeholder:text-zinc-500 focus:border-sky-400/40 focus:bg-zinc-950"
+              maxLength={120}
+              className="form-control"
               placeholder="Ex.: Lucas Barber"
             />
           </label>
@@ -198,7 +202,8 @@ export default function AdminBarbersClient({
               name="email"
               type="email"
               required
-              className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white outline-none transition placeholder:text-zinc-500 focus:border-sky-400/40 focus:bg-zinc-950"
+              maxLength={254}
+              className="form-control"
               placeholder="barbeiro@jakbarber.com"
             />
           </label>
@@ -209,18 +214,18 @@ export default function AdminBarbersClient({
               name="password"
               type="password"
               required
-              className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white outline-none transition placeholder:text-zinc-500 focus:border-sky-400/40 focus:bg-zinc-950"
+              minLength={6}
+              maxLength={128}
+              className="form-control"
               placeholder="Minimo de 6 caracteres"
             />
           </label>
 
           <label className="space-y-2 text-sm font-medium text-zinc-300">
             <span>Telefone</span>
-            <input
+            <PhoneInput
               name="phone"
-              type="text"
-              className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white outline-none transition placeholder:text-zinc-500 focus:border-sky-400/40 focus:bg-zinc-950"
-              placeholder="(11) 99999-9999"
+              className="form-control"
             />
           </label>
 
@@ -228,13 +233,13 @@ export default function AdminBarbersClient({
             <button
               type="submit"
               disabled={isPending && pendingKey === "create-barber"}
-              className="w-full rounded-2xl bg-[var(--brand)] px-5 py-3.5 font-semibold text-white shadow-[0_18px_40px_rgba(14,165,233,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="btn-primary w-full sm:w-auto"
             >
               {isPending && pendingKey === "create-barber" ? "Enviando..." : "Enviar acesso"}
             </button>
           </div>
         </form>
-      </SectionCard>
+      </section>
     </div>
   );
 }

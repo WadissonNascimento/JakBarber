@@ -63,7 +63,7 @@ export default function ComparisonControls({
   }
 
   return (
-    <form className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+    <form className="dashboard-subpanel mb-4 p-4">
       <input type="hidden" name="period" value={period} />
       <input type="hidden" name="start" value={start} />
       <input type="hidden" name="end" value={end} />

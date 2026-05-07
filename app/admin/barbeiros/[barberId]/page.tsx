@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import PageHeader from "@/components/ui/PageHeader";
+import DashboardShell from "@/components/ui/DashboardShell";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
 import { getWeekRange } from "@/lib/financials";
@@ -85,18 +85,10 @@ export default async function AdminBarberProfilePage({
   const activeTodayAppointments = todayAppointments.filter(
     (appointment) => normalizeAppointmentStatus(appointment.status) !== "CANCELLED"
   );
-  const completedTodayAppointments = todayAppointments.filter(
-    (appointment) => normalizeAppointmentStatus(appointment.status) === "COMPLETED"
-  );
   const completedWeekAppointments = weekAppointments.filter(
     (appointment) => normalizeAppointmentStatus(appointment.status) === "COMPLETED"
   );
 
-  const todayPayout = completedTodayAppointments.reduce(
-    (sum, appointment) =>
-      sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
-    0
-  );
   const weekPayout = completedWeekAppointments.reduce(
     (sum, appointment) =>
       sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
@@ -104,13 +96,7 @@ export default async function AdminBarberProfilePage({
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 text-white">
-      <PageHeader
-        eyebrow="Equipe"
-        title="Perfil do barbeiro"
-        description="Dados, foto e comissões individuais."
-      />
-
+    <DashboardShell>
       <BarberProfileClient
         barber={{
           id: barber.id,
@@ -123,11 +109,10 @@ export default async function AdminBarberProfilePage({
         }}
         summary={{
           todayAppointments: activeTodayAppointments.length,
-          todayPayout,
           weekPayout,
           servicesCount,
         }}
       />
-    </div>
+    </DashboardShell>
   );
 }

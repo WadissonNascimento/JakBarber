@@ -36,17 +36,11 @@ export default function FinancePeriodFilters({
       params.set("period", next.period);
 
       if (next.period === "custom") {
-        if (next.start) {
-          params.set("start", next.start);
-        } else {
-          params.delete("start");
-        }
+        if (next.start) params.set("start", next.start);
+        else params.delete("start");
 
-        if (next.end) {
-          params.set("end", next.end);
-        } else {
-          params.delete("end");
-        }
+        if (next.end) params.set("end", next.end);
+        else params.delete("end");
       } else {
         params.delete("start");
         params.delete("end");
@@ -62,15 +56,17 @@ export default function FinancePeriodFilters({
   }
 
   return (
-    <form className="grid gap-4 md:grid-cols-3">
-      <div>
+    <form className="grid gap-3">
+      <div className="grid gap-1.5 sm:grid-cols-[6.5rem_1fr] sm:items-center">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+          Período
+        </p>
         <PremiumSelect
           name="period"
-          label="Período do painel"
           value={filters.period}
           options={[
             { value: "week", label: "Esta semana" },
-            { value: "month", label: "Este mes" },
+            { value: "month", label: "Este mês" },
             { value: "custom", label: "Escolher datas" },
           ]}
           onChange={(value) => {
@@ -85,49 +81,50 @@ export default function FinancePeriodFilters({
         />
       </div>
 
-      <div>
-        <PremiumDatePicker
-          name="start"
-          label="Data inicial"
-          value={filters.start}
-          onChange={(value) => {
-            const next = {
-              ...filters,
-              start: value,
-            };
+      <div className="grid gap-1.5 sm:grid-cols-[6.5rem_1fr] sm:items-center">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+          Datas
+        </p>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <PremiumDatePicker
+            name="start"
+            value={filters.start}
+            onChange={(value) => {
+              const next = {
+                ...filters,
+                start: value,
+              };
 
-            setFilters(next);
-            if (next.period === "custom") {
-              applyFilters(next);
-            }
-          }}
-          disabled={filters.period !== "custom"}
-        />
+              setFilters(next);
+              if (next.period === "custom") {
+                applyFilters(next);
+              }
+            }}
+            disabled={filters.period !== "custom"}
+          />
+          <span className="text-xs text-zinc-500">até</span>
+          <PremiumDatePicker
+            name="end"
+            value={filters.end}
+            onChange={(value) => {
+              const next = {
+                ...filters,
+                end: value,
+              };
+
+              setFilters(next);
+              if (next.period === "custom") {
+                applyFilters(next);
+              }
+            }}
+            disabled={filters.period !== "custom"}
+          />
+        </div>
       </div>
 
-      <div>
-        <PremiumDatePicker
-          name="end"
-          label="Data final"
-          value={filters.end}
-          onChange={(value) => {
-            const next = {
-              ...filters,
-              end: value,
-            };
-
-            setFilters(next);
-            if (next.period === "custom") {
-              applyFilters(next);
-            }
-          }}
-          disabled={filters.period !== "custom"}
-        />
-      </div>
-
-      <p className="text-xs text-zinc-500 md:col-span-3">
+      <p className="text-xs text-zinc-500">
         {isPending
-          ? "Atualizando os numeros..."
+          ? "Atualizando os números..."
           : filters.period === "custom"
           ? "As datas escolhidas atualizam o painel automaticamente."
           : "Troque o período para atualizar o painel sem recarregar a página inteira."}

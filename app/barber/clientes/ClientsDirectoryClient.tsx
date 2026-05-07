@@ -13,6 +13,8 @@ import {
   UsersRound,
 } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import { formatBrazilianPhone } from "@/lib/phone";
+import { sanitizeSearchInput } from "@/lib/inputSanitization";
 
 type ClientItem = {
   id: string;
@@ -59,7 +61,7 @@ export default function ClientsDirectoryClient({
           className="mt-4"
           onSubmit={(event) => {
             event.preventDefault();
-            const trimmed = query.trim();
+            const trimmed = sanitizeSearchInput(query);
 
             startTransition(() => {
               router.replace(
@@ -77,7 +79,7 @@ export default function ClientsDirectoryClient({
                   type="text"
                   name="q"
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => setQuery(sanitizeSearchInput(event.target.value))}
                   placeholder="Nome, e-mail ou telefone"
                   className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
                 />
@@ -133,7 +135,7 @@ export default function ClientsDirectoryClient({
 }
 
 function ClientCard({ client }: { client: ClientItem }) {
-  const contact = client.phone || client.email || "Sem contato";
+  const contact = formatBrazilianPhone(client.phone) || client.email || "Sem contato";
   const ContactIcon = client.phone ? Phone : client.email ? Mail : UserRound;
 
   return (

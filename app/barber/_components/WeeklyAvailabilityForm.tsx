@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, Clock3, Moon, PauseCircle, Save, SunMedium } from "lucide-react";
+import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
 import { PremiumTimePicker } from "@/components/ui/PremiumFilters";
 import { weekDays } from "@/lib/barberSchedule";
 
@@ -92,7 +93,7 @@ export function WeeklyAvailabilityForm({
         onSave(new FormData(event.currentTarget));
       }}
     >
-      <details className="group">
+      <ExclusiveDetails group="barber-availability-panels" className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 marker:hidden sm:p-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)]">
@@ -123,8 +124,9 @@ export function WeeklyAvailabilityForm({
               const pausesCount = dayRecurringBlocks.length + dayBlocks.length;
 
               return (
-                <details
+                <ExclusiveDetails
                   key={day.weekDay}
+                  group="weekly-availability-days"
                   className="group/day rounded-2xl border border-transparent bg-white/[0.045] transition"
                 >
                   <summary className="flex min-h-[58px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 marker:hidden">
@@ -253,7 +255,7 @@ export function WeeklyAvailabilityForm({
                       )}
                     </div>
                   </div>
-                </details>
+                </ExclusiveDetails>
               );
             })}
           </div>
@@ -267,7 +269,7 @@ export function WeeklyAvailabilityForm({
             {isPending ? "Salvando..." : "Salvar semana"}
           </button>
         </div>
-      </details>
+      </ExclusiveDetails>
     </form>
   );
 }

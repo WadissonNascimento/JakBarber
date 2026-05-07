@@ -31,6 +31,12 @@ type BarberOption = {
   email: string | null;
 };
 
+type ActionResult = {
+  ok: boolean;
+  message: string;
+  tone: "success" | "error" | "info";
+};
+
 export default function AdminServicesClient({
   globalServices,
   barberServices,
@@ -46,16 +52,14 @@ export default function AdminServicesClient({
     tone: "success" | "error" | "info";
   }>({ message: null, tone: "success" });
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [openServiceId, setOpenServiceId] = useState<string | null>(null);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [serviceScope, setServiceScope] = useState<"GLOBAL" | "EXCLUSIVE">("GLOBAL");
 
   function runAction(
     key: string,
-    action: (formData: FormData) => Promise<{
-      ok: boolean;
-      message: string;
-      tone: "success" | "error" | "info";
-    }>,
+    action: (formData: FormData) => Promise<ActionResult>,
     formData: FormData,
     onSuccess?: () => void
   ) {
@@ -74,15 +78,23 @@ export default function AdminServicesClient({
     });
   }
 
-  return (
-    <>
-      <div className="mb-6 space-y-3">
-        <FeedbackMessage message={feedback.message} tone={feedback.tone} />
-      </div>
+  function toggleService(serviceId: string) {
+    setOpenServiceId((current) => {
+      const next = current === serviceId ? null : serviceId;
+      if (next !== serviceId) {
+        setEditingServiceId(null);
+      }
+      return next;
+    });
+  }
 
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+  return (
+    <div className="mt-6 space-y-4 border-t border-white/10 pt-5">
+      <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+      <section className="dashboard-subpanel p-3.5 sm:p-5">
         <form
-          className="overflow-hidden rounded-[32px] border border-sky-500/20 bg-[linear-gradient(180deg,rgba(16,26,46,0.98),rgba(10,15,28,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.16)]"
+          className="space-y-3.5"
           onSubmit={(event) => {
             event.preventDefault();
             const form = event.currentTarget;
@@ -98,64 +110,54 @@ export default function AdminServicesClient({
             );
           }}
         >
-          <div className="border-b border-white/10 bg-white/[0.03] px-6 py-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-sky-300">
-              Cadastro
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">
-              Novo serviço
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-300">
-              Crie um serviço geral da casa ou um serviço exclusivo de um barbeiro,
-              sem sair do painel do admin.
-            </p>
-          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_15rem] md:items-end">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+                Cadastro
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-white">Novo serviço</h2>
+            </div>
 
-          <div className="space-y-5 px-6 py-6">
-            <input type="hidden" name="serviceScope" value={serviceScope} />
-
-            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-black/20 p-2">
+            <div className="grid w-full grid-cols-2 gap-1.5 rounded-xl border border-white/10 bg-black/20 p-1">
               <button
                 type="button"
                 onClick={() => setServiceScope("GLOBAL")}
-                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
                   serviceScope === "GLOBAL"
-                    ? "bg-[var(--brand)] text-white shadow-[0_12px_30px_rgba(14,165,233,0.28)]"
-                    : "text-zinc-300 hover:bg-white/5"
+                    ? "bg-[var(--brand)] text-white"
+                    : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 }`}
               >
-                Serviço geral
+                Geral
               </button>
 
               <button
                 type="button"
                 onClick={() => setServiceScope("EXCLUSIVE")}
-                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
                   serviceScope === "EXCLUSIVE"
-                    ? "bg-[var(--brand)] text-white shadow-[0_12px_30px_rgba(14,165,233,0.28)]"
-                    : "text-zinc-300 hover:bg-white/5"
+                    ? "bg-[var(--brand)] text-white"
+                    : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 }`}
               >
-                Serviço exclusivo
+                Exclusivo
               </button>
             </div>
+          </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
-              {serviceScope === "GLOBAL"
-                ? "Esse serviço entra na agenda de qualquer barbeiro disponível."
-                : "Esse serviço vai ficar disponível apenas para o barbeiro selecionado."}
-            </div>
+          <input type="hidden" name="serviceScope" value={serviceScope} />
 
+          <div className="grid gap-3 md:grid-cols-2">
             {serviceScope === "EXCLUSIVE" ? (
-              <Field label="Barbeiro responsavel">
+              <Field label="Barbeiro responsável">
                 <select
                   name="barberId"
                   required
                   defaultValue=""
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/40 focus:bg-zinc-950"
+                  className="service-edit-control"
                 >
                   <option value="" disabled>
-                    Selecione o barbeiro
+                    Selecione
                   </option>
                   {barbers.map((barber) => (
                     <option key={barber.id} value={barber.id}>
@@ -170,7 +172,8 @@ export default function AdminServicesClient({
               <input
                 name="name"
                 required
-                className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/40 focus:bg-zinc-950"
+                maxLength={120}
+                className="service-edit-control"
                 placeholder={
                   serviceScope === "GLOBAL"
                     ? "Ex.: Corte + barba"
@@ -178,144 +181,181 @@ export default function AdminServicesClient({
                 }
               />
             </Field>
+          </div>
 
-            <Field label="Descrição">
-              <textarea
-                name="description"
-                rows={3}
-                className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/40 focus:bg-zinc-950"
-                placeholder="Detalhes que ajudam na agenda e no entendimento do atendimento."
-              />
-            </Field>
+          <input type="hidden" name="description" value="" />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Preco">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="1"
-                  name="price"
-                  required
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/40 focus:bg-zinc-950"
-                />
-              </Field>
-
-              <Field label="Duração (min)">
-                <input
-                  type="number"
-                  min="10"
-                  step="5"
-                  name="duration"
-                  required
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/40 focus:bg-zinc-950"
-                />
-              </Field>
-            </div>
-
-            <Field label="Comissão do barbeiro (%)">
+          <div className="service-compact-fields">
+            <Field label="Preço">
               <input
                 type="number"
-                min="0"
-                max="100"
-                step="1"
-                name="commissionValue"
-                defaultValue={40}
+                step="0.01"
+                min="1"
+                name="price"
                 required
-                className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/40 focus:bg-zinc-950"
+                className="service-edit-control"
               />
             </Field>
 
+            <Field label="Duração">
+              <input
+                type="number"
+                min="10"
+                step="5"
+                name="duration"
+                required
+                className="service-edit-control"
+              />
+            </Field>
+
+            <Field label="Comissão">
+              <div className="input-with-suffix">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  name="commissionValue"
+                  defaultValue={40}
+                  required
+                  className="service-edit-control input-with-suffix-control"
+                />
+                <span className="input-suffix">%</span>
+              </div>
+            </Field>
+          </div>
+
+          <div className="flex justify-end pt-1">
             <button
               type="submit"
               disabled={isPending && pendingKey === "create-service"}
-              className="w-full rounded-2xl bg-[var(--brand)] px-4 py-3.5 font-semibold text-white shadow-[0_18px_40px_rgba(14,165,233,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary w-full sm:w-auto"
             >
               {isPending && pendingKey === "create-service"
                 ? "Criando..."
                 : serviceScope === "EXCLUSIVE"
-                ? "Criar serviço exclusivo"
-                : "Criar serviço geral"}
+                ? "Criar exclusivo"
+                : "Criar geral"}
             </button>
           </div>
         </form>
+      </section>
 
-        <div className="space-y-8">
-          <section>
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white">Serviços gerais</h2>
-              <p className="text-sm text-zinc-400">
-                Disponíveis para qualquer barbeiro, com repasse definido pelo admin.
-              </p>
-            </div>
+      <ServiceSection
+        title="Serviços gerais"
+        emptyText="Nenhum serviço geral cadastrado."
+        services={globalServices}
+        openServiceId={openServiceId}
+        editingServiceId={editingServiceId}
+        isPending={isPending}
+        pendingKey={pendingKey}
+        onToggleOpen={toggleService}
+        onStartEditing={setEditingServiceId}
+        onCancelEditing={() => setEditingServiceId(null)}
+        onRunAction={runAction}
+      />
 
-            <div className="space-y-4">
-              {globalServices.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-6 text-sm text-zinc-400">
-                  Nenhum serviço geral cadastrado.
-                </div>
-              ) : (
-                globalServices.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isPending={isPending}
-                    pendingKey={pendingKey}
-                    onRunAction={runAction}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+      <ServiceSection
+        title="Serviços exclusivos dos barbeiros"
+        emptyText="Nenhum serviço exclusivo cadastrado."
+        services={barberServices}
+        openServiceId={openServiceId}
+        editingServiceId={editingServiceId}
+        isPending={isPending}
+        pendingKey={pendingKey}
+        onToggleOpen={toggleService}
+        onStartEditing={setEditingServiceId}
+        onCancelEditing={() => setEditingServiceId(null)}
+        onRunAction={runAction}
+      />
+    </div>
+  );
+}
 
-          <section>
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white">Serviços exclusivos dos barbeiros</h2>
-              <p className="text-sm text-zinc-400">
-                Criados e controlados pelo admin para barbeiros especificos.
-              </p>
-            </div>
+function ServiceSection({
+  title,
+  emptyText,
+  services,
+  openServiceId,
+  editingServiceId,
+  isPending,
+  pendingKey,
+  onToggleOpen,
+  onStartEditing,
+  onCancelEditing,
+  onRunAction,
+}: {
+  title: string;
+  emptyText: string;
+  services: ServiceItem[];
+  openServiceId: string | null;
+  editingServiceId: string | null;
+  isPending: boolean;
+  pendingKey: string | null;
+  onToggleOpen: (serviceId: string) => void;
+  onStartEditing: (serviceId: string) => void;
+  onCancelEditing: () => void;
+  onRunAction: (
+    key: string,
+    action: (formData: FormData) => Promise<ActionResult>,
+    formData: FormData,
+    onSuccess?: () => void
+  ) => void;
+}) {
+  return (
+    <section className="dashboard-subpanel p-3.5 sm:p-5">
+      <h2 className="text-lg font-bold text-white">{title}</h2>
 
-            <div className="space-y-4">
-              {barberServices.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-6 text-sm text-zinc-400">
-                  Nenhum serviço exclusivo cadastrado.
-                </div>
-              ) : (
-                barberServices.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isPending={isPending}
-                    pendingKey={pendingKey}
-                    onRunAction={runAction}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-        </div>
+      <div className="mt-3 space-y-2.5">
+        {services.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-400">
+            {emptyText}
+          </div>
+        ) : (
+          services.map((service) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+              isOpen={openServiceId === service.id}
+              isEditing={editingServiceId === service.id}
+              isPending={isPending}
+              pendingKey={pendingKey}
+              onToggleOpen={() => onToggleOpen(service.id)}
+              onStartEditing={() => onStartEditing(service.id)}
+              onCancelEditing={onCancelEditing}
+              onRunAction={onRunAction}
+            />
+          ))
+        )}
       </div>
-    </>
+    </section>
   );
 }
 
 function ServiceCard({
   service,
+  isOpen,
+  isEditing,
   isPending,
   pendingKey,
+  onToggleOpen,
+  onStartEditing,
+  onCancelEditing,
   onRunAction,
 }: {
   service: ServiceItem;
+  isOpen: boolean;
+  isEditing: boolean;
   isPending: boolean;
   pendingKey: string | null;
+  onToggleOpen: () => void;
+  onStartEditing: () => void;
+  onCancelEditing: () => void;
   onRunAction: (
     key: string,
-    action: (formData: FormData) => Promise<{
-      ok: boolean;
-      message: string;
-      tone: "success" | "error" | "info";
-    }>,
-    formData: FormData
+    action: (formData: FormData) => Promise<ActionResult>,
+    formData: FormData,
+    onSuccess?: () => void
   ) => void;
 }) {
   const ownerLabel = service.barber
@@ -323,153 +363,224 @@ function ServiceCard({
     : "Serviço geral";
 
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-lg font-semibold text-white">{service.name}</p>
-          <p className="text-sm text-zinc-400">{ownerLabel}</p>
-          <p className="text-xs text-zinc-500">
-            {service.isActive ? "Ativo para agendamento" : "Desativado"} - Comissão:{" "}
-            {service.commissionValue}%
+    <article className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        onClick={onToggleOpen}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.035]"
+      >
+        <div className="min-w-0">
+          <p className="truncate text-base font-semibold text-white">{service.name}</p>
+          <p className="mt-1 truncate text-sm leading-5 text-zinc-400">
+            {ownerLabel} · {service.duration} min
+          </p>
+          <p className="mt-0.5 whitespace-nowrap text-sm font-semibold leading-5 text-zinc-300">
+            R$ {service.price.toFixed(2)}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={isPending && pendingKey === `toggle-${service.id}`}
-            onClick={() => {
-              const formData = new FormData();
-              formData.set("serviceId", service.id);
-              onRunAction(`toggle-${service.id}`, toggleGlobalServiceAction, formData);
-            }}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        <div className="flex shrink-0 items-center gap-2">
+          <span
+            className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
               service.isActive
-                ? "bg-zinc-800 text-white hover:bg-zinc-700"
-                : "bg-green-600 text-white hover:bg-green-500"
+                ? "border-sky-400/30 bg-sky-500/10 text-sky-200"
+                : "border-red-500/25 bg-red-500/10 text-red-200"
             }`}
           >
-            {isPending && pendingKey === `toggle-${service.id}`
-              ? "Salvando..."
-              : service.isActive
-              ? "Desativar"
-              : "Ativar"}
-          </button>
+            {service.isActive ? "Ativo" : "Off"}
+          </span>
+          <span className="text-lg text-zinc-500">{isOpen ? "-" : "+"}</span>
+        </div>
+      </button>
 
-          <button
-            type="button"
-            disabled={isPending && pendingKey === `delete-${service.id}`}
-            onClick={() => {
-              if (
-                !window.confirm(
-                  "Excluir serviço? Se houver agendamentos no histórico, ele será apenas desativado."
-                )
-              ) {
-                return;
-              }
-
-              const formData = new FormData();
-              formData.set("serviceId", service.id);
-              onRunAction(`delete-${service.id}`, deleteGlobalServiceAction, formData);
+      {isOpen ? (
+        isEditing ? (
+          <form
+            className="border-t border-white/10 px-3.5 pb-3.5 pt-3.5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onRunAction(
+                `update-${service.id}`,
+                updateGlobalServiceAction,
+                new FormData(event.currentTarget),
+                onCancelEditing
+              );
             }}
-            className="rounded-xl border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isPending && pendingKey === `delete-${service.id}` ? "Excluindo..." : "Excluir"}
-          </button>
-        </div>
-      </div>
+            <input type="hidden" name="serviceId" value={service.id} />
+            <input type="hidden" name="description" value={service.description || ""} />
 
-      <form
-        className="grid gap-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const formData = new FormData(event.currentTarget);
-          onRunAction(`update-${service.id}`, updateGlobalServiceAction, formData);
-        }}
+            <div className="service-edit-row">
+              <Field label="Nome" className="service-edit-name">
+                <input
+                  name="name"
+                  defaultValue={service.name}
+                  required
+                  maxLength={120}
+                  className="service-edit-control"
+                />
+              </Field>
+
+              <Field label="Preço">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  name="price"
+                  defaultValue={service.price}
+                  required
+                  className="service-edit-control"
+                />
+              </Field>
+
+              <Field label="Duração">
+                <input
+                  type="number"
+                  min="10"
+                  step="5"
+                  name="duration"
+                  defaultValue={service.duration}
+                  required
+                  className="service-edit-control"
+                />
+              </Field>
+
+              <Field label="Comissão">
+                <div className="input-with-suffix">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    name="commissionValue"
+                    defaultValue={service.commissionValue}
+                    required
+                    className="service-edit-control input-with-suffix-control"
+                  />
+                  <span className="input-suffix">%</span>
+                </div>
+              </Field>
+            </div>
+
+            <div className="service-action-stack">
+              <div className="service-action-row service-action-row-primary">
+                <button
+                  type="submit"
+                  disabled={isPending && pendingKey === `update-${service.id}`}
+                  className="btn-primary"
+                >
+                  {isPending && pendingKey === `update-${service.id}` ? "Salvando..." : "Salvar"}
+                </button>
+                <button type="button" onClick={onCancelEditing} className="btn-secondary">
+                  Cancelar
+                </button>
+              </div>
+
+              <div className="service-action-row service-action-row-danger">
+                <button
+                  type="button"
+                  disabled={isPending && pendingKey === `toggle-${service.id}`}
+                  onClick={() => {
+                    const formData = new FormData();
+                    formData.set("serviceId", service.id);
+                    onRunAction(`toggle-${service.id}`, toggleGlobalServiceAction, formData);
+                  }}
+                  className={service.isActive ? "btn-warning-soft" : "btn-secondary"}
+                >
+                  {isPending && pendingKey === `toggle-${service.id}`
+                    ? "Salvando..."
+                    : service.isActive
+                    ? "Desativar"
+                    : "Ativar"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isPending && pendingKey === `delete-${service.id}`}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        "Excluir serviço? Se houver agendamentos no histórico, ele será apenas desativado."
+                      )
+                    ) {
+                      return;
+                    }
+
+                    const formData = new FormData();
+                    formData.set("serviceId", service.id);
+                    onRunAction(`delete-${service.id}`, deleteGlobalServiceAction, formData);
+                  }}
+                  className="btn-danger"
+                >
+                  {isPending && pendingKey === `delete-${service.id}` ? "Excluindo..." : "Excluir"}
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <div className="border-t border-white/10 px-3.5 pb-3.5 pt-3.5">
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <SummaryTile label="Preço" value={`R$ ${service.price.toFixed(2)}`} />
+              <SummaryTile label="Duração" value={`${service.duration} min`} />
+              <SummaryTile
+                label="Comissão"
+                value={`${service.commissionValue}%`}
+                accent
+              />
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <button type="button" onClick={onStartEditing} className="btn-secondary">
+                Editar
+              </button>
+            </div>
+          </div>
+        )
+      ) : null}
+    </article>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-black/20 p-2.5">
+      <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+        {label}
+      </p>
+      <p
+        className={`mt-1 truncate text-sm font-bold ${
+          accent ? "text-[var(--brand-strong)]" : "text-white"
+        }`}
       >
-        <input type="hidden" name="serviceId" value={service.id} />
-
-        <Field label="Nome">
-          <input
-            name="name"
-            defaultValue={service.name}
-            required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none"
-          />
-        </Field>
-
-        <Field label="Descrição">
-          <textarea
-            name="description"
-            defaultValue={service.description || ""}
-            rows={3}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none"
-          />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Preco">
-            <input
-              type="number"
-              step="0.01"
-              min="1"
-              name="price"
-              defaultValue={service.price}
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none"
-            />
-          </Field>
-
-          <Field label="Duração (min)">
-            <input
-              type="number"
-              min="10"
-              step="5"
-              name="duration"
-              defaultValue={service.duration}
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none"
-            />
-          </Field>
-        </div>
-
-        <Field label="Comissão do barbeiro (%)">
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="1"
-            name="commissionValue"
-            defaultValue={service.commissionValue}
-            required
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none"
-          />
-        </Field>
-
-        <button
-          type="submit"
-          disabled={isPending && pendingKey === `update-${service.id}`}
-          className="justify-self-start rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isPending && pendingKey === `update-${service.id}`
-            ? "Salvando..."
-            : "Salvar alteracoes"}
-        </button>
-      </form>
+        {value}
+      </p>
     </div>
   );
 }
 
 function Field({
   label,
+  className = "",
   children,
 }: {
   label: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm text-zinc-300">{label}</span>
+    <label className={`block min-w-0 ${className}`}>
+      <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </span>
       {children}
     </label>
   );

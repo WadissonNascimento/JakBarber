@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import CrownRating from "@/components/ui/CrownRating";
+import { sanitizeTextareaInput } from "@/lib/inputSanitization";
 import { submitAppointmentReviewAction } from "./actions";
 
 export default function ReviewForm({
@@ -22,10 +23,16 @@ export default function ReviewForm({
 
   return (
     <form
-      className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4"
+      className="dashboard-subpanel mt-4 p-4"
       onSubmit={(event) => {
         event.preventDefault();
+        if (rating < 1) {
+          setFeedback({ message: "Escolha uma nota de 1 a 5.", tone: "error" });
+          return;
+        }
+
         const formData = new FormData(event.currentTarget);
+        formData.set("comment", sanitizeTextareaInput(comment, 400));
 
         startTransition(async () => {
           const result = await submitAppointmentReviewAction(formData);
@@ -62,12 +69,12 @@ export default function ReviewForm({
         <textarea
           name="comment"
           value={comment}
-          onChange={(event) => setComment(event.target.value.slice(0, 400))}
+          onChange={(event) => setComment(sanitizeTextareaInput(event.target.value, 400))}
           rows={3}
           maxLength={400}
           disabled={isPending}
           placeholder="Conte como foi o atendimento..."
-          className="w-full resize-none rounded-lg border border-white/10 bg-[#07101f] px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60 disabled:cursor-not-allowed disabled:opacity-60"
+          className="form-control resize-none text-sm"
         />
         <span className="mt-1 block text-right text-xs text-zinc-500">
           {comment.length}/400
@@ -80,8 +87,8 @@ export default function ReviewForm({
 
       <button
         type="submit"
-        disabled={isPending}
-        className="mt-3 w-full rounded-lg bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        disabled={isPending || rating < 1}
+        className="btn-primary mt-3 w-full sm:w-auto"
       >
         {isPending
           ? "Salvando..."

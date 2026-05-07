@@ -22,11 +22,11 @@ const timeline = [
 
 const photos = [
   {
-    src: "/cortes/corte2.png",
+    src: "/cortes/corte2.webp",
     alt: "Corte finalizado na Jak Barber",
   },
   {
-    src: "/cortes/corte3.png",
+    src: "/cortes/corte3.webp",
     alt: "Detalhe de atendimento da Jak Barber",
   },
 ];
@@ -38,9 +38,10 @@ export default function SobreNosPage() {
         <div className="surface-card-strong order-2 overflow-hidden rounded-[28px] p-2 lg:order-1">
           <div className="relative h-[360px] overflow-hidden rounded-[22px] sm:h-[520px]">
             <Image
-              src="/cortes/corte1.png"
+              src="/cortes/corte1.webp"
               alt="Historia da Jak Barber"
               fill
+              sizes="(max-width: 1024px) 100vw, 46vw"
               priority
               className="object-cover"
             />

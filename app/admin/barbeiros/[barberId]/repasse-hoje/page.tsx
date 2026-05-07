@@ -1,14 +1,5 @@
+import { getWeekRange } from "@/lib/financials";
 import PayoutReport from "../PayoutReport";
-
-function getDayRange(baseDate = new Date()) {
-  const start = new Date(baseDate);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(baseDate);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-}
 
 export default function BarberTodayPayoutPage({
   params,
@@ -18,9 +9,9 @@ export default function BarberTodayPayoutPage({
   return (
     <PayoutReport
       barberId={params.barberId}
-      title="Repasse de hoje"
-      description="Serviços e produtos concluídos hoje, com comissão individual."
-      range={getDayRange()}
+      title="Repasse da semana atual"
+      description="Serviços e produtos concluídos nesta semana, com comissão individual."
+      range={getWeekRange()}
     />
   );
 }
