@@ -212,6 +212,7 @@ export async function updateProductFromForm(formData: FormData) {
   const category = parseProductCategory(String(formData.get("category") || ""));
   const price = Number(formData.get("price") || 0);
   const stock = Number(formData.get("stock") || 0);
+  const imageFile = formData.get("image");
 
   if (
     !productId ||
@@ -224,16 +225,73 @@ export async function updateProductFromForm(formData: FormData) {
     throw new Error("Preencha nome, categoria, preco e estoque corretamente.");
   }
 
-  await updateProduct(productId, {
-    name,
-    description: description || null,
-    category,
-    price,
-    stock,
+  const currentProduct = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      stock: true,
+      imagePath: true,
+    },
   });
+
+  if (!currentProduct) {
+    throw new Error("Produto nao encontrado.");
+  }
+
+  const image =
+    imageFile instanceof File && imageFile.size > 0
+      ? await uploadProductImage({
+          productId: currentProduct.id,
+          file: imageFile,
+        })
+      : null;
+
+  try {
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        name,
+        description: description || null,
+        category,
+        price,
+        stock,
+        ...(image
+          ? {
+              imageUrl: image.imageUrl,
+              imagePath: image.imagePath,
+            }
+          : {}),
+      },
+    });
+  } catch (error) {
+    if (image) {
+      await deleteProductImage(image.imagePath);
+    }
+
+    throw error;
+  }
+
+  if (image) {
+    await deleteProductImage(currentProduct.imagePath);
+  }
+
+  if (stock !== currentProduct.stock) {
+    const difference = stock - currentProduct.stock;
+
+    await registerStockMovement({
+      shopId: admin.shopId || undefined,
+      productId,
+      type: difference > 0 ? "ADJUST_IN" : "ADJUST_OUT",
+      quantity: Math.abs(difference),
+      reason: "Ajuste manual de estoque",
+    });
+  }
+
+  revalidateProductViews();
 
   return {
     message: "Produto atualizado com sucesso.",
+    imageUrl: image?.imageUrl,
   };
 }
 

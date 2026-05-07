@@ -14,9 +14,6 @@ export default async function ProdutosPage() {
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
-      stock: {
-        gt: 0,
-      },
     },
     orderBy: {
       createdAt: "desc",
@@ -27,7 +24,6 @@ export default async function ProdutosPage() {
       description: true,
       price: true,
       imageUrl: true,
-      stock: true,
     },
   });
 
@@ -50,7 +46,7 @@ export default async function ProdutosPage() {
           {products.length === 0 ? (
             <EmptyState
               title="Nenhum produto no catalogo"
-              description="Quando houver produtos ativos em estoque, eles aparecem aqui."
+              description="Quando houver produtos ativos no catalogo, eles aparecem aqui."
             />
           ) : (
             <ProductGrid

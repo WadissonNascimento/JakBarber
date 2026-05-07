@@ -11,7 +11,6 @@ type Product = {
   description: string | null;
   price: number;
   imageUrl: string | null;
-  stock: number;
 };
 
 export function ProductGrid({
@@ -65,13 +64,6 @@ export function ProductGrid({
             className="group overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] shadow-[0_16px_36px_rgba(0,0,0,0.24)] transition hover:border-[var(--brand)]/35"
           >
             <div className="relative aspect-square overflow-hidden border-b border-white/10 bg-[#edf1f7]">
-              <div className="absolute left-2 top-2 z-10 flex flex-wrap gap-2 sm:left-4 sm:top-4">
-                {product.stock <= 3 ? (
-                  <span className="rounded-full border border-amber-300/25 bg-amber-500/90 px-2 py-1 text-[9px] font-semibold text-white sm:px-3 sm:text-xs">
-                    Consultar estoque
-                  </span>
-                ) : null}
-              </div>
               {normalizeProductImageUrl(product.imageUrl) ? (
                 <Image
                   src={normalizeProductImageUrl(product.imageUrl) || ""}

@@ -178,6 +178,9 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   formData.set("category", draft.category);
                   formData.set("price", draft.price);
                   formData.set("stock", String(product.stock));
+                  if (imageUpload) {
+                    formData.set("image", imageUpload.file);
+                  }
 
                   runAction(
                     "details",
