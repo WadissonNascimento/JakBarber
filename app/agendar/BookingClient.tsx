@@ -11,6 +11,7 @@ import {
 } from "@/lib/extraCategories";
 import { sanitizeTextareaInput } from "@/lib/inputSanitization";
 import { formatCurrency } from "@/lib/utils";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 type BarberOption = {
   id: string;
@@ -1042,12 +1043,10 @@ function BookingSuccessDialog({
       month: "2-digit",
     }
   );
-  const whatsappMessage = encodeURIComponent(
+  const whatsappMessage =
     `Ola! Acabei de agendar meu horário para ${formattedDate} as ${details.time} com ${details.barberName}.`
-  );
-  const whatsappHref = whatsappNumber
-    ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
-    : null;
+  ;
+  const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
 
   useEffect(() => {
     setIsMounted(true);

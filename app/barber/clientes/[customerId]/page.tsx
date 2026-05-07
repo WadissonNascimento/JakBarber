@@ -29,6 +29,7 @@ import {
 } from "@/lib/appointmentStatus";
 import { formatBrazilianPhone } from "@/lib/phone";
 import { formatCurrency } from "@/lib/utils";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { ClientNoteForm } from "../../_components/ClientNoteForm";
 import { getBarberClientProfile } from "../../data";
 import { requireActiveBarber } from "../../guard";
@@ -52,9 +53,7 @@ export default async function BarberClientProfilePage({
   const phoneHref = profile.customer.phone
     ? `tel:${profile.customer.phone.replace(/\D/g, "")}`
     : null;
-  const whatsappHref = profile.customer.phone
-    ? `https://wa.me/${profile.customer.phone.replace(/\D/g, "")}`
-    : null;
+  const whatsappHref = buildWhatsAppUrl(profile.customer.phone);
   const emailHref = profile.customer.email ? `mailto:${profile.customer.email}` : null;
   const formattedPhone = formatBrazilianPhone(profile.customer.phone);
 

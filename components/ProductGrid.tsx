@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { formatCurrency } from "@/lib/utils";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 type Product = {
   id: string;
@@ -52,7 +53,13 @@ export function ProductGrid({
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {products.map((product) => (
+        {products.map((product) => {
+          const whatsappHref = buildWhatsAppUrl(
+            whatsappNumber,
+            `Ola! Tenho interesse no produto ${product.name} do Arsenal do barbeiro.`
+          );
+
+          return (
           <div
             key={product.id}
             className="group overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] shadow-[0_16px_36px_rgba(0,0,0,0.24)] transition hover:border-[var(--brand)]/35"
@@ -106,11 +113,9 @@ export function ProductGrid({
               </div>
 
               <div className="mt-3 sm:mt-4">
-                {whatsappNumber ? (
+                {whatsappHref ? (
                   <a
-                    href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-                      `Ola! Tenho interesse no produto ${product.name} do Arsenal do barbeiro.`
-                    )}`}
+                    href={whatsappHref}
                     target="_blank"
                     rel="noreferrer"
                     className="btn-primary w-full px-3 py-3 text-center text-[12px] leading-5 sm:px-4 sm:text-sm"
@@ -125,7 +130,8 @@ export function ProductGrid({
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

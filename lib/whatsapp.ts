@@ -1,33 +1,54 @@
 import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
+import {
+  isValidBrazilianPhone,
+  maskBrazilianPhone,
+  stripPhoneDigits,
+} from "@/lib/phone";
 
-function stripPhone(value: string) {
-  return value.replace(/\D/g, "");
+function normalizeBrazilianMobileDigitsForWhatsApp(
+  phone: string | null | undefined
+) {
+  let digits = stripPhoneDigits(phone).replace(/^0+/, "");
+
+  if (digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.length === 10) {
+    const ddd = digits.slice(0, 2);
+    const localNumber = digits.slice(2);
+
+    if (/^[6-9]/.test(localNumber)) {
+      digits = `${ddd}9${localNumber}`;
+    }
+  }
+
+  const masked = maskBrazilianPhone(digits);
+
+  return isValidBrazilianPhone(masked) ? stripPhoneDigits(masked) : null;
 }
 
 export function normalizePhoneToWhatsApp(
   phone: string | null | undefined
 ): string | null {
-  if (!phone) {
+  const mobileDigits = normalizeBrazilianMobileDigitsForWhatsApp(phone);
+
+  return mobileDigits ? `55${mobileDigits}` : null;
+}
+
+export function buildWhatsAppUrl(
+  phone: string | null | undefined,
+  message?: string
+) {
+  const normalizedPhone = normalizePhoneToWhatsApp(phone);
+
+  if (!normalizedPhone) {
     return null;
   }
 
-  let digits = stripPhone(phone);
+  const query = message ? `?text=${encodeURIComponent(message)}` : "";
 
-  if (!digits) {
-    return null;
-  }
-
-  digits = digits.replace(/^0+/, "");
-
-  if (digits.startsWith("55")) {
-    return digits.length >= 12 && digits.length <= 13 ? digits : null;
-  }
-
-  if (digits.length === 10 || digits.length === 11) {
-    return `55${digits}`;
-  }
-
-  return null;
+  return `https://wa.me/${normalizedPhone}${query}`;
 }
 
 function formatAppointmentDate(value: Date) {
@@ -65,5 +86,5 @@ export function buildAppointmentContactWhatsAppUrl({
     `✂️ Serviço: ${serviceName}\n\n` +
     "Qualquer dúvida ou necessidade de ajuste, me avise por aqui.";
 
-  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+  return buildWhatsAppUrl(normalizedPhone, message);
 }

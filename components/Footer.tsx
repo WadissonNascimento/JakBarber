@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export default function Footer({
   brandName,
@@ -16,9 +17,10 @@ export default function Footer({
   addressLine: string;
   businessHours: string;
 }) {
-  const whatsappMessage = encodeURIComponent(
+  const whatsappMessage =
     `Ola! Vim pelo site da ${brandName} e queria tirar uma dúvida.`
-  );
+  ;
+  const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
 
   return (
     <footer className="relative mt-14 border-t border-white/10 bg-[#030712] text-white">
@@ -95,9 +97,9 @@ export default function Footer({
               </svg>
             </a>
 
-            {whatsappNumber ? (
+            {whatsappHref ? (
               <a
-                href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
+                href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
                 className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand-muted)] hover:text-[var(--brand-strong)]"

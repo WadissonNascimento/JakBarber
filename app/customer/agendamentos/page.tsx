@@ -24,6 +24,7 @@ import {
 } from "@/lib/scheduleTime";
 import CancelAppointmentButton from "./CancelAppointmentButton";
 import ReviewForm from "./ReviewForm";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export default async function CustomerAppointmentsPage() {
   noStore();
@@ -90,12 +91,9 @@ export default async function CustomerAppointmentsPage() {
               const time = formatScheduleTime(date);
               const dateLabel = formatScheduleDate(date);
               const serviceLabel = getAppointmentDisplayName(appointment.services);
-              const whatsappMessage = encodeURIComponent(
+              const whatsappMessage =
                 `Ola! Quero falar sobre meu agendamento de ${dateLabel} as ${time} com ${appointment.barber.name || "o barbeiro"} para ${serviceLabel}.`
-              );
-              const whatsappHref = whatsappNumber
-                ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
-                : null;
+              const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
               const canCancel =
                 !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(
                   appointment.status
