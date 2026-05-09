@@ -1182,17 +1182,11 @@ function BookingExtrasDialog({
               Nenhum extra disponível no momento.
             </p>
           ) : (
-            <div className="max-h-[420px] space-y-3 overflow-y-auto overflow-x-hidden pr-1">
+            <div className="max-h-[420px] space-y-5 overflow-y-auto overflow-x-hidden pr-1">
               {groupedExtras.map((group) => (
                 <div
                   key={group.category}
-                  className={`space-y-3 rounded-[24px] border p-3 ${
-                    group.category === "BEVERAGE"
-                      ? "border-sky-400/20 bg-sky-500/[0.06]"
-                      : group.category === "SHELF"
-                        ? "border-violet-400/20 bg-violet-500/[0.06]"
-                        : "border-white/10 bg-white/[0.03]"
-                  }`}
+                  className="space-y-3"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
