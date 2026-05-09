@@ -19,8 +19,15 @@ out
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.next-dev*.log
+.next-start.log
 .codex-runtime
 *.tsbuildinfo
+
+# Uploads gerados em ambiente local/producao
+public/uploads/barbers/*.jpg
+public/uploads/products/test/
+public/uploads/products/*-teste.webp
 
 # Sistema
 .DS_Store

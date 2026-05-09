@@ -92,7 +92,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: "Agendamento realizado com sucesso.",
-      appointmentId: appointment.id,
       appointmentCode: formatAppointmentPublicId(appointment.publicId),
     });
   } catch (error) {

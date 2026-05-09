@@ -126,7 +126,7 @@ export default async function AdminPage() {
       href: "/barber",
       icon: UserRound,
       title: "Atuar como barbeiro",
-      description: "Agenda, encaixes e financeiro do Jackson.",
+      description: "Agenda, encaixes e financeiro da barbearia.",
     },
     {
       href: "/admin/agenda",

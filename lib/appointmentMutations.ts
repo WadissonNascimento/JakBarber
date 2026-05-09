@@ -139,6 +139,7 @@ async function createCustomerAppointmentInTransaction(
   input: CreateCustomerAppointmentInput,
   db: AppointmentTransactionClient
 ) {
+  const customerId = input.customerId.trim();
   const barberId = input.barberId.trim();
   const serviceIds = input.serviceIds.map((serviceId) => serviceId.trim()).filter(Boolean);
   const extras = (input.extras || [])
@@ -154,7 +155,7 @@ async function createCustomerAppointmentInTransaction(
   const notes = input.notes?.trim() || null;
   const conflictMode = input.conflictMode || "OVERLAP";
 
-  if (!input.customerId || !barberId || serviceIds.length === 0 || !date || !time) {
+  if (!customerId || !barberId || serviceIds.length === 0 || !date || !time) {
     throw new AppointmentMutationError(
       "Selecione barbeiro, servicos, data e horario para continuar."
     );
@@ -185,6 +186,22 @@ async function createCustomerAppointmentInTransaction(
   }
 
   const shopId = barber.shopId;
+
+  const customer = await db.user.findFirst({
+    where: {
+      id: customerId,
+      shopId,
+      role: "CUSTOMER",
+      isActive: true,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!customer) {
+    throw new AppointmentMutationError("Cliente nao autorizado para esta barbearia.");
+  }
 
   const availableServices = await db.service.findMany({
     where: {
@@ -220,6 +237,7 @@ async function createCustomerAppointmentInTransaction(
 
   const barberServiceCommissions = await db.barberServiceCommission.findMany({
     where: {
+      shopId,
       barberId,
       serviceId: {
         in: serviceIds,
@@ -291,6 +309,7 @@ async function createCustomerAppointmentInTransaction(
   const [availability, sameDayAppointments, blocks, recurringBlocks] = await Promise.all([
     db.barberAvailability.findFirst({
       where: {
+        shopId,
         barberId,
         weekDay: dayOfWeek,
         isActive: true,
@@ -298,6 +317,7 @@ async function createCustomerAppointmentInTransaction(
     }),
     db.appointment.findMany({
       where: {
+        shopId,
         barberId,
         date: {
           gte: dayStart,
@@ -310,6 +330,7 @@ async function createCustomerAppointmentInTransaction(
     }),
     db.barberBlock.findMany({
       where: {
+        shopId,
         barberId,
         startDateTime: {
           lte: dayEnd,
@@ -321,6 +342,7 @@ async function createCustomerAppointmentInTransaction(
     }),
     db.recurringBarberBlock.findMany({
       where: {
+        shopId,
         barberId,
         weekDay: dayOfWeek,
         isActive: true,
@@ -387,7 +409,7 @@ async function createCustomerAppointmentInTransaction(
       shopId,
       publicId,
       barberId,
-      customerId: input.customerId,
+      customerId,
       date: appointmentDate,
       notes,
       status: "CONFIRMED",

@@ -43,7 +43,7 @@ export function ProductGrid({
       <div className="dashboard-panel px-5 py-4">
         <div>
           <h2 className="text-2xl font-semibold text-white">
-            Catélogo disponível
+            Catálogo disponível
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Escolha um item e chame no WhatsApp para combinar compra, retirada ou disponibilidade.

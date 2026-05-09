@@ -255,7 +255,9 @@ model Appointment {
   @@unique([id, shopId])
   @@unique([shopId, publicId])
   @@index([shopId, customerId])
+  @@index([shopId, customerId, date])
   @@index([shopId, barberId, status])
+  @@index([shopId, barberId, date])
   @@index([shopId, date])
   @@index([shopId, status, reminderSentAt, date])
 }

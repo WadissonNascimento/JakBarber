@@ -9,6 +9,10 @@ import {
   sendPasswordResetCodeEmail,
 } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+import {
+  isStrongPassword,
+  NEW_PASSWORD_REQUIREMENT_MESSAGE,
+} from "@/lib/passwordPolicy";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getCurrentShopId } from "@/lib/shop";
 
@@ -222,9 +226,9 @@ export async function resetPasswordWithCodeAction(
     };
   }
 
-  if (password.length < 6) {
+  if (!isStrongPassword(password)) {
     return {
-      error: "A nova senha deve ter pelo menos 6 caracteres.",
+      error: NEW_PASSWORD_REQUIREMENT_MESSAGE,
       success: null,
     };
   }

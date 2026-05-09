@@ -14,19 +14,12 @@ import {
   isValidBrazilianPhone,
   normalizeBrazilianPhoneForSubmit,
 } from "@/lib/phone";
+import {
+  isStrongPassword,
+  NEW_PASSWORD_REQUIREMENT_MESSAGE,
+} from "@/lib/passwordPolicy";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
-
-const PASSWORD_REQUIREMENT_MESSAGE =
-  "A nova senha deve ter no minimo 7 caracteres, uma letra e um caractere especial.";
-
-function isValidPassword(password: string) {
-  return (
-    password.length >= 7 &&
-    /[A-Za-z]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
-  );
-}
 
 export async function updateCustomerProfileAction(
   formData: FormData
@@ -72,14 +65,36 @@ export async function updateCustomerProfileAction(
     return mutationError("Este e-mail ja esta em uso.");
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: {
+      id: session.user.id,
+    },
+    select: {
+      email: true,
+    },
+  });
+
+  if (!currentUser) {
+    return mutationError("Nao foi possivel atualizar seu perfil.");
+  }
+
+  const emailChanged = currentUser.email?.toLowerCase() !== email;
+
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
       name,
       email,
       phone: phone || null,
+      ...(emailChanged ? { emailVerified: null } : {}),
     },
   });
+
+  if (emailChanged) {
+    logSecurityEvent("customer_email_changed", {
+      userId: session.user.id,
+    });
+  }
 
   revalidatePath("/meu-perfil");
   return mutationSuccess("Perfil atualizado com sucesso.");
@@ -113,8 +128,8 @@ export async function updateCustomerPasswordAction(
     return mutationError("Preencha senha atual, nova senha e confirmacao.");
   }
 
-  if (!isValidPassword(newPassword)) {
-    return mutationError(PASSWORD_REQUIREMENT_MESSAGE);
+  if (!isStrongPassword(newPassword)) {
+    return mutationError(NEW_PASSWORD_REQUIREMENT_MESSAGE);
   }
 
   if (newPassword !== confirmPassword) {

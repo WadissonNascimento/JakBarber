@@ -24,7 +24,7 @@ export async function createOrder(data: {
 }) {
   const session = await auth();
 
-  if (!session?.user?.id) {
+  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
     throw new Error("Usuario nao autenticado.");
   }
 
@@ -47,11 +47,15 @@ export async function createOrder(data: {
 
   const itemsWithPrice = await Promise.all(
     data.items.map(async (item) => {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
+      const product = await prisma.product.findFirst({
+        where: {
+          id: item.productId,
+          shopId: session.user.shopId || undefined,
+          isActive: true,
+        },
       });
 
-      if (!product || !product.isActive) {
+      if (!product) {
         throw new Error("Produto nao encontrado.");
       }
 

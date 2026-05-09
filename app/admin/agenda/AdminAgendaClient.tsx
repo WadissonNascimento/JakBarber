@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BadgeDollarSign,
   CalendarDays,
@@ -90,6 +91,7 @@ export default function AdminAgendaClient({
   barbers: BarberOption[];
   initialFilters: AdminAgendaFilters;
 }) {
+  const router = useRouter();
   const [filters, setFilters] = useState(() => ({
     ...initialFilters,
     q: sanitizeSearchInput(initialFilters.q),
@@ -131,36 +133,33 @@ export default function AdminAgendaClient({
     .filter(Boolean).length;
 
   useEffect(() => {
-    const params = new URLSearchParams();
-
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        params.set(key, value);
-      }
-    });
-
-    const nextUrl = params.toString()
-      ? `/admin/agenda?${params.toString()}`
-      : "/admin/agenda";
-
-    window.history.replaceState(null, "", nextUrl);
+    window.history.replaceState(null, "", buildAgendaUrl(filters));
   }, [filters]);
 
   function updateFilter(key: keyof AdminAgendaFilters, value: string) {
-    setFilters((current) => ({
-      ...current,
+    const nextFilters = {
+      ...filters,
       [key]: key === "q" ? sanitizeSearchInput(value) : value,
-    }));
+    };
+
+    setFilters(nextFilters);
+
+    if (key !== "q") {
+      router.replace(buildAgendaUrl(nextFilters), { scroll: false });
+    }
   }
 
   function clearFilters() {
-    setFilters((current) => ({
-      ...current,
+    const nextFilters = {
+      ...filters,
       barberId: "",
       dateFrom: "",
       dateTo: "",
       status: "",
-    }));
+    };
+
+    setFilters(nextFilters);
+    router.replace(buildAgendaUrl(nextFilters), { scroll: false });
   }
 
   function clearSearch() {
@@ -414,6 +413,20 @@ export default function AdminAgendaClient({
       </section>
     </DashboardShell>
   );
+}
+
+function buildAgendaUrl(filters: AdminAgendaFilters) {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  return params.toString()
+    ? `/admin/agenda?${params.toString()}`
+    : "/admin/agenda";
 }
 
 function matchesAgendaFilters(

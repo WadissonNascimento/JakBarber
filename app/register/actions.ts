@@ -12,6 +12,10 @@ import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { getCurrentShopId } from "@/lib/shop";
+import {
+  isStrongPassword,
+  PASSWORD_REQUIREMENT_MESSAGE,
+} from "@/lib/passwordPolicy";
 
 function generateVerificationCode() {
   return randomInt(100000, 1000000).toString();
@@ -22,16 +26,6 @@ function getExpirationDate() {
 }
 
 const MAX_CODE_ATTEMPTS = 5;
-const PASSWORD_REQUIREMENT_MESSAGE =
-  "A senha deve ter no minimo 7 caracteres, uma letra e um caractere especial.";
-
-function isValidRegistrationPassword(password: string) {
-  return (
-    password.length >= 7 &&
-    /[A-Za-z]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
-  );
-}
 
 function buildPendingRegistrationRedirect(email: string, code?: string) {
   const devCodeQuery =
@@ -79,7 +73,7 @@ export async function registerCustomerAction(
     };
   }
 
-  if (!isValidRegistrationPassword(password)) {
+  if (!isStrongPassword(password)) {
     return {
       error: PASSWORD_REQUIREMENT_MESSAGE,
       success: null,

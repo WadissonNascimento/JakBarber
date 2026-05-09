@@ -28,6 +28,14 @@ export default async function AdminAgendaPage({
     redirect("/painel");
   }
 
+  const initialFilters = {
+    barberId: searchParams.barberId || "",
+    dateFrom: searchParams.dateFrom || getCurrentScheduleDateValue(),
+    dateTo: searchParams.dateTo || getCurrentScheduleDateValue(),
+    status: searchParams.status === "PENDING" ? "" : searchParams.status || "",
+    q: searchParams.q || "",
+  };
+
   const [barbers, report] = await Promise.all([
     prisma.user.findMany({
       where: {
@@ -41,20 +49,19 @@ export default async function AdminAgendaPage({
         name: true,
       },
     }),
-    getAdminAgendaReport({}),
+    getAdminAgendaReport({
+      barberId: initialFilters.barberId,
+      dateFrom: initialFilters.dateFrom,
+      dateTo: initialFilters.dateTo,
+      status: initialFilters.status,
+    }),
   ]);
 
   return (
     <AdminAgendaClient
       appointments={report.appointments}
       barbers={barbers}
-      initialFilters={{
-        barberId: searchParams.barberId || "",
-        dateFrom: searchParams.dateFrom || getCurrentScheduleDateValue(),
-        dateTo: searchParams.dateTo || getCurrentScheduleDateValue(),
-        status: searchParams.status === "PENDING" ? "" : searchParams.status || "",
-        q: searchParams.q || "",
-      }}
+      initialFilters={initialFilters}
     />
   );
 }
