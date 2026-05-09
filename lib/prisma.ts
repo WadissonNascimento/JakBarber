@@ -1,5 +1,5 @@
 import { basePrisma } from "@/lib/prisma-core";
-import { getCurrentShopId } from "@/lib/shop";
+import { DEFAULT_SHOP_ID, getCurrentShopId } from "@/lib/shop";
 
 const SHOP_SCOPED_MODELS = new Set([
   "User",
@@ -212,11 +212,19 @@ export const prisma: typeof basePrisma = basePrisma.$extends({
           return query(args);
         }
 
-        const shopId = await getCurrentShopId().catch(() => null);
+        const shopId = await getCurrentShopId().catch((error) => {
+          console.warn(
+            "[security] shop_scope_fallback",
+            JSON.stringify({
+              at: new Date().toISOString(),
+              model,
+              operation,
+              reason: error instanceof Error ? error.message : "unknown",
+            })
+          );
 
-        if (!shopId) {
-          return query(args);
-        }
+          return DEFAULT_SHOP_ID;
+        });
 
         if (
           operation === "findMany" ||

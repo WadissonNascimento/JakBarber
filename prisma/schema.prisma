@@ -169,6 +169,19 @@ model EmailDeliveryLog {
   @@index([shopId, status, createdAt])
 }
 
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  keyHash   String   @unique
+  scope     String
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope, resetAt])
+  @@index([resetAt])
+}
+
 model PendingRegistration {
   id           String   @id @default(cuid())
   shopId       String   @default("shop_jak_barber")

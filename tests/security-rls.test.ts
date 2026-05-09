@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-const migrationPath = path.join(
-  process.cwd(),
-  "prisma",
-  "migrations",
-  "20260508170000_enable_supabase_rls",
-  "migration.sql"
-);
-
-const migrationSql = readFileSync(migrationPath, "utf8");
+const migrationsPath = path.join(process.cwd(), "prisma", "migrations");
+const migrationSql = readdirSync(migrationsPath, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => path.join(migrationsPath, entry.name, "migration.sql"))
+  .map((migrationPath) => readFileSync(migrationPath, "utf8"))
+  .join("\n");
 
 const protectedTables = [
   "Shop",
@@ -40,11 +37,13 @@ const protectedTables = [
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
+  "EmailDeliveryLog",
+  "RateLimitBucket",
 ];
 
 test("RLS migration enables row security for every application table", () => {
   for (const table of protectedTables) {
-    assert.match(migrationSql, new RegExp(`'${table}'`));
+    assert.match(migrationSql, new RegExp(`'${table}'|"${table}"`));
   }
 
   assert.match(migrationSql, /ENABLE ROW LEVEL SECURITY/);

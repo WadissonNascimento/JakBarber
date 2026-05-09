@@ -61,3 +61,22 @@ test("service role storage helpers are server-only and not imported from client 
     assert.doesNotMatch(contents, /@\/lib\/productImages|@\/lib\/extraProductImages/, file);
   }
 });
+
+test("rate limit can use a persistent hashed database bucket in production", () => {
+  const security = read("lib/security.ts");
+  const schema = read("prisma/schema.prisma");
+
+  assert.match(security, /RATE_LIMIT_STORE/);
+  assert.match(security, /createHash\("sha256"\)/);
+  assert.match(security, /RateLimitBucket/);
+  assert.doesNotMatch(security, /identifier.*RateLimitBucket/);
+  assert.match(schema, /model RateLimitBucket/);
+  assert.match(schema, /keyHash\s+String\s+@unique/);
+});
+
+test("shop scoped prisma queries do not continue unscoped when shop lookup fails", () => {
+  const prisma = read("lib/prisma.ts");
+
+  assert.match(prisma, /DEFAULT_SHOP_ID/);
+  assert.doesNotMatch(prisma, /if \(!shopId\) {\s*return query\(args\);/);
+});

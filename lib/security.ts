@@ -1,5 +1,7 @@
+import { createHash } from "crypto";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { basePrisma } from "@/lib/prisma-core";
 
 type RateLimitBucket = {
   count: number;
@@ -12,6 +14,9 @@ type SecurityEventDetails = Record<
 >;
 
 const buckets = new Map<string, RateLimitBucket>();
+const usePersistentRateLimit =
+  process.env.RATE_LIMIT_STORE !== "memory" &&
+  process.env.NODE_ENV === "production";
 
 function sanitizeLogDetails(details: SecurityEventDetails = {}) {
   return Object.fromEntries(
@@ -60,6 +65,89 @@ function cleanupExpiredBuckets(now: number) {
 }
 
 export async function checkRateLimit({
+  key,
+  scope = "general",
+  limit,
+  windowMs,
+}: {
+  key: string;
+  scope?: string;
+  limit: number;
+  windowMs: number;
+}) {
+  if (usePersistentRateLimit) {
+    try {
+      return await checkPersistentRateLimit({ key, scope, limit, windowMs });
+    } catch (error) {
+      logSecurityEvent("rate_limit_store_failed", {
+        scope,
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+
+  return checkMemoryRateLimit({ key, limit, windowMs });
+}
+
+async function checkPersistentRateLimit({
+  key,
+  scope,
+  limit,
+  windowMs,
+}: {
+  key: string;
+  scope: string;
+  limit: number;
+  windowMs: number;
+}) {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowMs);
+  const keyHash = createHash("sha256").update(key).digest("hex");
+
+  const rows = await basePrisma.$queryRaw<
+    Array<{ count: number; resetAt: Date }>
+  >`
+    INSERT INTO "RateLimitBucket" ("id", "keyHash", "scope", "count", "resetAt", "createdAt", "updatedAt")
+    VALUES (${keyHash}, ${keyHash}, ${scope}, 1, ${resetAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT ("keyHash") DO UPDATE
+    SET
+      "scope" = EXCLUDED."scope",
+      "count" = CASE
+        WHEN "RateLimitBucket"."resetAt" <= CURRENT_TIMESTAMP THEN 1
+        ELSE "RateLimitBucket"."count" + 1
+      END,
+      "resetAt" = CASE
+        WHEN "RateLimitBucket"."resetAt" <= CURRENT_TIMESTAMP THEN EXCLUDED."resetAt"
+        ELSE "RateLimitBucket"."resetAt"
+      END,
+      "updatedAt" = CURRENT_TIMESTAMP
+    RETURNING "count", "resetAt"
+  `;
+
+  if (Math.random() < 0.01) {
+    await basePrisma.rateLimitBucket
+      .deleteMany({
+        where: {
+          resetAt: {
+            lt: now,
+          },
+        },
+      })
+      .catch(() => null);
+  }
+
+  const bucket = rows[0];
+  const count = bucket?.count ?? limit + 1;
+  const bucketResetAt = bucket?.resetAt?.getTime() ?? resetAt.getTime();
+
+  return {
+    allowed: count <= limit,
+    remaining: Math.max(0, limit - count),
+    resetAt: bucketResetAt,
+  };
+}
+
+async function checkMemoryRateLimit({
   key,
   limit,
   windowMs,
@@ -118,7 +206,7 @@ export async function enforceRateLimit({
   const ip = getClientIp(headerList);
   const safeIdentifier = (identifier || "anonymous").trim().toLowerCase();
   const key = `${scope}:${ip}:${safeIdentifier}`;
-  const result = await checkRateLimit({ key, limit, windowMs });
+  const result = await checkRateLimit({ key, scope, limit, windowMs });
 
   if (!result.allowed) {
     logSecurityEvent("rate_limit", {
