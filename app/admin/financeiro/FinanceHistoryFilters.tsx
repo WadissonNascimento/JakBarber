@@ -39,8 +39,8 @@ export default function FinanceHistoryFilters({
   }
 
   return (
-    <form className="grid gap-2 sm:min-w-[21rem]">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+    <form className="grid min-w-0 gap-2 sm:min-w-[21rem]">
+      <div className="grid min-w-0 gap-2 min-[460px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[460px]:items-center">
         <PremiumDatePicker
           name="historyStart"
           value={filters.historyStart}

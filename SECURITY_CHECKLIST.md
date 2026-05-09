@@ -15,6 +15,7 @@
 - [x] Erros de API deixam de retornar stack trace ou detalhes internos para o cliente.
 - [x] Logs de seguranca adicionados para falhas de login, acesso negado, IDOR bloqueado e rate limit.
 - [x] `.env` e bancos locais estao ignorados no Git.
+- [x] RLS aplicado no Supabase para as tabelas do sistema, com policies por cliente, barbeiro, admin e tenant.
 
 ## Limites aplicados
 
@@ -59,14 +60,15 @@
 
 ## Supabase e RLS
 
-O projeto acessa o banco via Prisma no backend usando `DATABASE_URL`/`DIRECT_URL`. Esse modelo nao usa o cliente Supabase no navegador e, por isso, as permissoes hoje sao aplicadas no backend da aplicacao.
+RLS foi aplicado com a migration `20260508170000_enable_supabase_rls`.
 
-Para ativar RLS sem quebrar o app, e preciso uma etapa propria:
+- 26 tabelas do sistema estao com `relrowsecurity = true`.
+- Acesso direto `anon` foi revogado.
+- As tabelas de sessao/codigos (`Account`, `Session`, `VerificationToken`, `PendingRegistration`, `PasswordResetRequest`) ficam sem grants diretos para `anon`/`authenticated`.
+- As policies de negocio usam `app.current_user_id`, `app.current_shop_id`, `app.current_role` ou claims JWT equivalentes em `app_metadata`/`user_metadata`.
+- `User.passwordHash` nao possui grant de SELECT para `authenticated`.
 
-- Criar roles/policies no Supabase alinhadas aos usuarios autenticados.
-- Evitar usar conexao de service role no frontend.
-- Testar Prisma com a role correta ou manter Prisma como backend confiavel sem expor o banco diretamente ao client.
-- Se algum cliente Supabase for introduzido no navegador, habilitar RLS antes de expor tabelas privadas.
+O app ainda usa Prisma no backend. Se algum cliente Supabase for introduzido no navegador, o JWT precisa carregar `userId`, `shopId` e `role`, ou a conexao precisa setar os GUCs usados pelas policies.
 
 ## Recomendacoes para VPS/Nginx/Cloudflare
 

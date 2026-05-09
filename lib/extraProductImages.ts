@@ -1,3 +1,4 @@
+import "server-only";
 import { randomUUID } from "crypto";
 import { processProductImageBuffer } from "@/lib/productImagePipeline";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";

@@ -245,15 +245,20 @@ function MetricCard({
   helper: string;
 }) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3.5">
       <div className="flex min-w-0 items-center gap-2 text-xs uppercase tracking-[0.16em] text-zinc-500">
-        <span className="h-4 w-4 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
+        <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
           {icon}
         </span>
         <span className="min-w-0 truncate">{label}</span>
       </div>
-      <p className="mt-3 break-words text-2xl font-bold text-white">{value}</p>
-      <p className="mt-1 text-xs text-zinc-400">{helper}</p>
+      <p
+        title={value}
+        className="mt-3 min-w-0 truncate text-xl font-bold text-white tabular-nums"
+      >
+        {value}
+      </p>
+      <p className="mt-1 truncate text-xs text-zinc-400">{helper}</p>
     </div>
   );
 }

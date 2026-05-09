@@ -24,6 +24,7 @@ const SHOP_SCOPED_MODELS = new Set([
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
+  "EmailDeliveryLog",
 ]);
 
 const ID_SCOPED_MODELS = new Set([
@@ -49,6 +50,7 @@ const ID_SCOPED_MODELS = new Set([
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
+  "EmailDeliveryLog",
 ]);
 
 function mergeWhereWithShop(
@@ -57,10 +59,6 @@ function mergeWhereWithShop(
 ) {
   if (!where) {
     return { shopId };
-  }
-
-  if ("shopId" in where) {
-    return where;
   }
 
   if (Array.isArray((where as { AND?: unknown[] }).AND)) {
@@ -84,16 +82,27 @@ function rewriteUniqueWhere(
     return where;
   }
 
-  if ("shopId" in where) {
-    return where;
-  }
-
   if ("id_shopId" in where) {
+    const { shopId: _ignoredShopId, id_shopId: idShopId, ...rest } = where;
+
+    if (typeof idShopId === "object" && idShopId !== null) {
+      return {
+        ...rest,
+        id_shopId: {
+          ...(idShopId as Record<string, unknown>),
+          shopId,
+        },
+      };
+    }
+
     return where;
   }
 
   if ("id" in where && ID_SCOPED_MODELS.has(model)) {
-    const { id, ...rest } = where as { id: string } & Record<string, unknown>;
+    const { id, shopId: _ignoredShopId, ...rest } = where as {
+      id: string;
+      shopId?: unknown;
+    } & Record<string, unknown>;
     return {
       ...rest,
       id_shopId: {
@@ -106,8 +115,11 @@ function rewriteUniqueWhere(
   return where;
 }
 
-function withShopId(data: Record<string, unknown> | undefined, shopId: string) {
-  if (!data || "shopId" in data) {
+function withShopId(
+  data: Record<string, unknown> | undefined,
+  shopId: string
+): Record<string, unknown> | undefined {
+  if (!data) {
     return data;
   }
 

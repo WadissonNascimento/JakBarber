@@ -7,6 +7,8 @@ import {
   AppointmentMutationError,
   createCustomerAppointment,
 } from "@/lib/appointmentMutations";
+import { notifyCustomerAppointmentConfirmed } from "@/lib/appointmentEmails";
+import { notifyBarberNewAppointment } from "@/lib/barberEmails";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit } from "@/lib/security";
 
@@ -72,8 +74,10 @@ export async function createAppointmentAction(
     };
   }
 
+  let appointmentId = "";
+
   try {
-    await createCustomerAppointment({
+    const appointment = await createCustomerAppointment({
       customerId: session.user.id,
       barberId,
       serviceIds,
@@ -82,6 +86,8 @@ export async function createAppointmentAction(
       time,
       notes,
     });
+
+    appointmentId = appointment.id;
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
       return {
@@ -93,7 +99,6 @@ export async function createAppointmentAction(
     throw error;
   }
 
-  revalidatePath("/customer");
   revalidatePath("/customer/agendamentos");
   revalidatePath("/meu-perfil");
   revalidatePath("/barber");
@@ -102,6 +107,9 @@ export async function createAppointmentAction(
   revalidatePath(`/barber/clientes/${session.user.id}`);
   revalidatePath("/admin/agenda");
   revalidatePath("/agendar");
+
+  await notifyCustomerAppointmentConfirmed(appointmentId);
+  await notifyBarberNewAppointment(appointmentId);
 
   redirect("/customer/agendamentos");
 }

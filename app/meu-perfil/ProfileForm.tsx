@@ -4,33 +4,25 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import PhoneInput from "@/components/ui/PhoneInput";
-import { PremiumSelect } from "@/components/ui/PremiumFilters";
 import { formatBrazilianPhone } from "@/lib/phone";
-import { updateCustomerProfileAction } from "./actions";
+import {
+  updateCustomerPasswordAction,
+  updateCustomerProfileAction,
+} from "./actions";
 
-type BarberOption = {
-  id: string;
-  name: string | null;
-};
+type ProfileMode = "view" | "contact" | "password";
 
 export default function ProfileForm({
   customer,
-  profile,
-  barbers,
 }: {
   customer: {
     name: string | null;
     email: string | null;
     phone: string | null;
   };
-  profile: {
-    preferredBarberId: string | null;
-    allergies: string | null;
-    preferences: string | null;
-  } | null;
-  barbers: BarberOption[];
 }) {
   const router = useRouter();
+  const [mode, setMode] = useState<ProfileMode>("view");
   const [feedback, setFeedback] = useState<{
     message: string | null;
     tone: "success" | "error" | "info";
@@ -38,101 +30,213 @@ export default function ProfileForm({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <form
-      className="mt-5 space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-
-        startTransition(async () => {
-          const result = await updateCustomerProfileAction(formData);
-          setFeedback({ message: result.message, tone: result.tone });
-
-          if (result.ok) {
-            router.refresh();
-          }
-        });
-      }}
-    >
-      <div className="space-y-3">
-        <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+    <section className="mt-5 max-w-xl rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-white">Contato do cliente</p>
+        <p className="mt-1 text-xs text-zinc-400">
+          Nome, e-mail e telefone do seu perfil.
+        </p>
       </div>
 
-      <label className="block">
-        <span className="mb-2 block text-sm text-zinc-300">Nome</span>
-        <input
-          name="name"
-          defaultValue={customer.name || ""}
-          required
-          maxLength={120}
-          className="form-control text-sm"
-        />
-      </label>
+      {mode === "contact" ? (
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
 
-      <label className="block">
-        <span className="mb-2 block text-sm text-zinc-300">E-mail</span>
-        <input
-          value={customer.email || ""}
-          readOnly
-          className="form-control text-sm"
-        />
-      </label>
+            startTransition(async () => {
+              const result = await updateCustomerProfileAction(formData);
+              setFeedback({ message: result.message, tone: result.tone });
 
-      <label className="block">
-        <span className="mb-2 block text-sm text-zinc-300">Telefone</span>
-        <PhoneInput
-          name="phone"
-          defaultValue={formatBrazilianPhone(customer.phone)}
-          className="form-control text-sm"
-        />
-      </label>
+              if (result.ok) {
+                setMode("view");
+                router.refresh();
+              }
+            });
+          }}
+        >
+          <FeedbackMessage message={feedback.message} tone={feedback.tone} />
 
-      <label className="block">
-        <PremiumSelect
-          name="preferredBarberId"
-          label="Barbeiro preferido"
-          defaultValue={profile?.preferredBarberId || ""}
-          options={[
-            { value: "", label: "Sem preferência" },
-            ...barbers.map((barber) => ({
-              value: barber.id,
-              label: barber.name || "Barbeiro",
-            })),
-          ]}
-        />
-      </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Nome
+            </span>
+            <input
+              name="name"
+              defaultValue={customer.name || ""}
+              required
+              maxLength={120}
+              className="form-control text-sm"
+            />
+          </label>
 
-      <label className="block">
-        <span className="mb-2 block text-sm text-zinc-300">Alergias ou cuidados</span>
-        <textarea
-          name="allergies"
-          rows={3}
-          defaultValue={profile?.allergies || ""}
-          maxLength={500}
-          placeholder="Ex.: sensibilidade a determinados produtos"
-          className="form-control text-sm"
-        />
-      </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              E-mail
+            </span>
+            <input
+              name="email"
+              type="email"
+              defaultValue={customer.email || ""}
+              required
+              maxLength={254}
+              className="form-control text-sm"
+            />
+          </label>
 
-      <label className="block">
-        <span className="mb-2 block text-sm text-zinc-300">Preferências</span>
-        <textarea
-          name="preferences"
-          rows={3}
-          defaultValue={profile?.preferences || ""}
-          maxLength={500}
-          placeholder="Ex.: estilo de corte, acabamento, horário favorito"
-          className="form-control text-sm"
-        />
-      </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Telefone
+            </span>
+            <PhoneInput
+              name="phone"
+              defaultValue={formatBrazilianPhone(customer.phone)}
+              className="form-control text-sm"
+            />
+          </label>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="btn-primary w-full"
-      >
-        {isPending ? "Salvando..." : "Salvar perfil"}
-      </button>
-    </form>
+          <button type="submit" disabled={isPending} className="btn-primary w-full">
+            {isPending ? "Salvando..." : "Salvar contato"}
+          </button>
+
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              setFeedback({ message: null, tone: "success" });
+              setMode("view");
+            }}
+            className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+        </form>
+      ) : mode === "password" ? (
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const formData = new FormData(form);
+
+            startTransition(async () => {
+              const result = await updateCustomerPasswordAction(formData);
+              setFeedback({ message: result.message, tone: result.tone });
+
+              if (result.ok) {
+                form.reset();
+                setMode("view");
+              }
+            });
+          }}
+        >
+          <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Senha atual
+            </span>
+            <input
+              name="currentPassword"
+              type="password"
+              required
+              autoComplete="current-password"
+              className="form-control text-sm"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Nova senha
+            </span>
+            <input
+              name="newPassword"
+              type="password"
+              required
+              minLength={7}
+              autoComplete="new-password"
+              className="form-control text-sm"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Confirmar nova senha
+            </span>
+            <input
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={7}
+              autoComplete="new-password"
+              className="form-control text-sm"
+            />
+          </label>
+
+          <button type="submit" disabled={isPending} className="btn-primary w-full">
+            {isPending ? "Salvando..." : "Salvar nova senha"}
+          </button>
+
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              setFeedback({ message: null, tone: "success" });
+              setMode("view");
+            }}
+            className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+        </form>
+      ) : (
+        <>
+          <div className="mt-4 grid gap-2 text-sm">
+            <ProfileValue label="Nome" value={customer.name || "Não informado"} />
+            <ProfileValue label="E-mail" value={customer.email || "Não informado"} />
+            <ProfileValue
+              label="Telefone"
+              value={formatBrazilianPhone(customer.phone) || "Não informado"}
+            />
+          </div>
+
+          <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+          <button
+            type="button"
+            onClick={() => {
+              setFeedback({ message: null, tone: "success" });
+              setMode("contact");
+            }}
+            className="mt-3 w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/5"
+          >
+            Editar contato
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFeedback({ message: null, tone: "success" });
+              setMode("password");
+            }}
+            className="mt-2 w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/5"
+          >
+            Trocar senha
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ProfileValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">{value}</p>
+    </div>
   );
 }

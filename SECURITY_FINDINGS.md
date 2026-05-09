@@ -64,11 +64,10 @@
 - Como foi corrigido: adicionados logs padronizados sem senha, token ou payload sensivel.
 - Status final: corrigido inicialmente; recomendado enviar logs para um coletor em producao.
 
-## Observacao: RLS no Supabase
+## Alta: RLS do Supabase estava pendente
 
-- Problema: nao ha cliente Supabase no frontend; o app usa Prisma no backend com `DATABASE_URL`/`DIRECT_URL`.
-- Risco: se no futuro o banco/tabelas forem expostos ao browser sem RLS, clientes poderiam ler ou alterar dados indevidos.
-- Como explorar: seria exploravel caso uma chave de browser acessasse tabelas privadas sem policies.
-- Como foi corrigido: nesta rodada, a protecao ficou no backend com checagem de sessao, papel e propriedade dos recursos. RLS foi documentado como etapa separada para nao quebrar Prisma/NextAuth.
-- Status final: mitigado pela arquitetura atual; pendente se houver uso direto do Supabase no client.
-
+- Problema: as tabelas publicas do Supabase ainda nao tinham uma camada completa de RLS alinhada a cliente, barbeiro, admin e tenant.
+- Risco: se uma chave `anon`/`authenticated` fosse usada direto contra o Supabase/PostgREST, dados de clientes, agendamentos, pedidos, repasses e comissoes poderiam ficar expostos sem depender do frontend.
+- Como explorar: tentar consultar tabelas publicas direto pelo Supabase usando IDs de outro cliente/barbeiro/tenant.
+- Como foi corrigido: criada e aplicada a migration `20260508170000_enable_supabase_rls`, com RLS ativo em 26 tabelas, grants anonimos revogados, policies por papel/tenant e protecao para nao selecionar `User.passwordHash`.
+- Status final: corrigido no Supabase configurado no `.env`; detalhes em `SECURITY_RLS_REPORT.md`.

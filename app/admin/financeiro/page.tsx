@@ -68,8 +68,8 @@ export default async function AdminFinanceiroPage({
   );
 
   return (
-    <DashboardShell size="wide">
-      <section className="dashboard-panel p-4 sm:p-5">
+    <DashboardShell size="wide" className="min-w-0 max-w-full overflow-hidden">
+      <section className="dashboard-panel max-w-full p-3 sm:p-5">
         <div className="border-b border-white/10 pb-5">
           <BackLink href="/admin" area="Admin" />
 
@@ -89,7 +89,7 @@ export default async function AdminFinanceiroPage({
             </p>
             <h2 className="mt-1 text-xl font-bold text-white">Filtro financeiro</h2>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-3.5">
+          <div className="max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3.5">
             <FinancePeriodFilters
               period={data.filters.period}
               start={data.filters.start}
@@ -99,7 +99,7 @@ export default async function AdminFinanceiroPage({
         </section>
 
         <section className="border-b border-white/10 py-5">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-4">
             <FinanceStat
               label="Entrou"
               value={formatCurrency(data.summary.grossRevenue)}
@@ -131,7 +131,7 @@ export default async function AdminFinanceiroPage({
             title="Resumo do período"
             description="Ticket médio, melhor dia e movimento."
           >
-            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2 xl:grid-cols-4">
               <InsightTile
                 label="Ticket médio"
                 value={formatCurrency(data.summary.averageTicket)}
@@ -401,7 +401,7 @@ export default async function AdminFinanceiroPage({
                 description="Os fechamentos realizados aparecerão aqui."
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="max-w-full overflow-x-auto">
                 <table className="table-premium min-w-[900px]">
                   <thead>
                     <tr>
@@ -484,7 +484,7 @@ function FinancePanel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/20 p-3.5 sm:p-4">
+    <section className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3.5 sm:p-4">
       <div className="mb-4 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">

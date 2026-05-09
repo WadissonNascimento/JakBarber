@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { updateAppointmentStatusAction } from "../actions";
 import type { BarberAppointmentItemDeliveryDecision } from "./BarberAppointmentCard";
 
@@ -34,8 +35,13 @@ export default function BarberAppointmentActions({
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
   const isPending = Boolean(pendingStatus);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isCancelOpen) {
@@ -140,8 +146,16 @@ export default function BarberAppointmentActions({
         </ActionButton>
       ) : null}
 
-      {isCancelOpen ? (
-        <div className="fixed inset-0 z-50 flex touch-none items-center justify-center overflow-hidden bg-black/65 px-4 backdrop-blur-sm">
+      {mounted && isCancelOpen
+        ? createPortal(
+        <div
+          className="fixed inset-0 z-[280] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-6 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Motivo do cancelamento"
+          onWheel={(event) => event.preventDefault()}
+          onTouchMove={(event) => event.preventDefault()}
+        >
           <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
               Cancelamento
@@ -193,8 +207,10 @@ export default function BarberAppointmentActions({
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+          )
+        : null}
     </>
   );
 }

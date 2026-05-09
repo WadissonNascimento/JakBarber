@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PrismaClient } from "@prisma/client";
+import { basePrisma } from "@/lib/prisma-core";
 import {
   AppointmentMutationError,
   cancelAppointmentByCustomer,
@@ -10,6 +11,10 @@ import {
 import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
 import { getBookingAvailability } from "@/lib/bookingAvailability";
 import { createScheduleDate } from "@/lib/scheduleTime";
+
+test.after(async () => {
+  await basePrisma.$disconnect();
+});
 
 function getNextBusinessDay(baseDate = new Date()) {
   const date = new Date(baseDate);

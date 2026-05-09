@@ -1,16 +1,46 @@
 import nodemailer from "nodemailer";
 import path from "path";
+import { Prisma } from "@prisma/client";
+import { getConfiguredAppUrl } from "@/lib/appUrl";
+import {
+  renderCustomerAppointmentCancelledEmail,
+  renderCustomerAppointmentCompletedEmail,
+  renderCustomerAppointmentConfirmationEmail,
+  renderCustomerAppointmentReminderEmail,
+  renderCustomerPasswordResetEmail,
+  renderCustomerVerificationCodeEmail,
+  type CustomerAppointmentEmailData,
+  type CustomerEmailTheme,
+} from "@/lib/email/customerTemplates";
+import { basePrisma } from "@/lib/prisma-core";
+import { getCurrentShop } from "@/lib/shop";
 
 const LOGO_CID = "jak-barber-logo";
+export const DEFAULT_EMAIL_LOGO_CID = LOGO_CID;
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+export type EmailDeliveryMetadata = Prisma.InputJsonValue;
+
+export type SendEmailMessageInput = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  template: string;
+  eventKey: string;
+  shopId?: string;
+  recipientUserId?: string | null;
+  metadata?: EmailDeliveryMetadata;
+  attachments?: Array<{
+    filename: string;
+    path: string;
+    cid?: string;
+  }>;
+  maxAttempts?: number;
+};
+
+const DEFAULT_SHOP_ID = "shop_jak_barber";
+const DEFAULT_SHOP_NAME = "Jak Barber";
+const DEFAULT_BRAND_COLOR = "#0ea5e9";
 
 function formatFromAddress(from: string) {
   return from.includes("<") ? from : `Jak Barber <${from}>`;
@@ -22,6 +52,54 @@ function getLogoAttachment() {
     path: path.join(process.cwd(), "public", "logo.png"),
     cid: LOGO_CID,
   };
+}
+
+export function getDefaultLogoAttachment() {
+  return getLogoAttachment();
+}
+
+function resolveEmailLogoUrl(logoPath: string | null | undefined) {
+  const value = logoPath?.trim();
+
+  if (!value) {
+    return `cid:${LOGO_CID}`;
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  const appUrl = getConfiguredAppUrl();
+  const normalizedPath = value.startsWith("/") ? value : `/${value}`;
+  return `${appUrl}${normalizedPath}`;
+}
+
+function buildCustomerThemeFromShop(shop: {
+  name?: string | null;
+  logoPath?: string | null;
+  brandColor?: string | null;
+  addressLine?: string | null;
+  whatsappNumber?: string | null;
+}): CustomerEmailTheme {
+  return {
+    nomeBarbearia: shop.name?.trim() || DEFAULT_SHOP_NAME,
+    logoBarbearia: resolveEmailLogoUrl(shop.logoPath),
+    corPrimaria: shop.brandColor?.trim() || DEFAULT_BRAND_COLOR,
+    enderecoBarbearia: shop.addressLine || null,
+    telefoneBarbearia: shop.whatsappNumber || null,
+  };
+}
+
+async function getCurrentCustomerEmailTheme() {
+  const shop = await getCurrentShop().catch(() => null);
+
+  return buildCustomerThemeFromShop({
+    name: shop?.name,
+    logoPath: shop?.logoPath,
+    brandColor: shop?.brandColor,
+    addressLine: shop?.addressLine,
+    whatsappNumber: shop?.whatsappNumber,
+  });
 }
 
 function getMailConfig() {
@@ -57,6 +135,293 @@ export function isUsingDevelopmentMailFallback() {
   return shouldUseConsoleMailFallback() && (!host || !user || !pass || !from);
 }
 
+export function isValidEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizeEmailError(error: unknown) {
+  return error instanceof Error ? error.message.slice(0, 500) : "Erro desconhecido.";
+}
+
+function getEmailLogWhere({
+  shopId,
+  template,
+  eventKey,
+  recipientEmail,
+}: {
+  shopId: string;
+  template: string;
+  eventKey: string;
+  recipientEmail: string;
+}) {
+  return {
+    shopId_template_eventKey_recipientEmail: {
+      shopId,
+      template,
+      eventKey,
+      recipientEmail,
+    },
+  };
+}
+
+async function getExistingSentEmailLog({
+  shopId,
+  template,
+  eventKey,
+  recipientEmail,
+}: {
+  shopId: string;
+  template: string;
+  eventKey: string;
+  recipientEmail: string;
+}) {
+  try {
+    return await basePrisma.emailDeliveryLog.findUnique({
+      where: getEmailLogWhere({
+        shopId,
+        template,
+        eventKey,
+        recipientEmail,
+      }),
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+  } catch (error) {
+    console.warn("[email] Nao foi possivel consultar log de envio:", normalizeEmailError(error));
+    return null;
+  }
+}
+
+async function recordEmailDeliveryAttempt({
+  shopId,
+  recipientUserId,
+  recipientEmail,
+  template,
+  eventKey,
+  subject,
+  status,
+  attempts,
+  lastError,
+  metadata,
+  sentAt,
+}: {
+  shopId: string;
+  recipientUserId?: string | null;
+  recipientEmail: string;
+  template: string;
+  eventKey: string;
+  subject: string;
+  status: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+  attempts: number;
+  lastError?: string | null;
+  metadata?: EmailDeliveryMetadata;
+  sentAt?: Date | null;
+}) {
+  try {
+    await basePrisma.emailDeliveryLog.upsert({
+      where: getEmailLogWhere({
+        shopId,
+        template,
+        eventKey,
+        recipientEmail,
+      }),
+      create: {
+        shopId,
+        recipientUserId: recipientUserId || null,
+        recipientEmail,
+        template,
+        eventKey,
+        subject,
+        status,
+        attempts,
+        lastError: lastError || null,
+        metadata: metadata ?? Prisma.JsonNull,
+        sentAt: sentAt || null,
+      },
+      update: {
+        recipientUserId: recipientUserId || null,
+        subject,
+        status,
+        attempts,
+        lastError: lastError || null,
+        metadata: metadata ?? Prisma.JsonNull,
+        sentAt: sentAt || null,
+      },
+    });
+  } catch (error) {
+    console.warn("[email] Nao foi possivel gravar log de envio:", normalizeEmailError(error));
+  }
+}
+
+async function sendMailOnce({
+  to,
+  subject,
+  text,
+  html,
+  attachments,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: SendEmailMessageInput["attachments"];
+}) {
+  const config = getMailConfig();
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.port === 465,
+    auth: {
+      user: config.user,
+      pass: config.pass,
+    },
+  });
+
+  await transporter.sendMail({
+    from: formatFromAddress(config.from),
+    to,
+    subject,
+    text,
+    html,
+    attachments: attachments?.length ? attachments : [getLogoAttachment()],
+  });
+}
+
+export async function sendEmailMessage({
+  to,
+  subject,
+  text,
+  html,
+  template,
+  eventKey,
+  shopId = "shop_jak_barber",
+  recipientUserId,
+  metadata,
+  attachments,
+  maxAttempts = 2,
+}: SendEmailMessageInput) {
+  const recipientEmail = to.trim().toLowerCase();
+  const attemptsLimit = Math.max(1, Math.min(maxAttempts, 3));
+
+  if (!isValidEmailAddress(recipientEmail)) {
+    await recordEmailDeliveryAttempt({
+      shopId,
+      recipientUserId,
+      recipientEmail,
+      template,
+      eventKey,
+      subject,
+      status: "FAILED",
+      attempts: 0,
+      lastError: "E-mail do destinatario invalido.",
+      metadata,
+    });
+
+    console.warn(`[email] Destinatario invalido para ${template}: ${recipientEmail}`);
+    return { sent: false, skipped: true, attempts: 0 };
+  }
+
+  const existingLog = await getExistingSentEmailLog({
+    shopId,
+    template,
+    eventKey,
+    recipientEmail,
+  });
+
+  if (existingLog?.status === "SENT") {
+    console.info(`[email] Envio duplicado ignorado: template=${template} eventKey=${eventKey}`);
+    return { sent: false, skipped: true, attempts: 0 };
+  }
+
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= attemptsLimit; attempt += 1) {
+    await recordEmailDeliveryAttempt({
+      shopId,
+      recipientUserId,
+      recipientEmail,
+      template,
+      eventKey,
+      subject,
+      status: "PENDING",
+      attempts: attempt - 1,
+      metadata,
+    });
+
+    try {
+      await sendMailOnce({
+        to: recipientEmail,
+        subject,
+        text,
+        html,
+        attachments,
+      });
+
+      await recordEmailDeliveryAttempt({
+        shopId,
+        recipientUserId,
+        recipientEmail,
+        template,
+        eventKey,
+        subject,
+        status: "SENT",
+        attempts: attempt,
+        metadata,
+        sentAt: new Date(),
+      });
+
+      console.info(`[email] Enviado: template=${template} to=${recipientEmail}`);
+      return { sent: true, skipped: false, attempts: attempt };
+    } catch (error) {
+      lastError = error;
+
+      if (shouldUseConsoleMailFallback()) {
+        logDevelopmentMessageEmail({
+          to: recipientEmail,
+          subject,
+          appointmentCode: eventKey,
+        });
+
+        await recordEmailDeliveryAttempt({
+          shopId,
+          recipientUserId,
+          recipientEmail,
+          template,
+          eventKey,
+          subject,
+          status: "SENT",
+          attempts: attempt,
+          metadata,
+          sentAt: new Date(),
+        });
+
+        return { sent: true, skipped: false, attempts: attempt };
+      }
+    }
+  }
+
+  await recordEmailDeliveryAttempt({
+    shopId,
+    recipientUserId,
+    recipientEmail,
+    template,
+    eventKey,
+    subject,
+    status: "FAILED",
+    attempts: attemptsLimit,
+    lastError: normalizeEmailError(lastError),
+    metadata,
+  });
+
+  console.warn(
+    `[email] Falha final: template=${template} to=${recipientEmail} error=${normalizeEmailError(lastError)}`
+  );
+
+  return { sent: false, skipped: false, attempts: attemptsLimit };
+}
+
 function logDevelopmentEmail({
   to,
   subject,
@@ -81,99 +446,161 @@ function logDevelopmentEmail({
   );
 }
 
-function buildCodeEmailHtml({
-  title,
-  greeting,
-  description,
-  code,
-  verifyUrl,
-  buttonLabel,
-  safetyText,
+export type AppointmentCustomerEmailPayload = {
+  to: string;
+  shopId?: string;
+  recipientUserId?: string | null;
+  eventKey?: string;
+  nomeBarbearia?: string;
+  logoBarbearia?: string;
+  corPrimaria?: string;
+  enderecoBarbearia?: string | null;
+  telefoneBarbearia?: string | null;
+  customerName: string;
+  appointmentCode: string;
+  barberName: string;
+  serviceName: string;
+  serviceMeta: string;
+  dateLabel: string;
+  timeLabel: string;
+  totalLabel: string;
+  extrasLabel?: string;
+  actionUrl?: string;
+  reviewUrl?: string;
+  cancellationReason?: string | null;
+};
+
+function logDevelopmentMessageEmail({
+  to,
+  subject,
+  appointmentCode,
 }: {
-  title: string;
-  greeting: string;
-  description: string;
-  code: string;
-  verifyUrl?: string;
-  buttonLabel?: string;
-  safetyText: string;
+  to: string;
+  subject: string;
+  appointmentCode?: string;
 }) {
-  const codeDigits = code
-    .split("")
-    .map(
-      (digit) => `
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:46px;border-radius:12px;background:#111827;border:1px solid rgba(255,255,255,0.12);font-size:24px;font-weight:800;letter-spacing:0;color:#f8fafc;">
-          ${escapeHtml(digit)}
-        </span>`
-    )
-    .join("");
+  console.info(
+    [
+      "[email-dev]",
+      `to=${to}`,
+      `subject=${subject}`,
+      appointmentCode ? `appointment=${appointmentCode}` : null,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
 
-  return `
-    <div style="margin:0;padding:0;background:#f4f7fb;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#f4f7fb;">
-        <tr>
-          <td align="center" style="padding:32px 16px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border-collapse:collapse;border-radius:24px;overflow:hidden;background:#ffffff;border:1px solid #e5e7eb;box-shadow:0 18px 50px rgba(15,23,42,0.10);">
-              <tr>
-                <td style="padding:28px 28px 18px;background:#020617;color:#ffffff;">
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="vertical-align:middle;">
-                        <img src="cid:${LOGO_CID}" width="72" alt="Jak Barber" style="display:block;border:0;outline:none;text-decoration:none;width:72px;height:auto;" />
-                      </td>
-                      <td align="right" style="vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;">
-                        Atendimento com hora marcada
-                      </td>
-                    </tr>
-                  </table>
-                  <h1 style="margin:28px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:28px;line-height:1.2;color:#ffffff;">
-                    ${escapeHtml(title)}
-                  </h1>
-                </td>
-              </tr>
+function getCustomerThemeFromAppointmentPayload(
+  payload: AppointmentCustomerEmailPayload
+): CustomerEmailTheme {
+  return {
+    nomeBarbearia: payload.nomeBarbearia?.trim() || DEFAULT_SHOP_NAME,
+    logoBarbearia: payload.logoBarbearia || `cid:${LOGO_CID}`,
+    corPrimaria: payload.corPrimaria?.trim() || DEFAULT_BRAND_COLOR,
+    enderecoBarbearia: payload.enderecoBarbearia || null,
+    telefoneBarbearia: payload.telefoneBarbearia || null,
+  };
+}
 
-              <tr>
-                <td style="padding:28px;font-family:Arial,Helvetica,sans-serif;color:#111827;">
-                  <p style="margin:0;font-size:16px;line-height:1.6;font-weight:700;">
-                    ${escapeHtml(greeting)}
-                  </p>
-                  <p style="margin:12px 0 0;font-size:15px;line-height:1.7;color:#4b5563;">
-                    ${escapeHtml(description)}
-                  </p>
+function buildCustomerAppointmentTemplateData(
+  payload: AppointmentCustomerEmailPayload
+) {
+  const theme = getCustomerThemeFromAppointmentPayload(payload);
 
-                  <div style="margin:24px 0 0;padding:18px;border-radius:20px;background:#020617;text-align:center;">
-                    <p style="margin:0 0 12px;font-size:12px;line-height:1.4;text-transform:uppercase;letter-spacing:0.18em;color:#7dd3fc;">
-                      Codigo de seguranca
-                    </p>
-                    <div style="display:inline-flex;gap:8px;">
-                      ${codeDigits}
-                    </div>
-                    <p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:#cbd5e1;">
-                      Este codigo expira em 10 minutos.
-                    </p>
-                  </div>
+  return {
+    ...theme,
+    nomeCliente: payload.customerName?.trim() || "cliente",
+    nomeBarbeiro: payload.barberName?.trim() || "barbeiro",
+    servico: payload.serviceName?.trim() || "Servico agendado",
+    detalhesServico: payload.serviceMeta?.trim() || "Detalhes indisponiveis",
+    dataAgendamento: payload.dateLabel?.trim() || "Data indisponivel",
+    horarioAgendamento: payload.timeLabel?.trim() || "Horario indisponivel",
+    codigoAgendamento: payload.appointmentCode?.trim() || "Sem codigo",
+    valorTotal: payload.totalLabel?.trim() || "Valor indisponivel",
+    extras: payload.extrasLabel,
+    motivoCancelamento: payload.cancellationReason || null,
+    linkPainelCliente: payload.actionUrl,
+    linkAvaliacao: payload.reviewUrl || payload.actionUrl,
+  };
+}
 
-                  ${
-                    verifyUrl && buttonLabel
-                      ? `<p style="margin:24px 0 0;">
-                          <a href="${escapeHtml(verifyUrl)}" style="display:inline-block;border-radius:14px;background:#0ea5e9;padding:14px 18px;font-size:14px;font-weight:800;color:#ffffff;text-decoration:none;">
-                            ${escapeHtml(buttonLabel)}
-                          </a>
-                        </p>`
-                      : ""
-                  }
+async function sendAppointmentCustomerEmail(
+  payload: AppointmentCustomerEmailPayload,
+  {
+    template,
+    eventName,
+    render,
+  }: {
+    template: string;
+    eventName: string;
+    render: (data: CustomerAppointmentEmailData) => {
+      subject: string;
+      html: string;
+      text: string;
+    };
+  }
+) {
+  const data = buildCustomerAppointmentTemplateData(payload);
+  const rendered = render(data);
 
-                  <p style="margin:24px 0 0;padding-top:18px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.6;color:#6b7280;">
-                    ${escapeHtml(safetyText)}
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </div>
-  `;
+  await sendEmailMessage({
+    to: payload.to,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    template,
+    eventKey:
+      payload.eventKey ||
+      `customer:${eventName}:${payload.appointmentCode || payload.to}`,
+    shopId: payload.shopId || DEFAULT_SHOP_ID,
+    recipientUserId: payload.recipientUserId || null,
+    metadata: {
+      appointmentCode: payload.appointmentCode,
+      eventName,
+    },
+    attachments: [getLogoAttachment()],
+  });
+}
+
+export async function sendAppointmentConfirmationEmail(
+  payload: AppointmentCustomerEmailPayload
+) {
+  await sendAppointmentCustomerEmail(payload, {
+    template: "customer.appointment_confirmation",
+    eventName: "appointment_confirmation",
+    render: renderCustomerAppointmentConfirmationEmail,
+  });
+}
+
+export async function sendAppointmentCompletedEmail(
+  payload: AppointmentCustomerEmailPayload
+) {
+  await sendAppointmentCustomerEmail(payload, {
+    template: "customer.appointment_completed",
+    eventName: "appointment_completed",
+    render: renderCustomerAppointmentCompletedEmail,
+  });
+}
+
+export async function sendAppointmentCancelledEmail(
+  payload: AppointmentCustomerEmailPayload
+) {
+  await sendAppointmentCustomerEmail(payload, {
+    template: "customer.appointment_cancelled",
+    eventName: "appointment_cancelled",
+    render: renderCustomerAppointmentCancelledEmail,
+  });
+}
+
+export async function sendAppointmentReminderEmail(
+  payload: AppointmentCustomerEmailPayload
+) {
+  await sendAppointmentCustomerEmail(payload, {
+    template: "customer.appointment_reminder",
+    eventName: "appointment_reminder",
+    render: renderCustomerAppointmentReminderEmail,
+  });
 }
 
 export async function sendVerificationCodeEmail({
@@ -189,50 +616,41 @@ export async function sendVerificationCodeEmail({
   verifyUrl?: string;
   accountLabel?: string;
 }) {
-  let config: ReturnType<typeof getMailConfig>;
-
-  try {
-    config = getMailConfig();
-  } catch (error) {
-    if (shouldUseConsoleMailFallback()) {
-      logDevelopmentEmail({
-        to,
-        subject: "Codigo de verificacao - Jak Barber",
-        code,
-        verifyUrl,
-      });
-      return;
-    }
-
-    throw error;
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.port === 465,
-    auth: {
-      user: config.user,
-      pass: config.pass,
-    },
-  });
-
-  await transporter.sendMail({
-    from: formatFromAddress(config.from),
-    to,
-    subject: "Codigo de verificacao - Jak Barber",
-    text: `Ola, ${name}.\n\nSeu codigo de verificacao para ${accountLabel} e: ${code}\n\nEsse codigo expira em 10 minutos.${verifyUrl ? `\n\nVoce tambem pode abrir: ${verifyUrl}` : ""}\n\nSe voce nao solicitou essa verificacao, ignore esta mensagem.`,
-    html: buildCodeEmailHtml({
-      title: "Confirme seu cadastro",
-      greeting: `Ola, ${name}.`,
-      description: `Use o codigo abaixo para concluir ${accountLabel}.`,
+  if (shouldUseConsoleMailFallback()) {
+    logDevelopmentEmail({
+      to,
+      subject: "Codigo de verificacao - Jak Barber",
       code,
       verifyUrl,
-      buttonLabel: "Abrir tela de verificacao",
-      safetyText: "Se voce nao solicitou esse cadastro, ignore esta mensagem.",
-    }),
+    });
+  }
+
+  const theme = await getCurrentCustomerEmailTheme();
+  const rendered = renderCustomerVerificationCodeEmail({
+    ...theme,
+    nomeCliente: name || "cliente",
+    codigoVerificacao: code,
+    linkAcao: verifyUrl,
+    rotuloAcao: verifyUrl ? "Abrir verificacao" : undefined,
+    contexto: accountLabel,
+  });
+
+  const result = await sendEmailMessage({
+    to,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    template: "customer.email_verification",
+    eventKey: `customer:email_verification:${to.trim().toLowerCase()}:${Date.now()}`,
+    metadata: {
+      accountLabel,
+    },
     attachments: [getLogoAttachment()],
   });
+
+  if (!result.sent) {
+    throw new Error("Nao foi possivel enviar o codigo de verificacao.");
+  }
 }
 
 export async function sendPasswordResetCodeEmail({
@@ -244,45 +662,41 @@ export async function sendPasswordResetCodeEmail({
   name: string;
   code: string;
 }) {
-  let config: ReturnType<typeof getMailConfig>;
-
-  try {
-    config = getMailConfig();
-  } catch (error) {
-    if (shouldUseConsoleMailFallback()) {
-      logDevelopmentEmail({
-        to,
-        subject: "Recuperacao de senha - Jak Barber",
-        code,
-      });
-      return;
-    }
-
-    throw error;
+  if (shouldUseConsoleMailFallback()) {
+    logDevelopmentEmail({
+      to,
+      subject: "Recuperacao de senha - Jak Barber",
+      code,
+    });
   }
 
-  const transporter = nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.port === 465,
-    auth: {
-      user: config.user,
-      pass: config.pass,
-    },
+  const resetUrl = `${getConfiguredAppUrl()}/forgot-password/reset?email=${encodeURIComponent(
+    to.trim().toLowerCase()
+  )}`;
+  const theme = await getCurrentCustomerEmailTheme();
+  const rendered = renderCustomerPasswordResetEmail({
+    ...theme,
+    nomeCliente: name || "cliente",
+    codigoVerificacao: code,
+    linkAcao: resetUrl,
+    rotuloAcao: "Abrir redefinicao",
+    contexto: "a recuperacao de senha",
   });
 
-  await transporter.sendMail({
-    from: formatFromAddress(config.from),
+  const result = await sendEmailMessage({
     to,
-    subject: "Recuperacao de senha - Jak Barber",
-    text: `Ola, ${name}.\n\nSeu codigo para redefinir a senha e: ${code}\n\nEsse codigo expira em 10 minutos.\n\nSe voce nao solicitou a redefinicao, ignore esta mensagem.`,
-    html: buildCodeEmailHtml({
-      title: "Redefina sua senha",
-      greeting: `Ola, ${name}.`,
-      description: "Use o codigo abaixo para criar uma nova senha de acesso.",
-      code,
-      safetyText: "Se voce nao solicitou a redefinicao, ignore esta mensagem.",
-    }),
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    template: "customer.password_reset",
+    eventKey: `customer:password_reset:${to.trim().toLowerCase()}:${Date.now()}`,
+    metadata: {
+      resetRequested: true,
+    },
     attachments: [getLogoAttachment()],
   });
+
+  if (!result.sent) {
+    throw new Error("Nao foi possivel enviar o codigo de recuperacao.");
+  }
 }

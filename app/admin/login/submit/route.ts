@@ -3,8 +3,10 @@ import { AuthError } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
+const ADMIN_LOGIN_ERROR = "Credenciais de administrador invalidas.";
 
 function wantsJson(request: NextRequest) {
   return (
@@ -44,29 +46,42 @@ export async function POST(request: NextRequest) {
     return adminLoginError(request, "Preencha e-mail e senha.");
   }
 
+  const rateLimit = await enforceRateLimit({
+    scope: "admin_login:http",
+    identifier: email,
+    limit: 6,
+    windowMs: 15 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return adminLoginError(
+      request,
+      "Muitas tentativas de login admin. Aguarde alguns minutos."
+    );
+  }
+
   const user = await prisma.user.findFirst({
     where: { email },
   });
 
   if (!user || !user.passwordHash) {
-    return adminLoginError(request, "Administrador nao encontrado.");
+    logSecurityEvent("admin_login_failed", { reason: "not_found", email });
+    return adminLoginError(request, ADMIN_LOGIN_ERROR);
   }
 
-  if (!user.isActive) {
-    return adminLoginError(request, "Este usuario esta inativo.");
-  }
-
-  if (user.role !== "ADMIN") {
-    return adminLoginError(
-      request,
-      "Este acesso e exclusivo para administradores."
-    );
+  if (!user.isActive || user.role !== "ADMIN") {
+    logSecurityEvent("admin_login_failed", {
+      reason: !user.isActive ? "inactive" : "not_admin",
+      userId: user.id,
+    });
+    return adminLoginError(request, ADMIN_LOGIN_ERROR);
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatch) {
-    return adminLoginError(request, "Senha invalida.");
+    logSecurityEvent("admin_login_failed", { reason: "bad_password", userId: user.id });
+    return adminLoginError(request, ADMIN_LOGIN_ERROR);
   }
 
   try {

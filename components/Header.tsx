@@ -78,7 +78,7 @@ function getHeaderLinks(role: HeaderRole): {
         { href: "/customer/agendamentos", label: "Meus horários" },
         { href: "/produtos", label: "Arsenal" },
       ],
-      secondary: [{ href: "/meu-perfil", label: "Meu cadastro" }],
+      secondary: [{ href: "/meu-perfil", label: "Meu perfil" }],
     };
   }
 
@@ -96,7 +96,7 @@ function getHeaderLinks(role: HeaderRole): {
 }
 
 function isActivePath(pathname: string, href: string) {
-  if (["/", "/admin", "/barber", "/customer"].includes(href)) {
+  if (["/", "/admin", "/barber"].includes(href)) {
     return pathname === href;
   }
 
@@ -188,22 +188,24 @@ export default function Header({
           </Link>
 
           <div className="flex items-center gap-3">
-            <nav className="hidden items-center gap-2 md:flex">
-              {nav.primary.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition ${
-                    isActivePath(pathname, link.href)
-                      ? "bg-[var(--brand-muted)] text-white"
-                      : "text-zinc-300 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <NavItemIcon href={link.href} className="h-4 w-4 shrink-0" />
-                  <span>{link.label}</span>
-                </Link>
-              ))}
-            </nav>
+            {role !== "CUSTOMER" ? (
+              <nav className="hidden items-center gap-2 md:flex">
+                {nav.primary.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition ${
+                      isActivePath(pathname, link.href)
+                        ? "bg-[var(--brand-muted)] text-white"
+                        : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <NavItemIcon href={link.href} className="h-4 w-4 shrink-0" />
+                    <span>{link.label}</span>
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
 
             <div className="relative">
               <label

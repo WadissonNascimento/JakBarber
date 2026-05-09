@@ -5,6 +5,8 @@ import {
   AppointmentMutationError,
   createCustomerAppointment,
 } from "@/lib/appointmentMutations";
+import { notifyCustomerAppointmentConfirmed } from "@/lib/appointmentEmails";
+import { notifyBarberNewAppointment } from "@/lib/barberEmails";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   enforceRateLimit,
@@ -76,7 +78,6 @@ export async function POST(request: Request) {
       notes,
     });
 
-    revalidatePath("/customer");
     revalidatePath("/customer/agendamentos");
     revalidatePath("/meu-perfil");
     revalidatePath("/barber");
@@ -85,6 +86,9 @@ export async function POST(request: Request) {
     revalidatePath(`/barber/clientes/${session.user.id}`);
     revalidatePath("/admin/agenda");
     revalidatePath("/agendar");
+
+    await notifyCustomerAppointmentConfirmed(appointment.id);
+    await notifyBarberNewAppointment(appointment.id);
 
     return NextResponse.json({
       message: "Agendamento realizado com sucesso.",

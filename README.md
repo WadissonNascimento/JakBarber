@@ -105,6 +105,7 @@ NEXTAUTH_SECRET="troque-essa-chave-por-uma-bem-grande"
 AUTH_SECRET="troque-essa-chave-por-uma-bem-grande"
 NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+CRON_SECRET="troque-por-um-token-longo-e-aleatorio"
 ADMIN_EMAIL="admin@barbearia.com"
 ADMIN_PASSWORD="123456"
 BARBER_WHATSAPP_NUMBER="5511999999999"
@@ -118,6 +119,24 @@ EMAIL_FROM=""
 ```
 
 Em desenvolvimento local, se as variaveis de SMTP ficarem vazias, o cadastro e a recuperacao de senha usam fallback local e exibem/logam o codigo de verificacao. Em producao, configure SMTP real.
+
+## Lembretes de agendamento
+
+O endpoint protegido `/api/cron/appointment-reminders` envia lembretes por e-mail para atendimentos que estao cerca de 30 minutos no futuro. Configure `CRON_SECRET` no ambiente da VPS e agende uma chamada a cada 5 minutos:
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://SEU_DOMINIO/api/cron/appointment-reminders
+```
+
+Cada agendamento e marcado com `reminderSentAt` depois do envio, evitando lembretes duplicados.
+
+O endpoint protegido `/api/cron/barber-daily-agenda` envia o resumo da agenda do dia para barbeiros com atendimentos. Agende uma chamada de manha, por exemplo as 07:00:
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://SEU_DOMINIO/api/cron/barber-daily-agenda
+```
+
+Os envios sao registrados em `EmailDeliveryLog` por template e evento, evitando duplicidade quando o cron roda novamente.
 
 ## Prisma e PostgreSQL
 

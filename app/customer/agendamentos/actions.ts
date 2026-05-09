@@ -6,6 +6,10 @@ import {
   AppointmentMutationError,
   cancelAppointmentByCustomer,
 } from "@/lib/appointmentMutations";
+import {
+  notifyBarberAppointmentCancelled,
+  notifyBarberNewReview,
+} from "@/lib/barberEmails";
 import { prisma } from "@/lib/prisma";
 import {
   mutationError,
@@ -67,11 +71,12 @@ export async function cancelCustomerAppointmentAction(
   }
 
   revalidatePath("/customer/agendamentos");
-  revalidatePath("/customer");
   revalidatePath("/agendar");
   revalidatePath("/admin/agenda");
   revalidatePath("/barber");
   revalidatePath("/barber/agenda");
+
+  await notifyBarberAppointmentCancelled(appointmentId, "Cancelado pelo cliente.");
 
   return mutationSuccess("Agendamento cancelado com sucesso.");
 }
@@ -154,7 +159,7 @@ export async function submitAppointmentReviewAction(
     return mutationError("Esse atendimento ja foi avaliado.");
   }
 
-  await prisma.review.create({
+  const review = await prisma.review.create({
     data: {
       appointmentId,
       customerId: session.user.id,
@@ -168,6 +173,8 @@ export async function submitAppointmentReviewAction(
   revalidatePath("/avaliacoes");
   revalidatePath("/customer/agendamentos");
   revalidatePath("/admin/avaliacoes");
+
+  await notifyBarberNewReview(review.id);
 
   return mutationSuccess("Obrigado pela avaliacao. Ela ja entrou para revisao do admin.");
 }

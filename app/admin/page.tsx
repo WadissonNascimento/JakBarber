@@ -251,17 +251,21 @@ function AdminMetric({
   helper: string;
 }) {
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(4.25rem,auto)] items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3.5 py-3.5">
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.13em] text-zinc-500">
-          <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
-            {icon}
-          </span>
-          <span className="truncate">{label}</span>
-        </div>
-        <p className="mt-1.5 truncate text-xs leading-4 text-zinc-400">{helper}</p>
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+      <div className="flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+        <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
+          {icon}
+        </span>
+        <span className="min-w-0 truncate">{label}</span>
       </div>
-      <p className="text-right text-2xl font-bold leading-none text-white">{value}</p>
+
+      <p
+        title={value}
+        className="mt-3 min-w-0 truncate text-2xl font-black leading-none text-white tabular-nums"
+      >
+        {value}
+      </p>
+      <p className="mt-1 truncate text-xs leading-4 text-zinc-400">{helper}</p>
     </div>
   );
 }

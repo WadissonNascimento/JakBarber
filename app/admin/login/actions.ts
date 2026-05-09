@@ -6,6 +6,9 @@ import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
+import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+
+const ADMIN_LOGIN_ERROR = "Credenciais de administrador invalidas.";
 
 async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
   const email = String(formData.get("email") || "")
@@ -17,26 +20,42 @@ async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
     return { error: "Preencha e-mail e senha.", success: null };
   }
 
+  const rateLimit = await enforceRateLimit({
+    scope: "admin_login:action",
+    identifier: email,
+    limit: 6,
+    windowMs: 15 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return {
+      error: "Muitas tentativas de login admin. Aguarde alguns minutos.",
+      success: null,
+    };
+  }
+
   const user = await prisma.user.findFirst({
     where: { email },
   });
 
   if (!user || !user.passwordHash) {
-    return { error: "Administrador nao encontrado.", success: null };
+    logSecurityEvent("admin_login_failed", { reason: "not_found", email });
+    return { error: ADMIN_LOGIN_ERROR, success: null };
   }
 
-  if (!user.isActive) {
-    return { error: "Este usuario esta inativo.", success: null };
-  }
-
-  if (user.role !== "ADMIN") {
-    return { error: "Este acesso e exclusivo para administradores.", success: null };
+  if (!user.isActive || user.role !== "ADMIN") {
+    logSecurityEvent("admin_login_failed", {
+      reason: !user.isActive ? "inactive" : "not_admin",
+      userId: user.id,
+    });
+    return { error: ADMIN_LOGIN_ERROR, success: null };
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatch) {
-    return { error: "Senha invalida.", success: null };
+    logSecurityEvent("admin_login_failed", { reason: "bad_password", userId: user.id });
+    return { error: ADMIN_LOGIN_ERROR, success: null };
   }
 
   try {

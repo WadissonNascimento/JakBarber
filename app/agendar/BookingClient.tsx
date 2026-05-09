@@ -431,12 +431,6 @@ export default function BookingClient({
           </p>
         </div>
 
-        <Link
-          href="/customer"
-          className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/5"
-        >
-          Voltar
-        </Link>
       </div>
 
       <section className="surface-card max-w-full overflow-hidden rounded-[20px] p-3 sm:rounded-[24px] sm:p-5">

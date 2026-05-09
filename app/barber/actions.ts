@@ -13,6 +13,11 @@ import {
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
 import {
+  notifyCustomerAppointmentCancelled,
+  notifyCustomerAppointmentCompleted,
+} from "@/lib/appointmentEmails";
+import { notifyBarberNoShow } from "@/lib/barberEmails";
+import {
   mutationError,
   mutationSuccess,
   type MutationResult,
@@ -62,7 +67,6 @@ function revalidateBarberViews() {
   revalidatePath("/barber/disponibilidade");
   revalidatePath("/barber/clientes");
   revalidatePath("/agendar");
-  revalidatePath("/customer");
   revalidatePath("/admin/agenda");
   revalidatePath("/admin/barbeiros");
 }
@@ -218,6 +222,19 @@ export async function updateAppointmentStatusAction(
     return mutationError("Informe o motivo do cancelamento.");
   }
 
+  const currentAppointment = await prisma.appointment.findFirst({
+    where: {
+      id: appointmentId,
+      barberId: barber.id,
+    },
+    select: {
+      status: true,
+    },
+  });
+  const previousStatus = currentAppointment
+    ? normalizeAppointmentStatus(currentAppointment.status)
+    : null;
+
   try {
     await updateAppointmentStatusForBarber({
       appointmentId,
@@ -235,6 +252,19 @@ export async function updateAppointmentStatusAction(
   }
 
   revalidateBarberViews();
+
+  if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
+    await notifyCustomerAppointmentCompleted(appointmentId);
+  }
+
+  if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
+    await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
+  }
+
+  if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
+    await notifyBarberNoShow(appointmentId);
+  }
+
   return mutationSuccess("Status do agendamento atualizado.");
 }
 
