@@ -13,6 +13,7 @@ import {
 } from "@/lib/appointmentStatus";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { orderStatusLabel } from "@/lib/orderStatus";
+import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import {
   formatScheduleDate,
   formatScheduleTime,
@@ -58,8 +59,8 @@ function formatTime(date: Date) {
   return formatScheduleTime(date);
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
+function formatCurrency(value: MoneyValue) {
+  return toMoneyNumber(value).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -180,7 +181,7 @@ export async function getAdminOrdersReport(filters: AdminOrdersFilters) {
   const summary = orders.reduce(
     (accumulator, order) => {
       accumulator.total += 1;
-      accumulator.revenue += order.status === "CANCELLED" ? 0 : order.total;
+      accumulator.revenue += order.status === "CANCELLED" ? 0 : toMoneyNumber(order.total);
 
       if (order.status === "PENDING") {
         accumulator.pending += 1;

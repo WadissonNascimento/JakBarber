@@ -22,6 +22,7 @@ import {
   appointmentForAdminSelect,
   appointmentForTotalsSelect,
 } from "@/lib/appointmentSelects";
+import { toMoneyNumber } from "@/lib/money";
 import { formatCurrency } from "@/lib/utils";
 
 function getTodayRange() {
@@ -112,7 +113,7 @@ export default async function AdminPage() {
     (sum, appointment) =>
       sum +
       appointment.services.reduce(
-        (servicesSum, service) => servicesSum + service.priceSnapshot,
+        (servicesSum, service) => servicesSum + toMoneyNumber(service.priceSnapshot),
         0
       ),
     0

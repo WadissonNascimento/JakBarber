@@ -7,6 +7,7 @@ import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import SummaryStatsPanel from "@/components/ui/SummaryStatsPanel";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
+import { toMoneyNumber } from "@/lib/money";
 import ProductCardClient from "./ProductCardClient";
 
 export default async function ProdutosPage() {
@@ -98,7 +99,7 @@ export default async function ProdutosPage() {
                     name: product.name,
                     description: product.description,
                     category: product.category,
-                    price: product.price,
+                    price: toMoneyNumber(product.price),
                     isActive: product.isActive,
                     stock: product.stock,
                     imageUrl: normalizeProductImageUrl(product.imageUrl),

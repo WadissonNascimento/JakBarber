@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAdminAgendaReport } from "@/lib/adminReports";
+import { toMoneyNumber } from "@/lib/money";
 import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
 import AdminAgendaClient from "./AdminAgendaClient";
 
@@ -59,7 +60,17 @@ export default async function AdminAgendaPage({
 
   return (
     <AdminAgendaClient
-      appointments={report.appointments}
+      appointments={report.appointments.map((appointment) => ({
+        ...appointment,
+        services: appointment.services.map((service) => ({
+          ...service,
+          priceSnapshot: toMoneyNumber(service.priceSnapshot),
+        })),
+        items: appointment.items.map((item) => ({
+          ...item,
+          subtotal: toMoneyNumber(item.subtotal),
+        })),
+      }))}
       barbers={barbers}
       initialFilters={initialFilters}
     />

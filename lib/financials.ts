@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { PrismaClient } from "@prisma/client";
+import { roundMoney, toMoneyNumber, type MoneyValue } from "@/lib/money";
 
 type FinancialsPrismaClient = Pick<
   PrismaClient,
@@ -7,23 +8,23 @@ type FinancialsPrismaClient = Pick<
 >;
 
 export type FinancialServiceInput = {
-  price: number;
+  price: MoneyValue;
   commissionType?: string | null;
-  commissionValue?: number | null;
+  commissionValue?: MoneyValue;
 };
 
 export function calculateCommissionFinancials(input: FinancialServiceInput) {
   const commissionType = input.commissionType === "FIXED" ? "FIXED" : "PERCENT";
-  const commissionValue = Math.max(0, input.commissionValue || 0);
-  const price = Math.max(0, input.price || 0);
+  const commissionValue = Math.max(0, toMoneyNumber(input.commissionValue));
+  const price = Math.max(0, toMoneyNumber(input.price));
 
   const barberPayout =
     commissionType === "FIXED"
       ? Math.min(price, commissionValue)
       : price * (commissionValue / 100);
 
-  const normalizedPayout = Number(barberPayout.toFixed(2));
-  const shopRevenue = Number((price - normalizedPayout).toFixed(2));
+  const normalizedPayout = roundMoney(barberPayout);
+  const shopRevenue = roundMoney(price - normalizedPayout);
 
   return {
     commissionType,

@@ -84,9 +84,9 @@ function getConfiguredHost() {
   return null;
 }
 
-export function getRequestHost() {
+export async function getRequestHost() {
   try {
-    const headerList = headers();
+    const headerList = await headers();
 
     return (
       normalizeHost(headerList.get("x-forwarded-host")) ||
@@ -189,7 +189,7 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
 });
 
 export async function getCurrentShop() {
-  const host = getRequestHost();
+  const host = await getRequestHost();
   const shop = await getShopByHost(host).catch(() => null);
 
   if (!shop) {

@@ -10,6 +10,7 @@ import {
   appointmentForFinanceSelect,
   appointmentForTotalsSelect,
 } from "@/lib/appointmentSelects";
+import { toMoneyNumber } from "@/lib/money";
 
 export type FinancePeriod = "week" | "month" | "custom";
 
@@ -204,9 +205,9 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     const current = barberMap.get(payout.barberId) || {
       barberId: payout.barberId,
       barberName: payout.barber.name || "Barbeiro",
-      grossRevenue: payout.grossRevenue,
-      commissionTotal: payout.commissionTotal,
-      shopNetRevenue: payout.shopNetRevenue,
+      grossRevenue: toMoneyNumber(payout.grossRevenue),
+      commissionTotal: toMoneyNumber(payout.commissionTotal),
+      shopNetRevenue: toMoneyNumber(payout.shopNetRevenue),
       appointmentsCount: 0,
       savedPayoutId: payout.id,
       savedStatus: payout.status,
@@ -364,7 +365,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
         grossRevenue: 0,
         count: 0,
       };
-      serviceCurrent.grossRevenue += service.priceSnapshot;
+      serviceCurrent.grossRevenue += toMoneyNumber(service.priceSnapshot);
       serviceCurrent.count += 1;
       servicesMap.set(service.nameSnapshot, serviceCurrent);
     }
@@ -490,7 +491,12 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       barberInsights,
     },
     barberPayouts,
-    history: paidHistory,
+    history: paidHistory.map((payout) => ({
+      ...payout,
+      grossRevenue: toMoneyNumber(payout.grossRevenue),
+      commissionTotal: toMoneyNumber(payout.commissionTotal),
+      shopNetRevenue: toMoneyNumber(payout.shopNetRevenue),
+    })),
   };
 }
 

@@ -17,6 +17,7 @@ import {
   calculateServiceFinancials,
   syncAppointmentFinancialSnapshots,
 } from "@/lib/financials";
+import { roundMoney, toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
   createScheduleDate,
@@ -479,8 +480,9 @@ async function createCustomerAppointmentInTransaction(
           commissionType: product.commissionType,
           commissionValue: product.commissionValue,
         });
-        const barberPayout = Number((unitFinancials.barberPayout * quantity).toFixed(2));
-        const shopRevenue = Number((unitFinancials.shopRevenue * quantity).toFixed(2));
+        const productPrice = toMoneyNumber(product.price);
+        const barberPayout = roundMoney(unitFinancials.barberPayout * quantity);
+        const shopRevenue = roundMoney(unitFinancials.shopRevenue * quantity);
 
         return {
           shopId,
@@ -488,8 +490,8 @@ async function createCustomerAppointmentInTransaction(
           extraProductId: product.id,
           productNameSnapshot: product.name,
           quantity,
-          unitPrice: product.price,
-          subtotal: product.price * quantity,
+          unitPrice: productPrice,
+          subtotal: roundMoney(productPrice * quantity),
           commissionTypeSnapshot: unitFinancials.commissionType,
           commissionValueSnapshot: unitFinancials.commissionValue,
           barberPayoutSnapshot: barberPayout,

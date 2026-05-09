@@ -1,6 +1,7 @@
 import { PrismaClient, type Coupon, type Product, type Service } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { calculateServiceFinancials } from "@/lib/financials";
+import { toMoneyNumber } from "@/lib/money";
 
 const prisma = new PrismaClient();
 
@@ -686,10 +687,10 @@ async function createOrders(customers: SeedCustomer[], products: Product[], coup
     ];
     const subtotal = Number(
       items
-        .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+        .reduce((sum, item) => sum + toMoneyNumber(item.product.price) * item.quantity, 0)
         .toFixed(2)
     );
-    const usesCoupon = index % 4 === 0 && subtotal >= coupon.minOrderTotal;
+    const usesCoupon = index % 4 === 0 && subtotal >= toMoneyNumber(coupon.minOrderTotal);
     const discountTotal = usesCoupon ? Number((subtotal * 0.1).toFixed(2)) : 0;
     const shippingMethod = shippingMethods[index % shippingMethods.length];
     const shippingCost = shippingMethod === "RETIRADA" ? 0 : index % 3 === 0 ? 18.9 : 12.9;

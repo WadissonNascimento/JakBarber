@@ -20,6 +20,7 @@ import {
   getScheduleDateValue,
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
+import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 
 export type BarberDashboardFilters = {
   view?: "day" | "today" | "upcoming" | "all";
@@ -71,6 +72,21 @@ function getAppointmentCardItems(
     quantity: item.quantity,
     isDelivered: item.isDelivered,
     deliveredAt: item.deliveredAt,
+  }));
+}
+
+function serializeServicesForClient<
+  T extends {
+    price: MoneyValue;
+    commissionValue?: MoneyValue;
+  }
+>(services: T[]) {
+  return services.map((service) => ({
+    ...service,
+    price: toMoneyNumber(service.price),
+    ...(service.commissionValue === undefined
+      ? {}
+      : { commissionValue: toMoneyNumber(service.commissionValue) }),
   }));
 }
 
@@ -410,8 +426,8 @@ export async function getBarberDashboardData(
       ...appointment,
       status: normalizeAppointmentStatus(appointment.status),
     })),
-    services,
-    walkInServices,
+    services: serializeServicesForClient(services),
+    walkInServices: serializeServicesForClient(walkInServices),
     availabilities,
     blocks,
     recurringBlocks,
@@ -569,7 +585,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
       })),
       nextAppointments: [],
     },
-    walkInServices,
+    walkInServices: serializeServicesForClient(walkInServices),
     clients: buildClientsFromHistory(clientNotes, allBarberAppointments),
   };
 }

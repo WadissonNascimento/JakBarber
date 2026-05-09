@@ -224,11 +224,11 @@ model Service {
   barberId        String?
   name            String
   description     String?
-  price           Float
+  price           Decimal  @db.Decimal(12, 2)
   duration        Int
   bufferAfter     Int      @default(0)
   commissionType  String   @default("PERCENT")
-  commissionValue Float    @default(40)
+  commissionValue Decimal  @default(40) @db.Decimal(12, 2)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -282,13 +282,13 @@ model AppointmentService {
   serviceId               String
   orderIndex              Int      @default(0)
   nameSnapshot            String
-  priceSnapshot           Float
+  priceSnapshot           Decimal  @db.Decimal(12, 2)
   durationSnapshot        Int
   bufferAfter             Int      @default(0)
   commissionTypeSnapshot  String   @default("PERCENT")
-  commissionValueSnapshot Float    @default(40)
-  barberPayoutSnapshot    Float    @default(0)
-  shopRevenueSnapshot     Float    @default(0)
+  commissionValueSnapshot Decimal  @default(40) @db.Decimal(12, 2)
+  barberPayoutSnapshot    Decimal  @default(0) @db.Decimal(12, 2)
+  shopRevenueSnapshot     Decimal  @default(0) @db.Decimal(12, 2)
   createdAt               DateTime @default(now())
 
   shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -424,7 +424,7 @@ model Product {
   name        String
   description String?
   category    ProductCategory @default(OTHER)
-  price       Float
+  price       Decimal         @db.Decimal(12, 2)
   imageUrl    String?
   imagePath   String?         @map("image_path")
   stock       Int             @default(0)
@@ -447,7 +447,7 @@ model BarberServiceCommission {
   barberId        String
   serviceId       String
   commissionType  String   @default("PERCENT")
-  commissionValue Float    @default(40)
+  commissionValue Decimal  @default(40) @db.Decimal(12, 2)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -467,9 +467,9 @@ model ExtraProduct {
   name            String
   description     String?
   category        ExtraCategory @default(OTHER)
-  price           Float
+  price           Decimal       @db.Decimal(12, 2)
   commissionType  String        @default("PERCENT")
-  commissionValue Float         @default(0)
+  commissionValue Decimal       @default(0) @db.Decimal(12, 2)
   imageUrl        String?
   imagePath       String?       @map("image_path")
   stock           Int           @default(0)
@@ -493,12 +493,12 @@ model AppointmentItem {
   extraProductId          String    @map("productId")
   productNameSnapshot     String
   quantity                Int       @default(1)
-  unitPrice               Float
-  subtotal                Float
+  unitPrice               Decimal   @db.Decimal(12, 2)
+  subtotal                Decimal   @db.Decimal(12, 2)
   commissionTypeSnapshot  String    @default("PERCENT")
-  commissionValueSnapshot Float     @default(0)
-  barberPayoutSnapshot    Float     @default(0)
-  shopRevenueSnapshot     Float     @default(0)
+  commissionValueSnapshot Decimal   @default(0) @db.Decimal(12, 2)
+  barberPayoutSnapshot    Decimal   @default(0) @db.Decimal(12, 2)
+  shopRevenueSnapshot     Decimal   @default(0) @db.Decimal(12, 2)
   isDelivered             Boolean   @default(false)
   deliveredAt             DateTime?
   createdAt               DateTime  @default(now())
@@ -520,10 +520,10 @@ model Order {
   status          String   @default("PENDING")
   trackingCode    String?
   adminApproved   Boolean  @default(false)
-  total           Float    @default(0)
-  subtotal        Float    @default(0)
-  shippingCost    Float    @default(0)
-  discountTotal   Float    @default(0)
+  total           Decimal  @default(0) @db.Decimal(12, 2)
+  subtotal        Decimal  @default(0) @db.Decimal(12, 2)
+  shippingCost    Decimal  @default(0) @db.Decimal(12, 2)
+  discountTotal   Decimal  @default(0) @db.Decimal(12, 2)
   shippingZipCode String?
   shippingMethod  String?
   shippingAddress String?
@@ -549,7 +549,7 @@ model OrderItem {
   productId           String
   productNameSnapshot String
   quantity            Int      @default(1)
-  unitPrice           Float
+  unitPrice           Decimal  @db.Decimal(12, 2)
   createdAt           DateTime @default(now())
 
   shop    Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -567,9 +567,9 @@ model Coupon {
   code          String    @unique
   description   String?
   discountType  String
-  discountValue Float
-  minOrderTotal Float     @default(0)
-  maxDiscount   Float?
+  discountValue Decimal   @db.Decimal(12, 2)
+  minOrderTotal Decimal   @default(0) @db.Decimal(12, 2)
+  maxDiscount   Decimal?  @db.Decimal(12, 2)
   expiresAt     DateTime?
   usageLimit    Int?
   timesUsed     Int       @default(0)
@@ -624,9 +624,9 @@ model BarberPayout {
   barberId        String
   periodStart     DateTime
   periodEnd       DateTime
-  grossRevenue    Float     @default(0)
-  commissionTotal Float     @default(0)
-  shopNetRevenue  Float     @default(0)
+  grossRevenue    Decimal   @default(0) @db.Decimal(12, 2)
+  commissionTotal Decimal   @default(0) @db.Decimal(12, 2)
+  shopNetRevenue  Decimal   @default(0) @db.Decimal(12, 2)
   status          String    @default("OPEN")
   paidAt          DateTime?
   notes           String?

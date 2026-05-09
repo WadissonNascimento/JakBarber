@@ -10,6 +10,7 @@ import {
 } from "@/lib/appointmentMutations";
 import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
 import { getBookingAvailability } from "@/lib/bookingAvailability";
+import { toMoneyNumber } from "@/lib/money";
 import { createScheduleDate } from "@/lib/scheduleTime";
 
 test.after(async () => {
@@ -219,8 +220,8 @@ test("customer can book and conclude an appointment", async () => {
 
     assert.ok(updated);
     assert.equal(updated.status, "COMPLETED");
-    assert.equal(updated.services.every((service) => service.barberPayoutSnapshot > 0), true);
-    assert.equal(updated.services.every((service) => service.shopRevenueSnapshot >= 0), true);
+    assert.equal(updated.services.every((service) => toMoneyNumber(service.barberPayoutSnapshot) > 0), true);
+    assert.equal(updated.services.every((service) => toMoneyNumber(service.shopRevenueSnapshot) >= 0), true);
   } finally {
     await cleanup();
     await db.$disconnect();
@@ -556,11 +557,11 @@ test("barber reviews extras before completing and payout uses delivered items on
       },
     });
     const servicePayout = completed.services.reduce(
-      (sum, service) => sum + service.barberPayoutSnapshot,
+      (sum, service) => sum + toMoneyNumber(service.barberPayoutSnapshot),
       0
     );
     const deliveredPayout =
-      completed.items.find((item) => item.extraProductId === pomada.id)?.barberPayoutSnapshot ||
+      toMoneyNumber(completed.items.find((item) => item.extraProductId === pomada.id)?.barberPayoutSnapshot) ||
       0;
 
     assert.equal(completed.status, "COMPLETED");

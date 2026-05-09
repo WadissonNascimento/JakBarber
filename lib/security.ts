@@ -202,7 +202,7 @@ export async function enforceRateLimit({
   limit: number;
   windowMs: number;
 }) {
-  const headerList = headers();
+  const headerList = await headers();
   const ip = getClientIp(headerList);
   const safeIdentifier = (identifier || "anonymous").trim().toLowerCase();
   const key = `${scope}:${ip}:${safeIdentifier}`;

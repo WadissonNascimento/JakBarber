@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { toMoneyNumber } from "@/lib/money";
 import BookingClient from "./BookingClient";
 
 export const metadata = {
@@ -100,8 +101,14 @@ export default async function AgendarPage() {
   return (
     <BookingClient
       barbers={barbers}
-      services={services}
-      extras={extras}
+      services={services.map((service) => ({
+        ...service,
+        price: toMoneyNumber(service.price),
+      }))}
+      extras={extras.map((extra) => ({
+        ...extra,
+        price: toMoneyNumber(extra.price),
+      }))}
       initialDate={getTodayString()}
       nextDays={getNextDays(12)}
       whatsappNumber={process.env.BARBER_WHATSAPP_NUMBER || ""}

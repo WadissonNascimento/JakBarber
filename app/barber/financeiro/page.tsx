@@ -13,6 +13,7 @@ import {
   getAppointmentTotalBarberPayout,
 } from "@/lib/appointmentServices";
 import { appointmentForBarberSelect } from "@/lib/appointmentSelects";
+import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { requireActiveBarber } from "../guard";
@@ -153,11 +154,11 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
     const normalizedStatus = normalizeAppointmentStatus(appointment.status);
     const deliveredItems = appointment.items.filter((item) => item.isDelivered);
     const servicePayout = appointment.services.reduce(
-      (sum, service) => sum + service.barberPayoutSnapshot,
+      (sum, service) => sum + toMoneyNumber(service.barberPayoutSnapshot),
       0
     );
     const deliveredItemsPayout = deliveredItems.reduce(
-      (sum, item) => sum + item.barberPayoutSnapshot,
+      (sum, item) => sum + toMoneyNumber(item.barberPayoutSnapshot),
       0
     );
     const payoutTotal = getAppointmentTotalBarberPayout(
@@ -179,15 +180,15 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
         .map((service) => ({
           id: service.id,
           name: service.nameSnapshot,
-          price: service.priceSnapshot,
-          payout: service.barberPayoutSnapshot,
+          price: toMoneyNumber(service.priceSnapshot),
+          payout: toMoneyNumber(service.barberPayoutSnapshot),
         })),
       items: appointment.items.map((item) => ({
         id: item.id,
         name: item.productNameSnapshot,
         quantity: item.quantity,
-        subtotal: item.subtotal,
-        payout: item.barberPayoutSnapshot,
+        subtotal: toMoneyNumber(item.subtotal),
+        payout: toMoneyNumber(item.barberPayoutSnapshot),
         isDelivered: item.isDelivered,
       })),
       servicePayout,

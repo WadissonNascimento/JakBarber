@@ -22,6 +22,7 @@ import {
   getCurrentScheduleDate,
 } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
+import type { MoneyValue } from "@/lib/money";
 
 const ACTIVE_REMINDER_STATUSES = ["PENDING", "CONFIRMED"];
 const REMINDER_LOOKAHEAD_MINUTES = 30;
@@ -49,14 +50,14 @@ type EmailAppointment = {
   };
   services: Array<{
     nameSnapshot: string;
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
     durationSnapshot: number;
     orderIndex: number;
   }>;
   items: Array<{
     productNameSnapshot: string;
     quantity: number;
-    subtotal: number;
+    subtotal: MoneyValue;
   }>;
 };
 

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { toMoneyNumber } from "@/lib/money";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import AdminServicesClient from "./AdminServicesClient";
@@ -23,8 +24,13 @@ export default async function AdminServicosPage() {
     orderBy: [{ barberId: "asc" }, { createdAt: "desc" }],
   });
 
-  const globalServices = services.filter((service) => service.barberId === null);
-  const barberServices = services.filter((service) => service.barberId !== null);
+  const serializedServices = services.map((service) => ({
+    ...service,
+    price: toMoneyNumber(service.price),
+    commissionValue: toMoneyNumber(service.commissionValue),
+  }));
+  const globalServices = serializedServices.filter((service) => service.barberId === null);
+  const barberServices = serializedServices.filter((service) => service.barberId !== null);
   const barbers = await prisma.user.findMany({
     where: {
       role: "BARBER",

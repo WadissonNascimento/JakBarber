@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/utils";
+import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 
 export type AppointmentItemSummary = {
   id: string;
@@ -17,8 +18,8 @@ export function getAppointmentItemsSummary(
     extraProductId: string;
     productNameSnapshot: string;
     quantity: number;
-    unitPrice: number;
-    subtotal: number;
+    unitPrice: MoneyValue;
+    subtotal: MoneyValue;
     isDelivered: boolean;
     deliveredAt: Date | null;
   }>
@@ -28,8 +29,8 @@ export function getAppointmentItemsSummary(
     extraProductId: item.extraProductId,
     name: item.productNameSnapshot,
     quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    subtotal: item.subtotal,
+    unitPrice: toMoneyNumber(item.unitPrice),
+    subtotal: toMoneyNumber(item.subtotal),
     isDelivered: item.isDelivered,
     deliveredAt: item.deliveredAt,
   }));
@@ -37,32 +38,32 @@ export function getAppointmentItemsSummary(
 
 export function getAppointmentItemsTotal(
   items: Array<{
-    subtotal: number;
+    subtotal: MoneyValue;
   }>
 ) {
-  return items.reduce((sum, item) => sum + item.subtotal, 0);
+  return items.reduce((sum, item) => sum + toMoneyNumber(item.subtotal), 0);
 }
 
 export function getAppointmentItemsBarberPayoutTotal(
   items: Array<{
-    barberPayoutSnapshot: number;
+    barberPayoutSnapshot: MoneyValue;
     isDelivered?: boolean;
   }>
 ) {
   return items.reduce(
-    (sum, item) => sum + (item.isDelivered ? item.barberPayoutSnapshot : 0),
+    (sum, item) => sum + (item.isDelivered ? toMoneyNumber(item.barberPayoutSnapshot) : 0),
     0
   );
 }
 
 export function getAppointmentItemsShopRevenueTotal(
   items: Array<{
-    shopRevenueSnapshot: number;
+    shopRevenueSnapshot: MoneyValue;
     isDelivered?: boolean;
   }>
 ) {
   return items.reduce(
-    (sum, item) => sum + (item.isDelivered ? item.shopRevenueSnapshot : 0),
+    (sum, item) => sum + (item.isDelivered ? toMoneyNumber(item.shopRevenueSnapshot) : 0),
     0
   );
 }
@@ -85,7 +86,7 @@ export function getAppointmentItemsLabel(
 export function getAppointmentItemsMetaLine(
   items: Array<{
     quantity: number;
-    subtotal: number;
+    subtotal: MoneyValue;
   }>
 ) {
   if (items.length === 0) {

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
+import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import ServiceCommissionListClient from "./ServiceCommissionListClient";
 
@@ -61,15 +62,15 @@ export default async function BarberServicesPage({
         services={services.map((service) => ({
           id: service.id,
           name: service.name,
-          price: service.price,
+          price: toMoneyNumber(service.price),
           duration: service.duration,
           barberId: service.barberId,
           commissionType: service.commissionType,
-          commissionValue: service.commissionValue,
+          commissionValue: toMoneyNumber(service.commissionValue),
           customCommission: service.barberCommissions[0]
             ? {
                 commissionType: service.barberCommissions[0].commissionType,
-                commissionValue: service.barberCommissions[0].commissionValue,
+                commissionValue: toMoneyNumber(service.barberCommissions[0].commissionValue),
               }
             : null,
         }))}

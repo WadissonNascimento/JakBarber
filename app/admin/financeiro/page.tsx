@@ -7,13 +7,14 @@ import EmptyState from "@/components/ui/EmptyState";
 import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { getFinanceDashboardData } from "@/lib/financeReports";
+import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import FinancePeriodFilters from "./FinancePeriodFilters";
 import FinanceHistoryFilters from "./FinanceHistoryFilters";
 import GeneratePayoutsButton from "./GeneratePayoutsButton";
 import PayoutActionPanel from "./PayoutActionPanel";
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
+function formatCurrency(value: MoneyValue) {
+  return toMoneyNumber(value).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
+import { toMoneyNumber } from "@/lib/money";
 import AdminCouponsClient from "./AdminCouponsClient";
 
 export default async function AdminCouponsPage() {
@@ -31,7 +32,14 @@ export default async function AdminCouponsPage() {
         actions={<BackLink href="/admin" area="Admin" />}
       />
 
-      <AdminCouponsClient coupons={coupons} />
+      <AdminCouponsClient
+        coupons={coupons.map((coupon) => ({
+          ...coupon,
+          discountValue: toMoneyNumber(coupon.discountValue),
+          minOrderTotal: toMoneyNumber(coupon.minOrderTotal),
+          maxDiscount: coupon.maxDiscount === null ? null : toMoneyNumber(coupon.maxDiscount),
+        }))}
+      />
     </DashboardShell>
   );
 }

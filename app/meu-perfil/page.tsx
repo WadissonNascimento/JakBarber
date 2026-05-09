@@ -23,6 +23,7 @@ import {
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
+import type { MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
   formatScheduleDate,
@@ -49,14 +50,14 @@ type ProfileAppointment = {
   services: Array<{
     nameSnapshot: string;
     orderIndex: number;
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
     durationSnapshot: number;
     bufferAfter: number;
   }>;
   items: Array<{
     productNameSnapshot: string;
     quantity: number;
-    subtotal: number;
+    subtotal: MoneyValue;
   }>;
 };
 

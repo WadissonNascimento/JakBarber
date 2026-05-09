@@ -4,11 +4,13 @@ import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
+import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 
-function formatCommission(type: string, value: number) {
-  return type === "FIXED" ? formatCurrency(value) : `${value}%`;
+function formatCommission(type: string, value: MoneyValue) {
+  const numericValue = toMoneyNumber(value);
+  return type === "FIXED" ? formatCurrency(numericValue) : `${numericValue}%`;
 }
 
 export default async function PayoutReport({
@@ -72,12 +74,12 @@ export default async function PayoutReport({
         }),
         customerName: appointment.customer.name || "Cliente",
         name: service.nameSnapshot,
-        gross: service.priceSnapshot,
+        gross: toMoneyNumber(service.priceSnapshot),
         commission: formatCommission(
           service.commissionTypeSnapshot,
           service.commissionValueSnapshot
         ),
-        payout: service.barberPayoutSnapshot,
+        payout: toMoneyNumber(service.barberPayoutSnapshot),
         type: "Serviço",
       }))
   );
@@ -94,9 +96,9 @@ export default async function PayoutReport({
         }),
         customerName: appointment.customer.name || "Cliente",
         name: `${item.productNameSnapshot} x${item.quantity}`,
-        gross: item.subtotal,
+        gross: toMoneyNumber(item.subtotal),
         commission: formatCommission(item.commissionTypeSnapshot, item.commissionValueSnapshot),
-        payout: item.barberPayoutSnapshot,
+        payout: toMoneyNumber(item.barberPayoutSnapshot),
         type: "Produto",
       }))
   );

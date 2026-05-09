@@ -3,6 +3,7 @@ import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import { ProductGrid } from "@/components/ProductGrid";
 import { getCurrentShop } from "@/lib/shop";
+import { toMoneyNumber } from "@/lib/money";
 
 export const metadata = {
   title: "Arsenal do barbeiro",
@@ -53,7 +54,10 @@ export default async function ProdutosPage() {
             />
           ) : (
             <ProductGrid
-              products={products}
+              products={products.map((product) => ({
+                ...product,
+                price: toMoneyNumber(product.price),
+              }))}
               whatsappNumber={shop.whatsappNumber || "5511961971267"}
             />
           )}

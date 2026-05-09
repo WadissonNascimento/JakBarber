@@ -5,6 +5,7 @@ import { reserveInventoryForOrder } from "@/lib/orderInventory";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { ORDER_STATUSES } from "@/lib/orderStatus";
+import { roundMoney, toMoneyNumber } from "@/lib/money";
 
 const orderInclude = {
   customer: true,
@@ -63,13 +64,14 @@ export async function createOrder(data: {
         throw new Error(`Estoque insuficiente para ${product.name}.`);
       }
 
-      total += product.price * item.quantity;
+      const unitPrice = toMoneyNumber(product.price);
+      total += unitPrice * item.quantity;
 
       return {
         productId: item.productId,
         productNameSnapshot: product.name,
         quantity: item.quantity,
-        unitPrice: product.price,
+        unitPrice,
       };
     })
   );
@@ -78,7 +80,7 @@ export async function createOrder(data: {
     data: {
       shopId: session.user.shopId || undefined,
       customerId: session.user.id,
-      total,
+      total: roundMoney(total),
       items: {
         create: itemsWithPrice.map((item) => ({
           ...item,

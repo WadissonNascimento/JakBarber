@@ -12,6 +12,7 @@ import {
   ADMIN_ORDER_STATUSES,
   getAdminOrdersReport,
 } from "@/lib/adminReports";
+import { formatCurrency } from "@/lib/utils";
 import { orderStatusLabel, orderStatusVariant } from "@/lib/orderStatus";
 import OrderActionPanel from "./OrderActionPanel";
 import OrdersFilters from "./OrdersFilters";
@@ -131,7 +132,7 @@ export default async function AdminPedidosPage({
                         {order.customer.name || order.customer.email || "Cliente sem nome"}
                       </h3>
                       <p className="mt-1 text-sm text-zinc-400">
-                        Total do pedido: R$ {order.total.toFixed(2)}
+                        Total do pedido: {formatCurrency(order.total)}
                       </p>
                     </div>
                     <StatusBadge variant={orderStatusVariant[order.status] || "neutral"}>
@@ -147,13 +148,13 @@ export default async function AdminPedidosPage({
                     <b>CEP:</b> {order.shippingZipCode || "Não informado"}
                   </p>
                   <p>
-                    <b>Frete:</b> {order.shippingMethod || "Não informado"} - R$ {order.shippingCost.toFixed(2)}
+                    <b>Frete:</b> {order.shippingMethod || "Não informado"} - {formatCurrency(order.shippingCost)}
                   </p>
                   <p>
-                    <b>Subtotal:</b> R$ {order.subtotal.toFixed(2)}
+                    <b>Subtotal:</b> {formatCurrency(order.subtotal)}
                   </p>
                   <p>
-                    <b>Desconto:</b> R$ {order.discountTotal.toFixed(2)}
+                    <b>Desconto:</b> {formatCurrency(order.discountTotal)}
                   </p>
                   <p>
                     <b>Cupom:</b> {order.coupon?.code || "Nenhum"}

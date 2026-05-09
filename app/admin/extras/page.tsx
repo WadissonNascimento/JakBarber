@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { normalizeProductImageUrl } from "@/lib/extraProductImages";
+import { toMoneyNumber } from "@/lib/money";
 import AdminExtrasClient from "./AdminExtrasClient";
 
 export default async function AdminExtrasPage() {
@@ -38,6 +39,8 @@ export default async function AdminExtrasPage() {
         <AdminExtrasClient
           extras={extras.map((extra) => ({
             ...extra,
+            price: toMoneyNumber(extra.price),
+            commissionValue: toMoneyNumber(extra.commissionValue),
             imageUrl: normalizeProductImageUrl(extra.imageUrl),
           }))}
         />

@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/utils";
+import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import {
   getAppointmentItemsBarberPayoutTotal,
   getAppointmentItemsShopRevenueTotal,
@@ -20,7 +21,7 @@ export function getAppointmentServicesSummary(
     id: string;
     orderIndex: number;
     nameSnapshot: string;
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
     durationSnapshot: number;
     bufferAfter: number;
     serviceId: string;
@@ -32,7 +33,7 @@ export function getAppointmentServicesSummary(
       id: service.id,
       serviceId: service.serviceId,
       name: service.nameSnapshot,
-      price: service.priceSnapshot,
+      price: toMoneyNumber(service.priceSnapshot),
       duration: service.durationSnapshot,
       bufferAfter: service.bufferAfter,
       orderIndex: service.orderIndex,
@@ -51,15 +52,15 @@ export function getAppointmentDisplayName(
 
 export function getAppointmentTotalPrice(
   services: Array<{
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
   }>
 ) {
-  return services.reduce((sum, service) => sum + service.priceSnapshot, 0);
+  return services.reduce((sum, service) => sum + toMoneyNumber(service.priceSnapshot), 0);
 }
 
 export function getAppointmentServiceRevenue(
   services: Array<{
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
   }>
 ) {
   return getAppointmentTotalPrice(services);
@@ -67,26 +68,32 @@ export function getAppointmentServiceRevenue(
 
 export function getAppointmentBarberPayoutTotal(
   services: Array<{
-    barberPayoutSnapshot: number;
+    barberPayoutSnapshot: MoneyValue;
   }>
 ) {
-  return services.reduce((sum, service) => sum + service.barberPayoutSnapshot, 0);
+  return services.reduce(
+    (sum, service) => sum + toMoneyNumber(service.barberPayoutSnapshot),
+    0
+  );
 }
 
 export function getAppointmentShopRevenueTotal(
   services: Array<{
-    shopRevenueSnapshot: number;
+    shopRevenueSnapshot: MoneyValue;
   }>
 ) {
-  return services.reduce((sum, service) => sum + service.shopRevenueSnapshot, 0);
+  return services.reduce(
+    (sum, service) => sum + toMoneyNumber(service.shopRevenueSnapshot),
+    0
+  );
 }
 
 export function getAppointmentTotalBarberPayout(
   services: Array<{
-    barberPayoutSnapshot: number;
+    barberPayoutSnapshot: MoneyValue;
   }>,
   items: Array<{
-    barberPayoutSnapshot: number;
+    barberPayoutSnapshot: MoneyValue;
     isDelivered?: boolean;
   }> = []
 ) {
@@ -95,10 +102,10 @@ export function getAppointmentTotalBarberPayout(
 
 export function getAppointmentTotalShopRevenue(
   services: Array<{
-    shopRevenueSnapshot: number;
+    shopRevenueSnapshot: MoneyValue;
   }>,
   items: Array<{
-    shopRevenueSnapshot: number;
+    shopRevenueSnapshot: MoneyValue;
     isDelivered?: boolean;
   }> = []
 ) {
@@ -107,10 +114,10 @@ export function getAppointmentTotalShopRevenue(
 
 export function getAppointmentGrandTotal(
   services: Array<{
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
   }>,
   items: Array<{
-    subtotal: number;
+    subtotal: MoneyValue;
   }> = []
 ) {
   return getAppointmentTotalPrice(services) + getAppointmentItemsTotal(items);
@@ -131,14 +138,17 @@ export function getAppointmentTotalDuration(
 export function getAppointmentServiceMetaLine(
   services: Array<{
     durationSnapshot: number;
-    priceSnapshot: number;
+    priceSnapshot: MoneyValue;
   }>
 ) {
   const totalDuration = services.reduce(
     (sum, service) => sum + service.durationSnapshot,
     0
   );
-  const totalPrice = services.reduce((sum, service) => sum + service.priceSnapshot, 0);
+  const totalPrice = services.reduce(
+    (sum, service) => sum + toMoneyNumber(service.priceSnapshot),
+    0
+  );
 
   return `${totalDuration} min - ${formatCurrency(totalPrice)}`;
 }
