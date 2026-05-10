@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
   AppointmentMutationError,
@@ -22,7 +22,18 @@ import {
   readJsonWithLimit,
 } from "@/lib/security";
 
-function runBookingNotifications({
+function revalidateBookingPaths(customerId: string) {
+  revalidatePath("/customer/agendamentos");
+  revalidatePath("/meu-perfil");
+  revalidatePath("/barber");
+  revalidatePath("/barber/agenda");
+  revalidatePath("/barber/clientes");
+  revalidatePath(`/barber/clientes/${customerId}`);
+  revalidatePath("/admin/agenda");
+  revalidatePath("/agendar");
+}
+
+async function runBookingNotifications({
   appointmentId,
   previousDate,
   nextDate,
@@ -45,16 +56,16 @@ function runBookingNotifications({
         notifyBarberNewAppointment(appointmentId),
       ];
 
-  void Promise.allSettled(jobs).then((results) => {
-    results.forEach((result) => {
-      if (result.status === "rejected") {
-        console.warn(
-          `[email] Falha em notificacao pos-agendamento ${appointmentId}: ${
-            result.reason instanceof Error ? result.reason.message : "erro desconhecido"
-          }`
-        );
-      }
-    });
+  const results = await Promise.allSettled(jobs);
+
+  results.forEach((result) => {
+    if (result.status === "rejected") {
+      console.warn(
+        `[email] Falha em notificacao pos-agendamento ${appointmentId}: ${
+          result.reason instanceof Error ? result.reason.message : "erro desconhecido"
+        }`
+      );
+    }
   });
 }
 
@@ -138,19 +149,13 @@ export async function POST(request: Request) {
         };
     const appointment = result.appointment;
 
-    revalidatePath("/customer/agendamentos");
-    revalidatePath("/meu-perfil");
-    revalidatePath("/barber");
-    revalidatePath("/barber/agenda");
-    revalidatePath("/barber/clientes");
-    revalidatePath(`/barber/clientes/${session.user.id}`);
-    revalidatePath("/admin/agenda");
-    revalidatePath("/agendar");
-
-    runBookingNotifications({
-      appointmentId: appointment.id,
-      previousDate: result.previousDate,
-      nextDate: appointment.date,
+    after(async () => {
+      revalidateBookingPaths(session.user.id);
+      await runBookingNotifications({
+        appointmentId: appointment.id,
+        previousDate: result.previousDate,
+        nextDate: appointment.date,
+      });
     });
 
     return NextResponse.json({

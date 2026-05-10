@@ -745,6 +745,10 @@ export default function BookingClient({
         />
       ) : null}
 
+      {bookingSlot ? (
+        <BookingLoadingOverlay isRescheduling={isRescheduling} />
+      ) : null}
+
       {bookingSuccess && bookingDetails ? (
         <BookingSuccessDialog
           details={bookingDetails}
@@ -773,6 +777,38 @@ export default function BookingClient({
         />
       ) : null}
     </div>
+  );
+}
+
+function BookingLoadingOverlay({ isRescheduling }: { isRescheduling: boolean }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 px-4 backdrop-blur-md"
+      role="status"
+      aria-live="polite"
+      aria-label={isRescheduling ? "Remarcando agendamento" : "Confirmando agendamento"}
+    >
+      <div className="flex w-full max-w-xs flex-col items-center rounded-3xl border border-white/10 bg-[#050b16]/95 p-6 text-center text-white shadow-[0_24px_90px_rgba(0,0,0,0.65)]">
+        <span className="h-14 w-14 animate-spin rounded-full border-4 border-white/15 border-t-[var(--brand)]" />
+        <p className="mt-5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
+          {isRescheduling ? "Remarcando" : "Confirmando"}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-zinc-300">
+          Aguarde enquanto salvamos seu horario.
+        </p>
+      </div>
+    </div>,
+    document.body
   );
 }
 
