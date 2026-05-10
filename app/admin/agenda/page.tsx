@@ -6,6 +6,8 @@ import { toMoneyNumber } from "@/lib/money";
 import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
 import AdminAgendaClient from "./AdminAgendaClient";
 
+const ADMIN_AGENDA_PAGE_LIMIT = 250;
+
 type SearchParams = {
   barberId?: string;
   dateFrom?: string;
@@ -55,7 +57,7 @@ export default async function AdminAgendaPage({
       dateFrom: initialFilters.dateFrom,
       dateTo: initialFilters.dateTo,
       status: initialFilters.status,
-    }),
+    }, { limit: ADMIN_AGENDA_PAGE_LIMIT }),
   ]);
 
   return (
@@ -73,6 +75,8 @@ export default async function AdminAgendaPage({
       }))}
       barbers={barbers}
       initialFilters={initialFilters}
+      isTruncated={report.isTruncated}
+      limit={report.limit}
     />
   );
 }

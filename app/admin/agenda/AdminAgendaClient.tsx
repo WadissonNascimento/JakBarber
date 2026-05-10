@@ -86,10 +86,14 @@ export default function AdminAgendaClient({
   appointments,
   barbers,
   initialFilters,
+  isTruncated = false,
+  limit = null,
 }: {
   appointments: AdminAgendaAppointment[];
   barbers: BarberOption[];
   initialFilters: AdminAgendaFilters;
+  isTruncated?: boolean;
+  limit?: number | null;
 }) {
   const router = useRouter();
   const [filters, setFilters] = useState(() => ({
@@ -204,6 +208,13 @@ export default function AdminAgendaClient({
         </div>
 
         <div className="mt-3 border-t border-white/10 pt-3">
+          {isTruncated ? (
+            <div className="mb-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Mostrando os primeiros {limit} registros para manter a agenda rapida.
+              Refine os filtros ou exporte o CSV para consultar o periodo completo.
+            </div>
+          ) : null}
+
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
               Filtros

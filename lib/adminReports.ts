@@ -26,6 +26,10 @@ export type AdminAgendaFilters = {
   status?: string;
 };
 
+type AdminAgendaReportOptions = {
+  limit?: number;
+};
+
 function parseScheduleStartDate(date?: string) {
   return date ? getScheduleDayRange(date)?.start : undefined;
 }
@@ -81,14 +85,23 @@ export function buildAgendaReportQuery(filters: AdminAgendaFilters) {
   return where;
 }
 
-export async function getAdminAgendaReport(filters: AdminAgendaFilters) {
-  const appointments = await prisma.appointment.findMany({
+export async function getAdminAgendaReport(
+  filters: AdminAgendaFilters,
+  options: AdminAgendaReportOptions = {}
+) {
+  const take = options.limit ? options.limit + 1 : undefined;
+  const foundAppointments = await prisma.appointment.findMany({
     where: buildAgendaReportQuery(filters),
     select: appointmentForAdminSelect,
     orderBy: {
       date: "asc",
     },
+    ...(take ? { take } : {}),
   });
+  const isTruncated = Boolean(options.limit && foundAppointments.length > options.limit);
+  const appointments = options.limit
+    ? foundAppointments.slice(0, options.limit)
+    : foundAppointments;
 
   const summary = appointments.reduce(
     (accumulator, appointment) => {
@@ -121,6 +134,8 @@ export async function getAdminAgendaReport(filters: AdminAgendaFilters) {
   return {
     appointments,
     summary,
+    isTruncated,
+    limit: options.limit || null,
   };
 }
 
