@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
@@ -67,6 +67,16 @@ type PeriodSlots = {
   night: string[];
 };
 
+type AvailabilityPayload = {
+  isDayAvailable: boolean;
+  periodSlots: PeriodSlots;
+};
+
+type AvailabilityCacheEntry = {
+  expiresAt: number;
+  data: AvailabilityPayload;
+};
+
 type BookingDetails = {
   mode: "create" | "reschedule";
   appointmentCode: string | null;
@@ -110,6 +120,22 @@ function getLocalBarberImage(image: string | null) {
   return image?.startsWith("/") ? image : null;
 }
 
+function emptyPeriodSlots(): PeriodSlots {
+  return {
+    morning: [],
+    afternoon: [],
+    night: [],
+  };
+}
+
+function removeSlotFromPeriods(periods: PeriodSlots, slot: string): PeriodSlots {
+  return {
+    morning: periods.morning.filter((value) => value !== slot),
+    afternoon: periods.afternoon.filter((value) => value !== slot),
+    night: periods.night.filter((value) => value !== slot),
+  };
+}
+
 export default function BookingClient({
   barbers,
   services,
@@ -145,6 +171,7 @@ export default function BookingClient({
   const [confirmationSlot, setConfirmationSlot] = useState<string | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [previewBarber, setPreviewBarber] = useState<BarberOption | null>(null);
+  const availabilityCacheRef = useRef<Map<string, AvailabilityCacheEntry>>(new Map());
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>(() =>
     Object.fromEntries(
       (rescheduleAppointment?.extras || []).map((extra) => [
@@ -202,6 +229,22 @@ export default function BookingClient({
   const totalSlots =
     periodSlots.morning.length + periodSlots.afternoon.length + periodSlots.night.length;
   const hasBookingConflict = bookingError?.toLowerCase().includes("reservado") ?? false;
+  const selectedServiceKey = useMemo(
+    () => [...selectedServiceIds].sort().join(","),
+    [selectedServiceIds]
+  );
+  const availabilityKey = useMemo(
+    () =>
+      selectedBarberId && selectedServiceKey && selectedDate
+        ? [
+            selectedBarberId,
+            selectedServiceKey,
+            selectedDate,
+            rescheduleAppointmentId || "",
+          ].join("|")
+        : "",
+    [rescheduleAppointmentId, selectedBarberId, selectedDate, selectedServiceKey]
+  );
   const groupedExtras = useMemo(() => {
     const categories = ["BEVERAGE", "SHELF", "OTHER"] as const;
 
@@ -226,14 +269,19 @@ export default function BookingClient({
   }, [visibleServices]);
 
   const loadAvailability = useCallback(
-    async (signal?: AbortSignal) => {
-      if (!selectedBarberId || selectedServiceIds.length === 0 || !selectedDate) {
-        setPeriodSlots({
-          morning: [],
-          afternoon: [],
-          night: [],
-        });
+    async (signal?: AbortSignal, options: { force?: boolean } = {}) => {
+      if (!availabilityKey || !selectedBarberId || selectedServiceIds.length === 0 || !selectedDate) {
+        setPeriodSlots(emptyPeriodSlots());
         setIsDayAvailable(false);
+        setAvailabilityError(null);
+        return;
+      }
+
+      const cached = availabilityCacheRef.current.get(availabilityKey);
+
+      if (!options.force && cached && cached.expiresAt > Date.now()) {
+        setIsDayAvailable(cached.data.isDayAvailable);
+        setPeriodSlots(cached.data.periodSlots);
         setAvailabilityError(null);
         return;
       }
@@ -267,24 +315,24 @@ export default function BookingClient({
         }
 
         setIsDayAvailable(Boolean(data.isDayAvailable));
-        setPeriodSlots(
-          data.periodSlots || {
-            morning: [],
-            afternoon: [],
-            night: [],
-          }
-        );
+        const nextPayload = {
+          isDayAvailable: Boolean(data.isDayAvailable),
+          periodSlots: data.periodSlots || emptyPeriodSlots(),
+        };
+
+        availabilityCacheRef.current.set(availabilityKey, {
+          data: nextPayload,
+          expiresAt: Date.now() + 20_000,
+        });
+
+        setPeriodSlots(nextPayload.periodSlots);
       } catch (error) {
         if (signal?.aborted) {
           return;
         }
 
         setIsDayAvailable(false);
-        setPeriodSlots({
-          morning: [],
-          afternoon: [],
-          night: [],
-        });
+        setPeriodSlots(emptyPeriodSlots());
         setAvailabilityError(
           error instanceof Error
             ? error.message
@@ -296,25 +344,26 @@ export default function BookingClient({
         }
       }
     },
-    [rescheduleAppointmentId, selectedBarberId, selectedDate, selectedServiceIds]
+    [availabilityKey, rescheduleAppointmentId, selectedBarberId, selectedDate, selectedServiceIds]
   );
 
   useEffect(() => {
     if (!selectedBarberId || selectedServiceIds.length === 0 || !selectedDate) {
-      setPeriodSlots({
-        morning: [],
-        afternoon: [],
-        night: [],
-      });
+      setPeriodSlots(emptyPeriodSlots());
       setIsDayAvailable(false);
       setAvailabilityError(null);
       return;
     }
 
     const controller = new AbortController();
-    void loadAvailability(controller.signal);
+    const timeout = window.setTimeout(() => {
+      void loadAvailability(controller.signal);
+    }, 300);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
   }, [loadAvailability, selectedBarberId, selectedDate, selectedServiceIds]);
 
   function toggleService(serviceId: string) {
@@ -420,47 +469,31 @@ export default function BookingClient({
       });
       setBookingSlot(null);
 
-      void (async () => {
-        try {
-          const refreshed = await fetch("/api/booking/availability", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+      setPeriodSlots((current) => {
+        const nextPeriods = removeSlotFromPeriods(current, time);
+        const hasRemainingSlots =
+          nextPeriods.morning.length + nextPeriods.afternoon.length + nextPeriods.night.length > 0;
+
+        if (availabilityKey) {
+          availabilityCacheRef.current.set(availabilityKey, {
+            data: {
+              isDayAvailable: hasRemainingSlots,
+              periodSlots: nextPeriods,
             },
-            body: JSON.stringify({
-              barberId: selectedBarberId,
-              serviceIds: selectedServiceIds,
-              date: selectedDate,
-              rescheduleAppointmentId,
-            }),
+            expiresAt: Date.now() + 20_000,
           });
-
-          if (refreshed.ok) {
-            const refreshedData = (await refreshed.json()) as {
-              isDayAvailable?: boolean;
-              periodSlots?: PeriodSlots;
-            };
-
-            setIsDayAvailable(Boolean(refreshedData.isDayAvailable));
-            setPeriodSlots(
-              refreshedData.periodSlots || {
-                morning: [],
-                afternoon: [],
-                night: [],
-              }
-            );
-          }
-        } catch {
-          // A reserva ja foi concluida; a disponibilidade sera atualizada no proximo carregamento.
         }
-      })();
+
+        setIsDayAvailable(hasRemainingSlots);
+        return nextPeriods;
+      });
     } catch (error) {
       setBookingError(
         error instanceof Error
           ? error.message
           : "Não foi possível concluir o agendamento."
       );
-      void loadAvailability();
+      void loadAvailability(undefined, { force: true });
     } finally {
       setBookingSlot(null);
     }
@@ -765,7 +798,7 @@ export default function BookingClient({
           }
           onReschedule={() => {
             setBookingError(null);
-            void loadAvailability();
+            void loadAvailability(undefined, { force: true });
           }}
         />
       ) : null}

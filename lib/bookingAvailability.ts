@@ -90,12 +90,21 @@ export async function getBookingAvailability(
         OR: [{ barberId }, { barberId: null }],
         isActive: true,
       },
+      select: {
+        id: true,
+        duration: true,
+        bufferAfter: true,
+      },
     }),
     db.barberAvailability.findFirst({
       where: {
         barberId,
         weekDay: dayOfWeek,
         isActive: true,
+      },
+      select: {
+        startTime: true,
+        endTime: true,
       },
     }),
     db.appointment.findMany({
@@ -107,8 +116,15 @@ export async function getBookingAvailability(
           lte: dayEnd,
         },
       },
-      include: {
-        services: true,
+      select: {
+        date: true,
+        status: true,
+        services: {
+          select: {
+            durationSnapshot: true,
+            bufferAfter: true,
+          },
+        },
       },
     }),
     db.barberBlock.findMany({
@@ -121,12 +137,20 @@ export async function getBookingAvailability(
           gte: dayStart,
         },
       },
+      select: {
+        startDateTime: true,
+        endDateTime: true,
+      },
     }),
     db.recurringBarberBlock.findMany({
       where: {
         barberId,
         weekDay: dayOfWeek,
         isActive: true,
+      },
+      select: {
+        startTime: true,
+        endTime: true,
       },
     }),
   ]);
