@@ -539,7 +539,7 @@ function AppointmentMobileCard({
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
             {formatAppointmentPublicId(appointment.publicId)}
           </p>
-          <h3 className="mt-1 truncate text-lg font-bold text-white">
+          <h3 className="mt-1 line-clamp-2 text-lg font-bold leading-tight text-white">
             {appointment.customer.name || "Cliente"}
           </h3>
         </div>
