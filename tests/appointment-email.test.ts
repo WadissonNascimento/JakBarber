@@ -13,6 +13,10 @@ test("customer appointment flows send notification emails from backend actions",
     /notifyCustomerAppointmentConfirmed\(appointment\.id\)/
   );
   assert.match(
+    read("app/api/booking/appointments/route.ts"),
+    /notifyCustomerAppointmentRescheduled\(/
+  );
+  assert.match(
     read("app/agendar/actions.ts"),
     /notifyCustomerAppointmentConfirmed\(appointmentId\)/
   );
@@ -36,6 +40,7 @@ test("appointment mailer exposes customer confirmation, completion, cancellation
     "sendAppointmentCompletedEmail",
     "sendAppointmentCancelledEmail",
     "sendAppointmentReminderEmail",
+    "sendAppointmentRescheduledEmail",
   ]) {
     assert.match(mail, new RegExp(`export async function ${exportName}`));
   }
@@ -57,6 +62,7 @@ test("appointment mailer exposes customer confirmation, completion, cancellation
   assert.match(templates, /renderCustomerAppointmentCompletedEmail/);
   assert.match(templates, /renderCustomerAppointmentCancelledEmail/);
   assert.match(templates, /renderCustomerAppointmentReminderEmail/);
+  assert.match(templates, /renderCustomerAppointmentRescheduledEmail/);
   assert.match(templates, /renderCustomerVerificationCodeEmail/);
   assert.match(templates, /renderCustomerPasswordResetEmail/);
   assert.match(templates, /Avaliar atendimento/);

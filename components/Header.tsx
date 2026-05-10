@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  BadgePercent,
   Boxes,
   CalendarDays,
   Clock,
@@ -109,7 +108,6 @@ const navIcons: Record<string, LucideIcon> = {
   "/admin/agenda": CalendarDays,
   "/admin/avaliacoes": MessageSquareText,
   "/admin/barbeiros": Users,
-  "/admin/cupons": BadgePercent,
   "/admin/extras": ShoppingBag,
   "/admin/financeiro": WalletCards,
   "/admin/produtos": Boxes,

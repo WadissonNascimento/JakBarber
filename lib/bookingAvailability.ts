@@ -50,11 +50,13 @@ export async function getBookingAvailability(
     barberId,
     serviceIds,
     date,
+    excludeAppointmentId,
     now = new Date(),
   }: {
     barberId: string;
     serviceIds: string[];
     date: string;
+    excludeAppointmentId?: string | null;
     now?: Date;
   },
   db: BookingPrismaClient = prisma
@@ -99,6 +101,7 @@ export async function getBookingAvailability(
     db.appointment.findMany({
       where: {
         barberId,
+        ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
         date: {
           gte: dayStart,
           lte: dayEnd,

@@ -18,9 +18,6 @@ const SHOP_SCOPED_MODELS = new Set([
   "BarberServiceCommission",
   "ExtraProduct",
   "AppointmentItem",
-  "Order",
-  "OrderItem",
-  "Coupon",
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
@@ -44,9 +41,6 @@ const ID_SCOPED_MODELS = new Set([
   "BarberServiceCommission",
   "ExtraProduct",
   "AppointmentItem",
-  "Order",
-  "OrderItem",
-  "Coupon",
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
@@ -179,19 +173,6 @@ function injectNestedShopId(
         create: mapArrayCreateData(services.create, shopId),
       };
     }
-
-    if (items?.create) {
-      nextData.items = {
-        ...items,
-        create: mapArrayCreateData(items.create, shopId),
-      };
-    }
-  }
-
-  if (model === "Order") {
-    const items = nextData.items as
-      | { create?: unknown[] }
-      | undefined;
 
     if (items?.create) {
       nextData.items = {

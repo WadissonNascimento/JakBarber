@@ -35,6 +35,20 @@ type BookingClientProps = {
   initialDate: string;
   nextDays: string[];
   whatsappNumber: string;
+  rescheduleAppointment?: RescheduleAppointmentOption | null;
+};
+
+type RescheduleAppointmentOption = {
+  id: string;
+  appointmentCode: string;
+  barberId: string;
+  serviceIds: string[];
+  date: string;
+  time: string;
+  extras: Array<{
+    extraProductId: string;
+    quantity: number;
+  }>;
 };
 
 type ProductExtraOption = {
@@ -54,6 +68,7 @@ type PeriodSlots = {
 };
 
 type BookingDetails = {
+  mode: "create" | "reschedule";
   appointmentCode: string | null;
   date: string;
   time: string;
@@ -102,10 +117,19 @@ export default function BookingClient({
   initialDate,
   nextDays,
   whatsappNumber,
+  rescheduleAppointment = null,
 }: BookingClientProps) {
-  const [selectedBarberId, setSelectedBarberId] = useState(() => barbers[0]?.id ?? "");
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const isRescheduling = Boolean(rescheduleAppointment);
+  const rescheduleAppointmentId = rescheduleAppointment?.id;
+  const [selectedBarberId, setSelectedBarberId] = useState(
+    () => rescheduleAppointment?.barberId || barbers[0]?.id || ""
+  );
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    () => rescheduleAppointment?.serviceIds || []
+  );
+  const [selectedDate, setSelectedDate] = useState(
+    () => rescheduleAppointment?.date || initialDate
+  );
   const [periodSlots, setPeriodSlots] = useState<PeriodSlots>({
     morning: [],
     afternoon: [],
@@ -121,7 +145,14 @@ export default function BookingClient({
   const [confirmationSlot, setConfirmationSlot] = useState<string | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [previewBarber, setPreviewBarber] = useState<BarberOption | null>(null);
-  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>(() =>
+    Object.fromEntries(
+      (rescheduleAppointment?.extras || []).map((extra) => [
+        extra.extraProductId,
+        extra.quantity,
+      ])
+    )
+  );
 
   const visibleServices = useMemo(
     () =>
@@ -220,6 +251,7 @@ export default function BookingClient({
             barberId: selectedBarberId,
             serviceIds: selectedServiceIds,
             date: selectedDate,
+            rescheduleAppointmentId,
           }),
           signal,
         });
@@ -264,7 +296,7 @@ export default function BookingClient({
         }
       }
     },
-    [selectedBarberId, selectedDate, selectedServiceIds]
+    [rescheduleAppointmentId, selectedBarberId, selectedDate, selectedServiceIds]
   );
 
   useEffect(() => {
@@ -350,6 +382,7 @@ export default function BookingClient({
           date: selectedDate,
           time,
           notes: sanitizeTextareaInput(notes, 280),
+          rescheduleAppointmentId,
         }),
       });
 
@@ -362,8 +395,14 @@ export default function BookingClient({
         throw new Error(data.message || "Não foi possível concluir o agendamento.");
       }
 
-      setBookingSuccess(data.message || "Agendamento realizado com sucesso.");
+      setBookingSuccess(
+        data.message ||
+          (isRescheduling
+            ? "Agendamento remarcado com sucesso."
+            : "Agendamento realizado com sucesso.")
+      );
       setBookingDetails({
+        mode: isRescheduling ? "reschedule" : "create",
         appointmentCode: data.appointmentCode || null,
         date: selectedDate,
         time,
@@ -389,6 +428,7 @@ export default function BookingClient({
           barberId: selectedBarberId,
           serviceIds: selectedServiceIds,
           date: selectedDate,
+          rescheduleAppointmentId,
         }),
       });
 
@@ -424,11 +464,18 @@ export default function BookingClient({
       <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">
-            Agendar horário
+            {isRescheduling ? "Remarcar horário" : "Agendar horário"}
           </h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-            Escolha o serviço e toque em um horário disponível.
+            {isRescheduling
+              ? "Escolha o novo horário. Ao confirmar, o horário antigo fica livre automaticamente."
+              : "Escolha o serviço e toque em um horário disponível."}
           </p>
+          {isRescheduling ? (
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+              Remarcando {rescheduleAppointment?.appointmentCode}
+            </p>
+          ) : null}
         </div>
 
       </div>
@@ -684,6 +731,7 @@ export default function BookingClient({
           servicePrice={selectedPrice}
           extrasPrice={selectedExtrasPrice}
           totalPrice={selectedTotalPrice}
+          isRescheduling={isRescheduling}
           isSubmitting={bookingSlot === confirmationSlot}
           onCancel={() => setConfirmationSlot(null)}
           onConfirm={(notes) => void bookAppointment(confirmationSlot, notes)}
@@ -1037,8 +1085,9 @@ function BookingSuccessDialog({
       month: "2-digit",
     }
   );
+  const isRescheduled = details.mode === "reschedule";
   const whatsappMessage =
-    `Ola! Acabei de agendar meu horário para ${formattedDate} as ${details.time} com ${details.barberName}.`
+    `Ola! Acabei de ${isRescheduled ? "remarcar" : "agendar"} meu horário para ${formattedDate} as ${details.time} com ${details.barberName}.`
   ;
   const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
 
@@ -1064,13 +1113,15 @@ function BookingSuccessDialog({
 
         <div className="mt-4 text-center">
           <p className="text-xs uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-            Agendamento realizado
+            {isRescheduled ? "Agendamento remarcado" : "Agendamento realizado"}
           </p>
           <h2 id="booking-success-title" className="mt-2 text-2xl font-bold">
-            Horário reservado
+            {isRescheduled ? "Horário atualizado" : "Horário reservado"}
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Chegue 5 minutos antes do horário para garantir um atendimento tranquilo.
+            {isRescheduled
+              ? "O horário antigo foi liberado e sua agenda já está atualizada."
+              : "Chegue 5 minutos antes do horário para garantir um atendimento tranquilo."}
           </p>
         </div>
 
@@ -1367,6 +1418,7 @@ function BookingConfirmationDialog({
   servicePrice,
   extrasPrice,
   totalPrice,
+  isRescheduling,
   isSubmitting,
   onCancel,
   onConfirm,
@@ -1384,6 +1436,7 @@ function BookingConfirmationDialog({
   servicePrice: number;
   extrasPrice: number;
   totalPrice: number;
+  isRescheduling: boolean;
   isSubmitting: boolean;
   onCancel: () => void;
   onConfirm: (notes: string) => void;
@@ -1414,13 +1467,15 @@ function BookingConfirmationDialog({
     >
       <div className="max-h-[calc(100svh-32px)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#050b16] p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
         <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-          Confirmar agendamento
+          {isRescheduling ? "Confirmar remarcação" : "Confirmar agendamento"}
         </p>
         <h2 id="booking-confirmation-title" className="mt-2 text-2xl font-bold">
           Esta tudo certo?
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Confira os dados antes de reservar esse horário.
+          {isRescheduling
+            ? "Confira os dados antes de atualizar o horário."
+            : "Confira os dados antes de reservar esse horário."}
         </p>
 
         <div className="mt-5 space-y-3 rounded-3xl border border-white/10 bg-black/20 p-4 text-sm">
@@ -1478,7 +1533,11 @@ function BookingConfirmationDialog({
             disabled={isSubmitting}
             className="rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Confirmando..." : "Confirmar agendamento"}
+            {isSubmitting
+              ? "Confirmando..."
+              : isRescheduling
+              ? "Confirmar remarcação"
+              : "Confirmar agendamento"}
           </button>
         </div>
       </div>

@@ -16,6 +16,17 @@ test("customer booking endpoint binds created appointments to the authenticated 
   assert.doesNotMatch(route, /customerId:\s*body\.customerId/);
 });
 
+test("customer reschedule flow validates ownership before freeing the old slot", () => {
+  const appointmentsRoute = read("app/api/booking/appointments/route.ts");
+  const availabilityRoute = read("app/api/booking/availability/route.ts");
+
+  assert.match(appointmentsRoute, /rescheduleAppointmentId/);
+  assert.match(appointmentsRoute, /customerId:\s*session\.user\.id/);
+  assert.match(availabilityRoute, /appointment\.customerId !== session\.user\.id/);
+  assert.match(availabilityRoute, /idor_blocked/);
+  assert.match(availabilityRoute, /excludeAppointmentId:\s*rescheduleAppointmentId/);
+});
+
 test("customer appointment actions reject manipulated appointment ids", () => {
   const actions = read("app/customer/agendamentos/actions.ts");
 
@@ -38,7 +49,6 @@ test("admin-only pages and export routes enforce admin role", () => {
     "app/admin/page.tsx",
     "app/admin/financeiro/page.tsx",
     "app/admin/agenda/export/route.ts",
-    "app/admin/pedidos/export/route.ts",
   ]) {
     assert.match(read(file), /role !== "ADMIN"/, file);
   }

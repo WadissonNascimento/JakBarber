@@ -13,6 +13,7 @@ import {
   sendAppointmentCompletedEmail,
   sendAppointmentConfirmationEmail,
   sendAppointmentReminderEmail,
+  sendAppointmentRescheduledEmail,
   type AppointmentCustomerEmailPayload,
 } from "@/lib/mail";
 import { basePrisma } from "@/lib/prisma-core";
@@ -109,6 +110,15 @@ function normalizeName(value: string | null | undefined, fallback: string) {
 
 function getCustomerAppointmentsUrl() {
   return `${getConfiguredAppUrl()}/customer/agendamentos`;
+}
+
+function formatDateTimeLabel(date: Date) {
+  return `${formatScheduleDate(date, {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })} as ${formatScheduleTime(date)}`;
 }
 
 function resolveEmailLogoUrl(logoPath: string | null | undefined) {
@@ -243,6 +253,23 @@ export async function notifyCustomerAppointmentCancelled(
     appointmentId,
     sendAppointmentCancelledEmail,
     cancellationReason
+  );
+}
+
+export async function notifyCustomerAppointmentRescheduled(
+  appointmentId: string,
+  previousDate: Date,
+  nextDate?: Date
+) {
+  return sendCustomerAppointmentEmailSafely("reagendamento", appointmentId, (payload) =>
+    sendAppointmentRescheduledEmail({
+      ...payload,
+      eventKey: `customer:appointment_rescheduled:${appointmentId}:${previousDate.toISOString()}`,
+      previousDateTimeLabel: formatDateTimeLabel(previousDate),
+      nextDateTimeLabel: nextDate
+        ? formatDateTimeLabel(nextDate)
+        : `${payload.dateLabel} as ${payload.timeLabel}`,
+    })
   );
 }
 

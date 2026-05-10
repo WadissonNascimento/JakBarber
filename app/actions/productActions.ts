@@ -24,8 +24,6 @@ async function ensureProductAccess() {
 
 function revalidateProductViews() {
   revalidatePath("/produtos");
-  revalidatePath("/loja");
-  revalidatePath("/carrinho");
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
   revalidatePath("/admin/produtos/novo");
@@ -131,10 +129,10 @@ export async function createProductFromForm(formData: FormData) {
       await registerStockMovement({
         shopId: admin.shopId || undefined,
         productId: product.id,
-      type: "IN",
-      quantity: stock,
-      reason: "Cadastro inicial do produto",
-    });
+        type: "IN",
+        quantity: stock,
+        reason: "Cadastro inicial do produto",
+      });
   } catch (error) {
     await prisma.product.delete({ where: { id: product.id } }).catch(() => undefined);
     throw error;
@@ -352,7 +350,6 @@ export async function deleteProduct(id: string) {
       imagePath: true,
       _count: {
         select: {
-          orderItems: true,
           stockMovements: true,
         },
       },
@@ -363,7 +360,7 @@ export async function deleteProduct(id: string) {
     throw new Error("Produto nao encontrado.");
   }
 
-  if (product._count.orderItems > 0 || product._count.stockMovements > 0) {
+  if (product._count.stockMovements > 0) {
     await prisma.product.update({
       where: { id },
       data: {
@@ -378,8 +375,8 @@ export async function deleteProduct(id: string) {
     return {
       deleted: false,
       message: product.isActive
-        ? "Produto ocultado para preservar historico de pedidos e estoque."
-        : "Produto ja estava oculto. Historico preservado.",
+        ? "Produto ocultado para preservar historico de estoque."
+        : "Produto ja estava oculto. Historico de estoque preservado.",
     };
   }
 

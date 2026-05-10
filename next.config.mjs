@@ -31,20 +31,28 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=()",
   },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  },
+];
+
+const isProduction = process.env.NODE_ENV === "production";
+const productionOrigins = ["jakbarbercompany.com", "www.jakbarbercompany.com"];
+const developmentOrigins = [
+  "*.trycloudflare.com",
+  "*.ngrok-free.dev",
+  "localhost",
+  "localhost:3000",
+  "127.0.0.1",
+  "127.0.0.1:3000",
 ];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compress: true,
   poweredByHeader: false,
-  allowedDevOrigins: [
-    "*.trycloudflare.com",
-    "*.ngrok-free.dev",
-    "localhost:3000",
-    "127.0.0.1:3000",
-    "jakbarbercompany.com",
-    "www.jakbarbercompany.com",
-  ],
+  allowedDevOrigins: isProduction ? [] : developmentOrigins,
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
@@ -60,12 +68,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "3mb",
       allowedOrigins: [
-        "*.trycloudflare.com",
-        "*.ngrok-free.dev",
-        "localhost:3000",
-        "127.0.0.1:3000",
-        "jakbarbercompany.com",
-        "www.jakbarbercompany.com",
+        ...productionOrigins,
+        ...(isProduction ? [] : developmentOrigins),
       ],
     },
   },

@@ -67,12 +67,16 @@ export type CreateCustomerAppointmentInput = {
   conflictMode?: "OVERLAP" | "SAME_START_ONLY";
 };
 
+export type RescheduleCustomerAppointmentInput = CreateCustomerAppointmentInput & {
+  appointmentId: string;
+};
+
 export type AppointmentItemDeliveryDecision = {
   appointmentItemId: string;
   isDelivered: boolean;
 };
 
-const FINAL_APPOINTMENT_STATUSES = ["CANCELLED", "COMPLETED", "NO_SHOW"];
+const FINAL_APPOINTMENT_STATUSES = ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"];
 
 function getAppointmentDurationFromServices(
   services: Array<{
@@ -116,6 +120,33 @@ export async function createCustomerAppointment(
   try {
     return await db.$transaction(
       (tx) => createCustomerAppointmentInTransaction(input, tx),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 20000,
+      }
+    );
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2034" || error.code === "P2028")
+    ) {
+      throw new AppointmentMutationError(
+        "Esse horario acabou de ser reservado. Escolha outro horario."
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function rescheduleCustomerAppointment(
+  input: RescheduleCustomerAppointmentInput,
+  db: AppointmentPrismaClient = prisma
+) {
+  try {
+    return await db.$transaction(
+      (tx) => rescheduleCustomerAppointmentInTransaction(input, tx),
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         maxWait: 10000,
@@ -526,6 +557,472 @@ async function createCustomerAppointmentInTransaction(
       customer: true,
     },
   });
+}
+
+async function rescheduleCustomerAppointmentInTransaction(
+  input: RescheduleCustomerAppointmentInput,
+  db: AppointmentTransactionClient
+) {
+  const appointmentId = input.appointmentId.trim();
+  const customerId = input.customerId.trim();
+  const barberId = input.barberId.trim();
+  const serviceIds = input.serviceIds.map((serviceId) => serviceId.trim()).filter(Boolean);
+  const extras = (input.extras || [])
+    .map((extra) => ({
+      extraProductId: extra.extraProductId.trim(),
+      quantity: Number(extra.quantity),
+    }))
+    .filter(
+      (extra) => extra.extraProductId && Number.isInteger(extra.quantity) && extra.quantity > 0
+    );
+  const date = input.date.trim();
+  const time = input.time.trim();
+  const notes = input.notes?.trim() || null;
+  const conflictMode = input.conflictMode || "OVERLAP";
+
+  if (!appointmentId || !customerId || !barberId || serviceIds.length === 0 || !date || !time) {
+    throw new AppointmentMutationError(
+      "Selecione barbeiro, servicos, data e horario para remarcar."
+    );
+  }
+
+  if (serviceIds.length > 8 || extras.length > 12 || (notes && notes.length > 400)) {
+    throw new AppointmentMutationError("Os dados do agendamento excedem o tamanho permitido.");
+  }
+
+  const currentAppointment = await db.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      items: true,
+      services: true,
+    },
+  });
+
+  if (!currentAppointment || currentAppointment.customerId !== customerId) {
+    throw new AppointmentMutationError("Agendamento nao encontrado para sua conta.");
+  }
+
+  const currentStatus = normalizeAppointmentStatus(currentAppointment.status);
+
+  if (FINAL_APPOINTMENT_STATUSES.includes(currentStatus)) {
+    throw new AppointmentMutationError("Esse agendamento nao pode mais ser remarcado.");
+  }
+
+  const now = input.now ?? new Date();
+
+  if (isScheduleDateTimePast(currentAppointment.date, now)) {
+    throw new AppointmentMutationError(
+      "Esse horario ja passou. Fale com a barbearia para remarcar."
+    );
+  }
+
+  const extrasByProductId = new Map<string, number>();
+  for (const extra of extras) {
+    extrasByProductId.set(
+      extra.extraProductId,
+      (extrasByProductId.get(extra.extraProductId) || 0) + extra.quantity
+    );
+  }
+
+  const currentReservedByProductId = new Map<string, number>();
+  for (const item of currentAppointment.items) {
+    currentReservedByProductId.set(
+      item.extraProductId,
+      (currentReservedByProductId.get(item.extraProductId) || 0) + item.quantity
+    );
+  }
+
+  const barber = await db.user.findFirst({
+    where: {
+      id: barberId,
+      role: "BARBER",
+      isActive: true,
+    },
+  });
+
+  if (!barber) {
+    throw new AppointmentMutationError("O barbeiro selecionado nao esta mais disponivel.");
+  }
+
+  const shopId = barber.shopId;
+
+  if (currentAppointment.shopId !== shopId) {
+    throw new AppointmentMutationError("Agendamento nao encontrado para esta barbearia.");
+  }
+
+  const customer = await db.user.findFirst({
+    where: {
+      id: customerId,
+      shopId,
+      role: "CUSTOMER",
+      isActive: true,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!customer) {
+    throw new AppointmentMutationError("Cliente nao autorizado para esta barbearia.");
+  }
+
+  const availableServices = await db.service.findMany({
+    where: {
+      shopId,
+      id: {
+        in: serviceIds,
+      },
+      OR: [{ barberId }, { barberId: null }],
+      isActive: true,
+    },
+  });
+
+  if (availableServices.length !== serviceIds.length) {
+    throw new AppointmentMutationError(
+      "Um ou mais servicos escolhidos nao estao disponiveis para esse barbeiro."
+    );
+  }
+
+  const serviceMap = new Map(availableServices.map((service) => [service.id, service] as const));
+  const orderedServices = serviceIds
+    .map((serviceId) => serviceMap.get(serviceId))
+    .filter(
+      (
+        service
+      ): service is (typeof availableServices)[number] => Boolean(service)
+    );
+
+  if (orderedServices.length !== serviceIds.length) {
+    throw new AppointmentMutationError(
+      "Nao foi possivel validar a ordem dos servicos selecionados."
+    );
+  }
+
+  const barberServiceCommissions = await db.barberServiceCommission.findMany({
+    where: {
+      shopId,
+      barberId,
+      serviceId: {
+        in: serviceIds,
+      },
+    },
+  });
+  const commissionByServiceId = new Map(
+    barberServiceCommissions.map((commission) => [commission.serviceId, commission] as const)
+  );
+
+  const selectedProducts = extrasByProductId.size
+      ? await db.extraProduct.findMany({
+        where: {
+          shopId,
+          id: {
+            in: Array.from(extrasByProductId.keys()),
+          },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          stock: true,
+          commissionType: true,
+          commissionValue: true,
+        },
+      })
+    : [];
+
+  if (selectedProducts.length !== extrasByProductId.size) {
+    throw new AppointmentMutationError(
+      "Um ou mais extras escolhidos nao estao mais disponiveis."
+    );
+  }
+
+  for (const product of selectedProducts) {
+    const selectedQuantity = extrasByProductId.get(product.id) || 0;
+    const quantityAlreadyReserved = currentReservedByProductId.get(product.id) || 0;
+    const availableStock = product.stock + quantityAlreadyReserved;
+
+    if (selectedQuantity > availableStock) {
+      throw new AppointmentMutationError(
+        `${product.name} nao possui estoque suficiente para esse agendamento.`
+      );
+    }
+  }
+
+  const appointmentDate = createScheduleDate(date, time);
+
+  if (!appointmentDate) {
+    throw new AppointmentMutationError("Data ou horario invalido.");
+  }
+
+  if (isScheduleDateTimePast(appointmentDate, now)) {
+    throw new AppointmentMutationError("Nao e possivel remarcar para um horario que ja passou.");
+  }
+
+  const dayOfWeek = getScheduleDayOfWeek(date);
+  const dayRange = getScheduleDayRange(date);
+
+  if (dayOfWeek === null || !dayRange) {
+    throw new AppointmentMutationError("Data ou horario invalido.");
+  }
+
+  const { start: dayStart, end: dayEnd } = dayRange;
+
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${barberId}), hashtext(${date}))`;
+
+  const [availability, sameDayAppointments, blocks, recurringBlocks] = await Promise.all([
+    db.barberAvailability.findFirst({
+      where: {
+        shopId,
+        barberId,
+        weekDay: dayOfWeek,
+        isActive: true,
+      },
+    }),
+    db.appointment.findMany({
+      where: {
+        shopId,
+        barberId,
+        date: {
+          gte: dayStart,
+          lte: dayEnd,
+        },
+      },
+      include: {
+        services: true,
+      },
+    }),
+    db.barberBlock.findMany({
+      where: {
+        shopId,
+        barberId,
+        startDateTime: {
+          lte: dayEnd,
+        },
+        endDateTime: {
+          gte: dayStart,
+        },
+      },
+    }),
+    db.recurringBarberBlock.findMany({
+      where: {
+        shopId,
+        barberId,
+        weekDay: dayOfWeek,
+        isActive: true,
+      },
+    }),
+  ]);
+
+  if (!availability) {
+    throw new AppointmentMutationError("Este barbeiro nao atende nesse dia.");
+  }
+
+  const occupiedDuration = getAppointmentDurationFromServices(orderedServices);
+  const selectedStartMinutes = toMinutes(time);
+  const selectedEndMinutes = selectedStartMinutes + occupiedDuration;
+  const availabilityStart = toMinutes(availability.startTime);
+  const availabilityEnd = toMinutes(availability.endTime);
+
+  if (selectedStartMinutes < availabilityStart || selectedEndMinutes > availabilityEnd) {
+    throw new AppointmentMutationError(
+      "O horario escolhido esta fora da disponibilidade do barbeiro."
+    );
+  }
+
+  const endDate = new Date(appointmentDate.getTime() + occupiedDuration * 60000);
+
+  if (isBlockedPeriod(appointmentDate, endDate, blocks)) {
+    throw new AppointmentMutationError("O horario escolhido esta bloqueado pelo barbeiro.");
+  }
+
+  if (isBlockedByRecurringBlock(selectedStartMinutes, selectedEndMinutes, recurringBlocks)) {
+    throw new AppointmentMutationError(
+      "O horario escolhido entra em um bloqueio recorrente do barbeiro."
+    );
+  }
+
+  const conflict = sameDayAppointments.some((appointment) => {
+    if (appointment.id === appointmentId || !isActiveAppointmentStatus(appointment.status)) {
+      return false;
+    }
+
+    const existingDate = new Date(appointment.date);
+    const existingStartMinutes = getScheduleMinutes(existingDate);
+
+    if (conflictMode === "SAME_START_ONLY") {
+      return selectedStartMinutes === existingStartMinutes;
+    }
+
+    const existingEndMinutes =
+      existingStartMinutes + getAppointmentServicesOccupiedDuration(appointment.services);
+
+    return selectedStartMinutes < existingEndMinutes && selectedEndMinutes > existingStartMinutes;
+  });
+
+  if (conflict) {
+    throw new AppointmentMutationError(
+      "Esse horario acabou de ser reservado. Escolha outro horario."
+    );
+  }
+
+  for (const item of currentAppointment.items) {
+    await db.extraProduct.update({
+      where: {
+        id: item.extraProductId,
+      },
+      data: {
+        stock: {
+          increment: item.quantity,
+        },
+      },
+    });
+
+    await registerExtraStockMovement(
+      {
+        extraProductId: item.extraProductId,
+        shopId,
+        type: "RESCHEDULE_RETURN",
+        quantity: item.quantity,
+        reason: `Devolucao por remarcacao do agendamento ${appointmentId}`,
+      },
+      db
+    );
+  }
+
+  await db.appointmentItem.deleteMany({
+    where: {
+      appointmentId,
+    },
+  });
+
+  await db.appointmentService.deleteMany({
+    where: {
+      appointmentId,
+    },
+  });
+
+  await db.appointment.update({
+    where: { id: appointmentId },
+    data: {
+      barberId,
+      date: appointmentDate,
+      notes: notes ?? currentAppointment.notes,
+      status: "CONFIRMED",
+      reminderSentAt: null,
+    },
+  });
+
+  await db.appointmentService.createMany({
+    data: orderedServices.map((service, index) => {
+      const barberCommission = commissionByServiceId.get(service.id);
+      const financials = calculateServiceFinancials({
+        price: service.price,
+        commissionType: barberCommission?.commissionType || service.commissionType,
+        commissionValue: barberCommission?.commissionValue ?? service.commissionValue,
+      });
+
+      return {
+        shopId,
+        appointmentId,
+        serviceId: service.id,
+        orderIndex: index,
+        nameSnapshot: service.name,
+        priceSnapshot: service.price,
+        durationSnapshot: service.duration,
+        bufferAfter: service.bufferAfter || 0,
+        commissionTypeSnapshot: financials.commissionType,
+        commissionValueSnapshot: financials.commissionValue,
+        barberPayoutSnapshot: financials.barberPayout,
+        shopRevenueSnapshot: financials.shopRevenue,
+      };
+    }),
+  });
+
+  if (selectedProducts.length > 0) {
+    for (const product of selectedProducts) {
+      const quantity = extrasByProductId.get(product.id) || 0;
+      const updated = await db.extraProduct.updateMany({
+        where: {
+          id: product.id,
+          isActive: true,
+          stock: {
+            gte: quantity,
+          },
+        },
+        data: {
+          stock: {
+            decrement: quantity,
+          },
+        },
+      });
+
+      if (updated.count === 0) {
+        throw new AppointmentMutationError(
+          `${product.name} acabou de ficar sem estoque. Tente novamente.`
+        );
+      }
+    }
+
+    await db.appointmentItem.createMany({
+      data: selectedProducts.map((product) => {
+        const quantity = extrasByProductId.get(product.id) || 0;
+        const unitFinancials = calculateCommissionFinancials({
+          price: product.price,
+          commissionType: product.commissionType,
+          commissionValue: product.commissionValue,
+        });
+        const productPrice = toMoneyNumber(product.price);
+        const barberPayout = roundMoney(unitFinancials.barberPayout * quantity);
+        const shopRevenue = roundMoney(unitFinancials.shopRevenue * quantity);
+
+        return {
+          shopId,
+          appointmentId,
+          extraProductId: product.id,
+          productNameSnapshot: product.name,
+          quantity,
+          unitPrice: productPrice,
+          subtotal: roundMoney(productPrice * quantity),
+          commissionTypeSnapshot: unitFinancials.commissionType,
+          commissionValueSnapshot: unitFinancials.commissionValue,
+          barberPayoutSnapshot: barberPayout,
+          shopRevenueSnapshot: shopRevenue,
+        };
+      }),
+    });
+
+    for (const product of selectedProducts) {
+      const quantity = extrasByProductId.get(product.id) || 0;
+      await registerExtraStockMovement(
+        {
+          extraProductId: product.id,
+          shopId,
+          type: "RESCHEDULE_RESERVE_OUT",
+          quantity,
+          reason: `Reserva em remarcacao do agendamento ${appointmentId}`,
+        },
+        db
+      );
+    }
+  }
+
+  const appointment = await db.appointment.findUniqueOrThrow({
+    where: {
+      id: appointmentId,
+    },
+    include: {
+      items: true,
+      services: true,
+      barber: true,
+      customer: true,
+    },
+  });
+
+  return {
+    appointment,
+    previousDate: currentAppointment.date,
+  };
 }
 
 export async function updateAppointmentStatusForBarber(

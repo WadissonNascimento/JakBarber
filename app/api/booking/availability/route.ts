@@ -4,6 +4,9 @@ import {
   BookingAvailabilityError,
   getBookingAvailability,
 } from "@/lib/bookingAvailability";
+import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
+import { prisma } from "@/lib/prisma";
+import { isScheduleDateTimePast } from "@/lib/scheduleTime";
 import {
   enforceRateLimit,
   logSecurityEvent,
@@ -38,6 +41,7 @@ export async function POST(request: Request) {
       barberId?: string;
       serviceIds?: string[];
       date?: string;
+      rescheduleAppointmentId?: string;
     };
 
     const barberId = String(body.barberId || "").trim();
@@ -45,11 +49,50 @@ export async function POST(request: Request) {
       ? body.serviceIds.map((value) => String(value).trim()).filter(Boolean)
       : [];
     const date = String(body.date || "").trim();
+    const rescheduleAppointmentId = String(body.rescheduleAppointmentId || "").trim();
+
+    if (rescheduleAppointmentId) {
+      const appointment = await prisma.appointment.findUnique({
+        where: {
+          id: rescheduleAppointmentId,
+        },
+        select: {
+          customerId: true,
+          status: true,
+          date: true,
+        },
+      });
+
+      if (!appointment || appointment.customerId !== session.user.id) {
+        logSecurityEvent("idor_blocked", {
+          route: "/api/booking/availability",
+          userId: session.user.id,
+          appointmentId: rescheduleAppointmentId,
+        });
+        return NextResponse.json(
+          { message: "Agendamento nao encontrado para sua conta." },
+          { status: 404 }
+        );
+      }
+
+      if (
+        ["CANCELLED", "COMPLETED", "NO_SHOW"].includes(
+          normalizeAppointmentStatus(appointment.status)
+        ) ||
+        isScheduleDateTimePast(appointment.date)
+      ) {
+        return NextResponse.json(
+          { message: "Esse agendamento nao pode mais ser remarcado." },
+          { status: 400 }
+        );
+      }
+    }
 
     const availability = await getBookingAvailability({
       barberId,
       serviceIds,
       date,
+      excludeAppointmentId: rescheduleAppointmentId || undefined,
     });
 
     return NextResponse.json(availability);

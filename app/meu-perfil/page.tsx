@@ -333,12 +333,14 @@ function AppointmentHistoryCard({
 
         <div className="mt-3 flex items-center gap-2">
           <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-            <Link
-              href="/agendar"
-              className="btn-primary min-h-11 rounded-xl px-3 py-2 text-sm shadow-none"
-            >
-              Remarcar
-            </Link>
+            {canCancel ? (
+              <Link
+                href={`/agendar?remarcar=${appointment.id}`}
+                className="btn-primary min-h-11 rounded-xl px-3 py-2 text-sm shadow-none"
+              >
+                Remarcar
+              </Link>
+            ) : null}
             {canCancel ? (
               <CancelAppointmentButton appointmentId={appointment.id} />
             ) : canShowCancel ? (

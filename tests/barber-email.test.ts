@@ -50,6 +50,7 @@ test("barber email orchestration wires existing business events", () => {
   }
 
   assert.match(bookingRoute, /notifyBarberNewAppointment\(appointment\.id\)/);
+  assert.match(bookingRoute, /notifyBarberAppointmentRescheduled\(\{/);
   assert.match(bookingAction, /notifyBarberNewAppointment\(appointmentId\)/);
   assert.match(customerActions, /notifyBarberAppointmentCancelled\(appointmentId/);
   assert.match(customerActions, /notifyBarberNewReview\(review\.id\)/);

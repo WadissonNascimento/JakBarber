@@ -7,6 +7,7 @@ import {
   renderCustomerAppointmentCompletedEmail,
   renderCustomerAppointmentConfirmationEmail,
   renderCustomerAppointmentReminderEmail,
+  renderCustomerAppointmentRescheduledEmail,
   renderCustomerPasswordResetEmail,
   renderCustomerVerificationCodeEmail,
   type CustomerAppointmentEmailData,
@@ -600,6 +601,24 @@ export async function sendAppointmentReminderEmail(
     template: "customer.appointment_reminder",
     eventName: "appointment_reminder",
     render: renderCustomerAppointmentReminderEmail,
+  });
+}
+
+export async function sendAppointmentRescheduledEmail(
+  payload: AppointmentCustomerEmailPayload & {
+    previousDateTimeLabel: string;
+    nextDateTimeLabel: string;
+  }
+) {
+  await sendAppointmentCustomerEmail(payload, {
+    template: "customer.appointment_rescheduled",
+    eventName: "appointment_rescheduled",
+    render: (data) =>
+      renderCustomerAppointmentRescheduledEmail({
+        ...data,
+        horarioAntigo: payload.previousDateTimeLabel,
+        novoHorario: payload.nextDateTimeLabel,
+      }),
   });
 }
 

@@ -12,11 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts",
     "images:reprocess-test": "tsx scripts/reprocess-test-product-images.ts"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "overrides": {
     "postcss": "8.5.14"

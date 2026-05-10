@@ -4,9 +4,16 @@ import { auth } from "@/auth";
 import {
   AppointmentMutationError,
   createCustomerAppointment,
+  rescheduleCustomerAppointment,
 } from "@/lib/appointmentMutations";
-import { notifyCustomerAppointmentConfirmed } from "@/lib/appointmentEmails";
-import { notifyBarberNewAppointment } from "@/lib/barberEmails";
+import {
+  notifyCustomerAppointmentConfirmed,
+  notifyCustomerAppointmentRescheduled,
+} from "@/lib/appointmentEmails";
+import {
+  notifyBarberAppointmentRescheduled,
+  notifyBarberNewAppointment,
+} from "@/lib/barberEmails";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   enforceRateLimit,
@@ -45,6 +52,7 @@ export async function POST(request: Request) {
       date?: string;
       time?: string;
       notes?: string;
+      rescheduleAppointmentId?: string;
     };
 
     const barberId = String(body.barberId || "").trim();
@@ -67,16 +75,32 @@ export async function POST(request: Request) {
     const date = String(body.date || "").trim();
     const time = String(body.time || "").trim();
     const notes = String(body.notes || "").trim();
+    const rescheduleAppointmentId = String(body.rescheduleAppointmentId || "").trim();
 
-    const appointment = await createCustomerAppointment({
-      customerId: session.user.id,
-      barberId,
-      serviceIds,
-      extras,
-      date,
-      time,
-      notes,
-    });
+    const result = rescheduleAppointmentId
+      ? await rescheduleCustomerAppointment({
+          appointmentId: rescheduleAppointmentId,
+          customerId: session.user.id,
+          barberId,
+          serviceIds,
+          extras,
+          date,
+          time,
+          notes,
+        })
+      : {
+          appointment: await createCustomerAppointment({
+            customerId: session.user.id,
+            barberId,
+            serviceIds,
+            extras,
+            date,
+            time,
+            notes,
+          }),
+          previousDate: null,
+        };
+    const appointment = result.appointment;
 
     revalidatePath("/customer/agendamentos");
     revalidatePath("/meu-perfil");
@@ -87,11 +111,26 @@ export async function POST(request: Request) {
     revalidatePath("/admin/agenda");
     revalidatePath("/agendar");
 
-    await notifyCustomerAppointmentConfirmed(appointment.id);
-    await notifyBarberNewAppointment(appointment.id);
+    if (result.previousDate) {
+      await notifyCustomerAppointmentRescheduled(
+        appointment.id,
+        result.previousDate,
+        appointment.date
+      );
+      await notifyBarberAppointmentRescheduled({
+        appointmentId: appointment.id,
+        previousDate: result.previousDate,
+        nextDate: appointment.date,
+      });
+    } else {
+      await notifyCustomerAppointmentConfirmed(appointment.id);
+      await notifyBarberNewAppointment(appointment.id);
+    }
 
     return NextResponse.json({
-      message: "Agendamento realizado com sucesso.",
+      message: result.previousDate
+        ? "Agendamento remarcado com sucesso."
+        : "Agendamento realizado com sucesso.",
       appointmentCode: formatAppointmentPublicId(appointment.publicId),
     });
   } catch (error) {

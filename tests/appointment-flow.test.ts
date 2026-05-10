@@ -6,6 +6,7 @@ import {
   AppointmentMutationError,
   cancelAppointmentByCustomer,
   createCustomerAppointment,
+  rescheduleCustomerAppointment,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
 import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
@@ -385,6 +386,72 @@ test("booking availability respects recurring blocks and ignores cancelled appoi
     assert.equal(availability.periodSlots.afternoon.includes("13:00"), false);
     assert.equal(availability.periodSlots.afternoon.includes("13:10"), false);
     assert.equal(availability.periodSlots.afternoon.includes("15:00"), true);
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("customer can reschedule and old slot becomes available", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte, pomada } = await createFixture(db, runId);
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+    const testNow = createScheduleDate(date, "08:00")!;
+
+    const appointment = await createCustomerAppointment(
+      {
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        extras: [{ extraProductId: pomada.id, quantity: 1 }],
+        date,
+        time: "10:00",
+        now: testNow,
+      },
+      db
+    );
+
+    const rescheduled = await rescheduleCustomerAppointment(
+      {
+        appointmentId: appointment.id,
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        extras: [{ extraProductId: pomada.id, quantity: 1 }],
+        date,
+        time: "11:00",
+        now: testNow,
+      },
+      db
+    );
+
+    assert.equal(rescheduled.appointment.id, appointment.id);
+    assert.equal(rescheduled.previousDate.getUTCHours(), 10);
+    assert.equal(new Date(rescheduled.appointment.date).getUTCHours(), 11);
+    assert.equal(rescheduled.appointment.items.length, 1);
+
+    const productAfterReschedule = await db.extraProduct.findUniqueOrThrow({
+      where: {
+        id: pomada.id,
+      },
+    });
+    assert.equal(productAfterReschedule.stock, 3);
+
+    const availability = await getBookingAvailability(
+      {
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        now: testNow,
+      },
+      db
+    );
+
+    assert.equal(availability.periodSlots.morning.includes("10:00"), true);
+    assert.equal(availability.periodSlots.morning.includes("11:00"), false);
   } finally {
     await cleanup();
     await db.$disconnect();

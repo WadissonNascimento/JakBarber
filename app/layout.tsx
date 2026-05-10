@@ -1,5 +1,4 @@
 import "./globals.css";
-import { CartProvider } from "@/context/CartContext";
 import AppChrome from "@/components/AppChrome";
 import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
 import { Manrope, Space_Grotesk } from "next/font/google";
@@ -96,21 +95,19 @@ export default async function RootLayout({
         className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[var(--app-bg)] text-[var(--text-primary)]`}
       >
         <ClientRuntimeGuard />
-        <CartProvider>
-          <AppChrome
-            brandName={brandName}
-            logoPath={logoPath}
-            publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
-            role={role}
-            userName={session?.user?.name || null}
-            whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
-            instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
-            addressLine={shop.addressLine || "Osasco, SP"}
-            businessHours={shop.businessHours || "Terca a domingo, das 09h as 20h"}
-          >
-            {children}
-          </AppChrome>
-        </CartProvider>
+        <AppChrome
+          brandName={brandName}
+          logoPath={logoPath}
+          publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
+          role={role}
+          userName={session?.user?.name || null}
+          whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
+          instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
+          addressLine={shop.addressLine || "Osasco, SP"}
+          businessHours={shop.businessHours || "Terca a domingo, das 09h as 20h"}
+        >
+          {children}
+        </AppChrome>
       </body>
     </html>
   );
