@@ -7,19 +7,24 @@ import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import ServiceCommissionListClient from "./ServiceCommissionListClient";
 
+export const dynamic = "force-dynamic";
+
+type AdminBarberRouteParams = {
+  params: Promise<{ barberId: string }>;
+};
+
 export default async function BarberServicesPage({
   params,
-}: {
-  params: { barberId: string };
-}) {
+}: AdminBarberRouteParams) {
   const session = await auth();
+  const { barberId } = await params;
 
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/painel");
 
   const barber = await prisma.user.findFirst({
     where: {
-      id: params.barberId,
+      id: barberId,
       role: "BARBER",
     },
   });

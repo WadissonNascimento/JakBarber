@@ -28,8 +28,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(getConfiguredAppUrl()),
     title: {
-      default: shop.metadataTitle || `${brandName} | Barbearia com hora marcada`,
-      template: `%s | ${brandName}`,
+      default: "JakBarber",
+      template: "JakBarber",
     },
     description,
     icons: {
