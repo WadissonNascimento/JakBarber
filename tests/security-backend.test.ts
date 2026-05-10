@@ -44,11 +44,27 @@ test("barber actions use the authenticated barber id instead of trusting form id
   assert.match(actions, /Cliente nao vinculado a este barbeiro/);
 });
 
+test("barber tip action stores tips only for the authenticated barber", () => {
+  const actions = read("app/barber/caixinhas/actions.ts");
+  const schema = read("prisma/schema.prisma");
+  const adminActions = read("app/admin/caixinhas/actions.ts");
+
+  assert.match(actions, /const \{ session, barber \} = await requireActiveBarber\(\)/);
+  assert.match(actions, /barberId:\s*barber\.id/);
+  assert.doesNotMatch(actions, /barberId:\s*formData\.get/);
+  assert.match(actions, /scope:\s*"barber_tip:create"/);
+  assert.match(schema, /model BarberTip/);
+  assert.match(schema, /amount\s+Decimal\s+@db\.Decimal\(12, 2\)/);
+  assert.match(adminActions, /groupBy\(\{/);
+  assert.match(adminActions, /skip:\s*\(safePage - 1\) \* DETAIL_PAGE_SIZE/);
+});
+
 test("admin-only pages and export routes enforce admin role", () => {
   for (const file of [
     "app/admin/page.tsx",
     "app/admin/financeiro/page.tsx",
     "app/admin/agenda/export/route.ts",
+    "app/admin/caixinhas/page.tsx",
   ]) {
     assert.match(read(file), /role !== "ADMIN"/, file);
   }

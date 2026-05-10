@@ -5,6 +5,7 @@ import {
   MessageSquareText,
   PackagePlus,
   PackageSearch,
+  PiggyBank,
   Scissors,
   UserRound,
   UsersRound,
@@ -177,6 +178,12 @@ export default async function AdminPage() {
       title: "Financeiro",
       description: "Faturamento, repasses e fechamentos.",
       badge: openPayouts ? `${openPayouts}` : undefined,
+    },
+    {
+      href: "/admin/caixinhas",
+      icon: PiggyBank,
+      title: "Caixinhas dos barbeiros",
+      description: "Resumo e detalhes das caixinhas registradas.",
     },
   ];
 

@@ -34,6 +34,7 @@ const protectedTables = [
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
+  "BarberTip",
   "EmailDeliveryLog",
   "RateLimitBucket",
 ];
