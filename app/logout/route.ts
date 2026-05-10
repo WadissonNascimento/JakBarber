@@ -18,8 +18,8 @@ const COOKIE_NAMES = [
 
 export async function GET(request: Request) {
   const url = new URL("/login", getRequestAwareAppUrl(request.url));
-  const response = NextResponse.redirect(url);
-  response.headers.set("Clear-Site-Data", '"cache", "cookies", "storage"');
+  const response = NextResponse.redirect(url, { status: 303 });
+  response.headers.set("Cache-Control", "no-store");
 
   for (const name of COOKIE_NAMES) {
     response.cookies.set({

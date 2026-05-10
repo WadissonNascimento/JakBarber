@@ -22,6 +22,42 @@ import {
   readJsonWithLimit,
 } from "@/lib/security";
 
+function runBookingNotifications({
+  appointmentId,
+  previousDate,
+  nextDate,
+}: {
+  appointmentId: string;
+  previousDate: Date | null;
+  nextDate: Date;
+}) {
+  const jobs = previousDate
+    ? [
+        notifyCustomerAppointmentRescheduled(appointmentId, previousDate, nextDate),
+        notifyBarberAppointmentRescheduled({
+          appointmentId,
+          previousDate,
+          nextDate,
+        }),
+      ]
+    : [
+        notifyCustomerAppointmentConfirmed(appointmentId),
+        notifyBarberNewAppointment(appointmentId),
+      ];
+
+  void Promise.allSettled(jobs).then((results) => {
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        console.warn(
+          `[email] Falha em notificacao pos-agendamento ${appointmentId}: ${
+            result.reason instanceof Error ? result.reason.message : "erro desconhecido"
+          }`
+        );
+      }
+    });
+  });
+}
+
 export async function POST(request: Request) {
   const session = await auth();
 
@@ -111,21 +147,11 @@ export async function POST(request: Request) {
     revalidatePath("/admin/agenda");
     revalidatePath("/agendar");
 
-    if (result.previousDate) {
-      await notifyCustomerAppointmentRescheduled(
-        appointment.id,
-        result.previousDate,
-        appointment.date
-      );
-      await notifyBarberAppointmentRescheduled({
-        appointmentId: appointment.id,
-        previousDate: result.previousDate,
-        nextDate: appointment.date,
-      });
-    } else {
-      await notifyCustomerAppointmentConfirmed(appointment.id);
-      await notifyBarberNewAppointment(appointment.id);
-    }
+    runBookingNotifications({
+      appointmentId: appointment.id,
+      previousDate: result.previousDate,
+      nextDate: appointment.date,
+    });
 
     return NextResponse.json({
       message: result.previousDate

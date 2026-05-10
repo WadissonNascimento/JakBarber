@@ -418,35 +418,42 @@ export default function BookingClient({
         extrasPrice: selectedExtrasPrice,
         totalPrice: selectedTotalPrice,
       });
+      setBookingSlot(null);
 
-      const refreshed = await fetch("/api/booking/availability", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          barberId: selectedBarberId,
-          serviceIds: selectedServiceIds,
-          date: selectedDate,
-          rescheduleAppointmentId,
-        }),
-      });
+      void (async () => {
+        try {
+          const refreshed = await fetch("/api/booking/availability", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              barberId: selectedBarberId,
+              serviceIds: selectedServiceIds,
+              date: selectedDate,
+              rescheduleAppointmentId,
+            }),
+          });
 
-      if (refreshed.ok) {
-        const refreshedData = (await refreshed.json()) as {
-          isDayAvailable?: boolean;
-          periodSlots?: PeriodSlots;
-        };
+          if (refreshed.ok) {
+            const refreshedData = (await refreshed.json()) as {
+              isDayAvailable?: boolean;
+              periodSlots?: PeriodSlots;
+            };
 
-        setIsDayAvailable(Boolean(refreshedData.isDayAvailable));
-        setPeriodSlots(
-          refreshedData.periodSlots || {
-            morning: [],
-            afternoon: [],
-            night: [],
+            setIsDayAvailable(Boolean(refreshedData.isDayAvailable));
+            setPeriodSlots(
+              refreshedData.periodSlots || {
+                morning: [],
+                afternoon: [],
+                night: [],
+              }
+            );
           }
-        );
-      }
+        } catch {
+          // A reserva ja foi concluida; a disponibilidade sera atualizada no proximo carregamento.
+        }
+      })();
     } catch (error) {
       setBookingError(
         error instanceof Error
