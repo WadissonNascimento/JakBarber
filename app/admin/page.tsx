@@ -12,7 +12,9 @@ import {
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import AccountPasswordForm from "@/components/AccountPasswordForm";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
+import { updateOwnAccountPasswordAction } from "@/app/accountPasswordActions";
 import {
   getCurrentScheduleDateValue,
   getScheduleDayRange,
@@ -213,6 +215,14 @@ export default async function AdminPage() {
               helper="atendimentos concluídos"
             />
           </div>
+        </section>
+
+        <section className="mt-4 max-w-xl">
+          <AccountPasswordForm
+            action={updateOwnAccountPasswordAction}
+            title="Senha do admin"
+            description="Atualize a senha usada para entrar no painel administrativo."
+          />
         </section>
 
         <section className="mt-10">
