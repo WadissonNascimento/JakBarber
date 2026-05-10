@@ -152,21 +152,15 @@ export default function HomeClient({
                   onTouchEnd={handleTouchEnd}
                 >
                   <div className="relative h-[290px] w-full sm:h-[360px] md:h-[420px] lg:h-[560px] xl:h-[620px]">
-                    {corteImages.map((src, index) => (
-                      <Image
-                        key={src}
-                        src={src}
-                        alt={`Corte ${index + 1}`}
-                        fill
-                        sizes="(max-width: 1024px) 100vw, 560px"
-                        priority={index === 0}
-                        className={`object-cover transition-all duration-700 ease-out ${
-                          current === index
-                            ? "scale-100 opacity-100"
-                            : "scale-[1.03] opacity-0"
-                        }`}
-                      />
-                    ))}
+                    <Image
+                      key={corteImages[current]}
+                      src={corteImages[current]}
+                      alt={`Corte ${current + 1}`}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 560px"
+                      priority={current === 0}
+                      className="object-cover transition-all duration-700 ease-out"
+                    />
                   </div>
 
                   <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
