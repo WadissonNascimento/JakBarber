@@ -13,15 +13,18 @@ type SearchParams = {
   tone?: string;
 };
 
+type BarberAgendaPageProps = {
+  searchParams: Promise<SearchParams>;
+};
+
 export default async function BarberAgendaPage({
   searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+}: BarberAgendaPageProps) {
   noStore();
 
   const { barber } = await requireActiveBarber();
-  const dashboard = await getBarberDashboardData(barber.id, searchParams);
+  const filters = await searchParams;
+  const dashboard = await getBarberDashboardData(barber.id, filters);
   const barberName = barber.name || "Barbeiro";
 
   return (

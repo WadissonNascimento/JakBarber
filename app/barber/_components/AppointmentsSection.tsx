@@ -125,6 +125,7 @@ export function AppointmentsSection({
     }
 
     if (date) {
+      params.set("view", "day");
       params.set("date", date);
     }
 
