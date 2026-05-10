@@ -20,10 +20,7 @@ import {
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
 import { ensureAdminBarberProfile } from "@/lib/barberAccess";
-import {
-  appointmentForAdminSelect,
-  appointmentForTotalsSelect,
-} from "@/lib/appointmentSelects";
+import { appointmentForTotalsSelect } from "@/lib/appointmentSelects";
 import { toMoneyNumber } from "@/lib/money";
 import { formatCurrency } from "@/lib/utils";
 
@@ -52,7 +49,8 @@ export default async function AdminPage() {
     openPayouts,
     pendingInvites,
     visibleReviews,
-    todayAppointments,
+    todayAppointmentsCount,
+    canceledTodayAppointments,
     completedTodayAppointments,
   ] = await Promise.all([
     prisma.user.count({
@@ -86,16 +84,23 @@ export default async function AdminPage() {
         isVisible: true,
       },
     }),
-    prisma.appointment.findMany({
+    prisma.appointment.count({
       where: {
         date: {
           gte: todayStart,
           lte: todayEnd,
         },
       },
-      select: appointmentForAdminSelect,
-      orderBy: {
-        date: "asc",
+    }),
+    prisma.appointment.count({
+      where: {
+        date: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
+        status: {
+          in: ["CANCELED", "CANCELLED", "NO_SHOW"],
+        },
       },
     }),
     prisma.appointment.findMany({
@@ -120,10 +125,6 @@ export default async function AdminPage() {
       ),
     0
   );
-  const canceledTodayAppointments = todayAppointments.filter((appointment) =>
-    ["CANCELED", "CANCELLED", "NO_SHOW"].includes(appointment.status)
-  ).length;
-
   const entries = [
     {
       href: "/barber",
@@ -199,7 +200,7 @@ export default async function AdminPage() {
             <AdminMetric
               icon={<CalendarRange />}
               label="Atendimentos"
-              value={`${todayAppointments.length}`}
+              value={`${todayAppointmentsCount}`}
               helper={`${completedTodayAppointments.length} concluídos · ${canceledTodayAppointments} cancelados`}
             />
             <AdminMetric

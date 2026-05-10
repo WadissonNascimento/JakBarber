@@ -49,7 +49,7 @@ test("barber email orchestration wires existing business events", () => {
     assert.match(barberEmails, new RegExp(`export async function ${notifyName}`));
   }
 
-  assert.match(bookingRoute, /notifyBarberNewAppointment\(appointment\.id\)/);
+  assert.match(bookingRoute, /notifyBarberNewAppointment\(appointmentId\)/);
   assert.match(bookingRoute, /notifyBarberAppointmentRescheduled\(\{/);
   assert.match(bookingAction, /notifyBarberNewAppointment\(appointmentId\)/);
   assert.match(customerActions, /notifyBarberAppointmentCancelled\(appointmentId/);

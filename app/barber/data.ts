@@ -28,6 +28,8 @@ export type BarberDashboardFilters = {
   date?: string;
 };
 
+const DASHBOARD_CLIENT_HISTORY_LIMIT = 200;
+
 function normalizeDashboardView(
   view?: BarberDashboardFilters["view"]
 ): "day" | "upcoming" | "all" {
@@ -315,6 +317,7 @@ export async function getBarberDashboardData(
         orderBy: {
           date: "desc",
         },
+        take: DASHBOARD_CLIENT_HISTORY_LIMIT,
       }),
       prisma.service.findMany({
         where: {
@@ -515,6 +518,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
       orderBy: {
         date: "desc",
       },
+      take: DASHBOARD_CLIENT_HISTORY_LIMIT,
     }),
   ]);
 

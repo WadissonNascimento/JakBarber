@@ -10,7 +10,7 @@ function read(path: string) {
 test("customer appointment flows send notification emails from backend actions", () => {
   assert.match(
     read("app/api/booking/appointments/route.ts"),
-    /notifyCustomerAppointmentConfirmed\(appointment\.id\)/
+    /notifyCustomerAppointmentConfirmed\(appointmentId\)/
   );
   assert.match(
     read("app/api/booking/appointments/route.ts"),

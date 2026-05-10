@@ -53,10 +53,11 @@ function getSearchParam(value?: string | string[]) {
 }
 
 export default async function AgendarPage({
-  searchParams = {},
+  searchParams,
 }: {
-  searchParams?: AgendarPageSearchParams;
+  searchParams?: Promise<AgendarPageSearchParams>;
 }) {
+  const resolvedSearchParams = (await searchParams) || {};
   const session = await auth();
 
   if (!session?.user) {
@@ -118,7 +119,7 @@ export default async function AgendarPage({
     }),
   ]);
   let extras = initialExtras;
-  const rescheduleAppointmentId = getSearchParam(searchParams.remarcar).trim();
+  const rescheduleAppointmentId = getSearchParam(resolvedSearchParams.remarcar).trim();
   let rescheduleAppointment: {
     id: string;
     appointmentCode: string;

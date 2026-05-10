@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
+import { basePrisma } from "@/lib/prisma-core";
 import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -10,26 +11,36 @@ export const metadata = {
   description: "Produtos selecionados para rotina, bancada e revenda.",
 };
 
+const getPublicProducts = unstable_cache(
+  async (shopId: string) =>
+    basePrisma.product.findMany({
+      where: {
+        shopId,
+        isActive: true,
+        stock: {
+          gt: 0,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        imageUrl: true,
+      },
+    }),
+  ["public-products"],
+  {
+    revalidate: 300,
+  }
+);
+
 export default async function ProdutosPage() {
   const shop = await getCurrentShop();
-  const products = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      stock: {
-        gt: 0,
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      price: true,
-      imageUrl: true,
-    },
-  });
+  const products = await getPublicProducts(shop.id);
 
   return (
     <main className="min-h-screen text-white">

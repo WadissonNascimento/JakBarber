@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
+import { basePrisma } from "@/lib/prisma-core";
+import { getCurrentShopId } from "@/lib/shop";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata = {
@@ -7,25 +9,36 @@ export const metadata = {
   description: "Veja cortes, barba e serviços disponíveis na Jak Barber.",
 };
 
-export default async function ServicosPage() {
-  const services = await prisma.service.findMany({
-    where: {
-      isActive: true,
-    },
-    orderBy: [{ barberId: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      price: true,
-      duration: true,
-      barber: {
-        select: {
-          name: true,
+const getPublicServices = unstable_cache(
+  async (shopId: string) =>
+    basePrisma.service.findMany({
+      where: {
+        shopId,
+        isActive: true,
+      },
+      orderBy: [{ barberId: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        duration: true,
+        barber: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ["public-services"],
+  {
+    revalidate: 300,
+  }
+);
+
+export default async function ServicosPage() {
+  const shopId = await getCurrentShopId();
+  const services = await getPublicServices(shopId);
 
   return (
     <main className="page-shell max-w-5xl text-white">

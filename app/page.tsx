@@ -1,26 +1,39 @@
-import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
+import { basePrisma } from "@/lib/prisma-core";
+import { getCurrentShopId } from "@/lib/shop";
 import HomeClient, { type HomeReview } from "./HomeClient";
 
-export default async function HomePage() {
-  const reviews = await prisma.review.findMany({
-    where: {
-      isVisible: true,
-    },
-    select: {
-      id: true,
-      rating: true,
-      comment: true,
-      customer: {
-        select: {
-          name: true,
+const getHomeReviews = unstable_cache(
+  async (shopId: string) =>
+    basePrisma.review.findMany({
+      where: {
+        shopId,
+        isVisible: true,
+      },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        customer: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 4,
-  });
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 4,
+    }),
+  ["home-reviews"],
+  {
+    revalidate: 300,
+  }
+);
+
+export default async function HomePage() {
+  const shopId = await getCurrentShopId();
+  const reviews = await getHomeReviews(shopId);
 
   const homeReviews: HomeReview[] = reviews.slice(0, 3).map((review) => ({
     id: review.id,

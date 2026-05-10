@@ -53,6 +53,33 @@ export type ShopRuntimeConfig = Pick<
   | "brandColorMuted"
 >;
 
+type ShopCacheEntry = {
+  expiresAt: number;
+  value: ShopRuntimeConfig | null;
+};
+
+const SHOP_CACHE_TTL_MS = 60_000;
+const shopRuntimeCache = new Map<string, ShopCacheEntry>();
+const shopRuntimeSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  primaryDomain: true,
+  isDefault: true,
+  isActive: true,
+  metadataTitle: true,
+  metadataDescription: true,
+  whatsappNumber: true,
+  instagramUrl: true,
+  addressLine: true,
+  businessHours: true,
+  logoPath: true,
+  faviconPath: true,
+  brandColor: true,
+  brandColorStrong: true,
+  brandColorMuted: true,
+} satisfies Record<keyof ShopRuntimeConfig, true>;
+
 function normalizeHost(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -99,34 +126,28 @@ export async function getRequestHost() {
 }
 
 const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConfig | null> => {
+  const cacheKey = host || "__default__";
+  const now = Date.now();
+  const cached = shopRuntimeCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
   if (host) {
     const shopByDomain = await basePrisma.shop.findFirst({
       where: {
         isActive: true,
         primaryDomain: host,
       },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        primaryDomain: true,
-        isDefault: true,
-        isActive: true,
-        metadataTitle: true,
-        metadataDescription: true,
-        whatsappNumber: true,
-        instagramUrl: true,
-        addressLine: true,
-        businessHours: true,
-        logoPath: true,
-        faviconPath: true,
-        brandColor: true,
-        brandColorStrong: true,
-        brandColorMuted: true,
-      },
+      select: shopRuntimeSelect,
     });
 
     if (shopByDomain) {
+      shopRuntimeCache.set(cacheKey, {
+        expiresAt: now + SHOP_CACHE_TTL_MS,
+        value: shopByDomain,
+      });
       return shopByDomain;
     }
   }
@@ -137,25 +158,7 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
         isActive: true,
         isDefault: true,
       },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        primaryDomain: true,
-        isDefault: true,
-        isActive: true,
-        metadataTitle: true,
-        metadataDescription: true,
-        whatsappNumber: true,
-        instagramUrl: true,
-        addressLine: true,
-        businessHours: true,
-        logoPath: true,
-        faviconPath: true,
-        brandColor: true,
-        brandColorStrong: true,
-        brandColorMuted: true,
-      },
+      select: shopRuntimeSelect,
     })) ||
     (await basePrisma.shop.findFirst({
       where: {
@@ -164,26 +167,13 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
       orderBy: {
         createdAt: "asc",
       },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        primaryDomain: true,
-        isDefault: true,
-        isActive: true,
-        metadataTitle: true,
-        metadataDescription: true,
-        whatsappNumber: true,
-        instagramUrl: true,
-        addressLine: true,
-        businessHours: true,
-        logoPath: true,
-        faviconPath: true,
-        brandColor: true,
-        brandColorStrong: true,
-        brandColorMuted: true,
-      },
+      select: shopRuntimeSelect,
     }));
+
+  shopRuntimeCache.set(cacheKey, {
+    expiresAt: now + SHOP_CACHE_TTL_MS,
+    value: defaultShop,
+  });
 
   return defaultShop;
 });
