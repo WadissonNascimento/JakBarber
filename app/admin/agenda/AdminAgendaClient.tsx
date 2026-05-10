@@ -167,8 +167,8 @@ export default function AdminAgendaClient({
   }
 
   return (
-    <DashboardShell size="wide" className="space-y-5">
-      <section className="dashboard-panel dashboard-panel-overflow-visible relative z-20 p-4 sm:p-6">
+    <DashboardShell size="wide" className="max-w-full space-y-5 overflow-x-hidden">
+      <section className="dashboard-panel relative z-20 max-w-full p-3 sm:p-6">
         <div className="mb-5">
           <BackLink href="/admin" area="Admin" />
         </div>
@@ -188,7 +188,7 @@ export default function AdminAgendaClient({
           </div>
 
         </div>
-        <div className="mt-5 border-t border-white/10 pt-5">
+        <div className="mt-5 min-w-0 border-t border-white/10 pt-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
@@ -340,7 +340,7 @@ export default function AdminAgendaClient({
           </div>
         ) : (
           <>
-            <div className="mt-5 grid gap-3 md:hidden">
+            <div className="mt-5 grid min-w-0 max-w-full gap-3 overflow-hidden md:hidden">
               {visibleAppointments.map((appointment) => (
                 <AppointmentMobileCard
                   key={appointment.id}
@@ -533,9 +533,9 @@ function AppointmentMobileCard({
   const notes = appointment.notes?.trim();
 
   return (
-    <article className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+    <article className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
             {formatAppointmentPublicId(appointment.publicId)}
           </p>
@@ -545,13 +545,13 @@ function AppointmentMobileCard({
         </div>
         <StatusBadge
           variant={appointmentStatusVariant(appointment.status)}
-          className="shrink-0"
+          className="max-w-[132px] shrink-0 justify-center px-2.5 text-[10px]"
         >
           {appointmentStatusLabel(appointment.status)}
         </StatusBadge>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-2">
         <InfoTile icon={<CalendarDays />} label="Data" value={formatScheduleDate(date)} />
         <InfoTile icon={<Clock3 />} label="Hora" value={formatScheduleTime(date)} />
         <InfoTile
@@ -562,7 +562,7 @@ function AppointmentMobileCard({
         <InfoTile icon={<BadgeDollarSign />} label="Valor" value={formatCurrency(total)} />
       </div>
 
-      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+      <div className="mt-3 min-w-0 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
         <div className="flex items-start gap-2">
           <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
           <div className="min-w-0">
@@ -605,14 +605,14 @@ function InfoTile({
   value: string;
 }) {
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-3">
       <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
         <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
           {icon}
         </span>
         <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-sm font-semibold text-white">{value}</p>
+      <p className="mt-2 break-words text-sm font-semibold text-white">{value}</p>
     </div>
   );
 }
