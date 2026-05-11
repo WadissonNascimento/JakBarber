@@ -97,6 +97,18 @@ export async function POST(request: Request) {
 
     return NextResponse.json(availability);
   } catch (error) {
+    const aborted =
+      request.signal.aborted ||
+      (error instanceof Error && error.message.toLowerCase().includes("aborted")) ||
+      (typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: unknown }).code === "ECONNRESET");
+
+    if (aborted) {
+      return new Response(null, { status: 204 });
+    }
+
     if (error instanceof Error && error.message === "PAYLOAD_TOO_LARGE") {
       return NextResponse.json({ message: "Requisicao muito grande." }, { status: 413 });
     }

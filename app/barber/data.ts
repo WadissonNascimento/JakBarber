@@ -197,8 +197,6 @@ export async function getBarberDashboardData(
   });
 
   const [
-    appointmentsToday,
-    completedToday,
     todayAppointments,
     upcomingAppointments,
     services,
@@ -211,30 +209,6 @@ export async function getBarberDashboardData(
     walkInExtras,
   ] =
     await Promise.all([
-      prisma.appointment.count({
-        where: {
-          barberId,
-          date: {
-            gte: todayStart,
-            lte: todayEnd,
-          },
-          status: {
-            notIn: ["CANCELLED"],
-          },
-        },
-      }),
-      prisma.appointment.count({
-        where: {
-          barberId,
-          date: {
-            gte: todayStart,
-            lte: todayEnd,
-          },
-          status: {
-            in: ["COMPLETED", "DONE"],
-          },
-        },
-      }),
       prisma.appointment.findMany({
         where: {
           barberId,
@@ -364,6 +338,8 @@ export async function getBarberDashboardData(
   const completedTodayAppointments = normalizedTodayAppointments.filter(
     (appointment) => appointment.status === "COMPLETED"
   );
+  const appointmentsToday = normalizedTodayAppointments.length;
+  const completedToday = completedTodayAppointments.length;
   const todayServiceMap = new Map<string, number>();
 
   for (const appointment of activeTodayAppointments) {
@@ -526,38 +502,12 @@ export async function getBarberTodayDashboardData(barberId: string) {
   );
 
   const [
-    appointmentsToday,
-    completedToday,
     todayAppointments,
     walkInServices,
     walkInExtras,
     clientNotes,
     allBarberAppointments,
   ] = await Promise.all([
-    prisma.appointment.count({
-      where: {
-        barberId,
-        date: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        status: {
-          notIn: ["CANCELLED"],
-        },
-      },
-    }),
-    prisma.appointment.count({
-      where: {
-        barberId,
-        date: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        status: {
-          in: ["COMPLETED", "DONE"],
-        },
-      },
-    }),
     prisma.appointment.findMany({
       where: {
         barberId,
@@ -633,6 +583,8 @@ export async function getBarberTodayDashboardData(barberId: string) {
   const completedTodayAppointments = normalizedTodayAppointments.filter(
     (appointment) => appointment.status === "COMPLETED"
   );
+  const appointmentsToday = normalizedTodayAppointments.length;
+  const completedToday = completedTodayAppointments.length;
   const todayServiceMap = new Map<string, number>();
 
   for (const appointment of activeTodayAppointments) {

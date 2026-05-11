@@ -73,7 +73,7 @@ export default async function MeuPerfilPage() {
     redirect("/painel");
   }
 
-  const [customer, appointments, pendingEmailChange] = await Promise.all([
+  const [customer, appointmentStats, recentAppointments, pendingEmailChange] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
     }),
@@ -81,15 +81,62 @@ export default async function MeuPerfilPage() {
       where: {
         customerId: session.user.id,
       },
-      include: {
-        barber: true,
-        items: true,
-        review: true,
-        services: true,
+      select: {
+        id: true,
+        status: true,
+        services: {
+          select: {
+            nameSnapshot: true,
+            orderIndex: true,
+          },
+        },
       },
       orderBy: {
         date: "desc",
       },
+    }),
+    prisma.appointment.findMany({
+      where: {
+        customerId: session.user.id,
+      },
+      select: {
+        id: true,
+        publicId: true,
+        date: true,
+        status: true,
+        notes: true,
+        barber: {
+          select: {
+            name: true,
+            phone: true,
+          },
+        },
+        review: {
+          select: {
+            id: true,
+          },
+        },
+        services: {
+          select: {
+            nameSnapshot: true,
+            orderIndex: true,
+            priceSnapshot: true,
+            durationSnapshot: true,
+            bufferAfter: true,
+          },
+        },
+        items: {
+          select: {
+            productNameSnapshot: true,
+            quantity: true,
+            subtotal: true,
+          },
+        },
+      },
+      orderBy: {
+        date: "desc",
+      },
+      take: 3,
     }),
     prisma.emailChangeRequest.findFirst({
       where: {
@@ -104,7 +151,7 @@ export default async function MeuPerfilPage() {
 
   const favoriteServiceMap = new Map<string, number>();
 
-  for (const appointment of appointments) {
+  for (const appointment of appointmentStats) {
     const serviceName = getAppointmentDisplayName(appointment.services);
     favoriteServiceMap.set(
       serviceName,
@@ -115,11 +162,10 @@ export default async function MeuPerfilPage() {
   const favoriteService =
     Array.from(favoriteServiceMap.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ||
     null;
-  const completedAppointments = appointments.filter((appointment) =>
+  const completedAppointments = appointmentStats.filter((appointment) =>
     ["COMPLETED", "DONE"].includes(appointment.status)
   );
   const customerName = customer?.name || "Cliente";
-  const recentAppointments = appointments.slice(0, 3);
 
   return (
     <DashboardShell size="wide" className="min-w-0 max-w-full overflow-hidden">
@@ -167,7 +213,7 @@ export default async function MeuPerfilPage() {
               <MiniStat
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="Atendimento"
-                value={appointments.length}
+                value={appointmentStats.length}
               />
               <MiniStat
                 icon={<Star className="h-4 w-4" />}
@@ -189,7 +235,7 @@ export default async function MeuPerfilPage() {
               className="rounded-[28px]"
             >
               <div className="space-y-3">
-                {appointments.length === 0 ? (
+                {appointmentStats.length === 0 ? (
                   <EmptyState
                     title="Sem atendimentos registrados"
                     description="Assim que você reservar ou concluir atendimentos, o histórico aparece aqui."
@@ -205,7 +251,7 @@ export default async function MeuPerfilPage() {
                       />
                     ))}
 
-                    {appointments.length > recentAppointments.length ? (
+                    {appointmentStats.length > recentAppointments.length ? (
                       <Link
                         href="/customer/agendamentos"
                         className="btn-secondary min-h-11 w-full rounded-2xl px-4 py-3 text-sm"

@@ -21,7 +21,6 @@ import {
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
 import { ensureAdminBarberProfile } from "@/lib/barberAccess";
-import { appointmentForTotalsSelect } from "@/lib/appointmentSelects";
 import { toMoneyNumber } from "@/lib/money";
 import { formatCurrency } from "@/lib/utils";
 
@@ -114,7 +113,13 @@ export default async function AdminPage() {
           in: ["COMPLETED", "DONE"],
         },
       },
-      select: appointmentForTotalsSelect,
+      select: {
+        services: {
+          select: {
+            priceSnapshot: true,
+          },
+        },
+      },
     }),
   ]);
   const todayRevenue = completedTodayAppointments.reduce(
