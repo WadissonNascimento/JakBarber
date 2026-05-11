@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PremiumDatePicker } from "@/components/ui/PremiumFilters";
 
@@ -12,95 +13,49 @@ export default function BarberFinanceFilters({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [selectedStart, setSelectedStart] = useState(start);
+  const [selectedEnd, setSelectedEnd] = useState(end);
 
-  function updateFilter(name: string, value: string) {
+  useEffect(() => {
+    setSelectedStart(start);
+    setSelectedEnd(end);
+  }, [start, end]);
+
+  function applyManualRange() {
     const params = new URLSearchParams(searchParams.toString());
-
-    if (value) {
-      params.set(name, value);
-    } else {
-      params.delete(name);
-    }
+    params.set("start", selectedStart);
+    params.set("end", selectedEnd);
 
     router.replace(`/barber/financeiro?${params.toString()}`);
   }
 
-  function applyQuickRange(days: number) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days + 1);
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("start", toDateValue(startDate));
-    params.set("end", toDateValue(endDate));
-    router.replace(`/barber/financeiro?${params.toString()}`);
-  }
-
-  function applyCurrentWeek() {
-    const startDate = new Date();
-    const day = startDate.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    startDate.setDate(startDate.getDate() + diff);
-
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("start", toDateValue(startDate));
-    params.set("end", toDateValue(endDate));
-    router.replace(`/barber/financeiro?${params.toString()}`);
-  }
+  const canApply = Boolean(selectedStart && selectedEnd);
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <PremiumDatePicker
-          label="Início"
-          value={start}
-          onChange={(value) => updateFilter("start", value)}
+          label="Inicio"
+          value={selectedStart}
+          onChange={setSelectedStart}
+          required
         />
         <PremiumDatePicker
           label="Fim"
-          value={end}
-          onChange={(value) => updateFilter("end", value)}
+          value={selectedEnd}
+          onChange={setSelectedEnd}
+          required
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <QuickRangeButton onClick={applyCurrentWeek}>Semana atual</QuickRangeButton>
-        <QuickRangeButton onClick={() => applyQuickRange(7)}>7 dias</QuickRangeButton>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <QuickRangeButton onClick={() => applyQuickRange(30)}>30 dias</QuickRangeButton>
-        <QuickRangeButton onClick={() => applyQuickRange(90)}>90 dias</QuickRangeButton>
-      </div>
+      <button
+        type="button"
+        onClick={applyManualRange}
+        disabled={!canApply}
+        className="min-h-11 w-full rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Aplicar filtro
+      </button>
     </div>
   );
-}
-
-function QuickRangeButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="min-h-10 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:border-[var(--brand)]/45 hover:bg-[var(--brand-muted)] hover:text-white"
-    >
-      {children}
-    </button>
-  );
-}
-
-function toDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
 }

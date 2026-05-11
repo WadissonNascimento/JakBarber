@@ -15,6 +15,10 @@ import {
 import { appointmentForBarberSelect } from "@/lib/appointmentSelects";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import {
+  getCurrentScheduleDateValue,
+  getScheduleDayRange,
+} from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import { requireActiveBarber } from "../guard";
 import BarberFinanceFilters from "./BarberFinanceFilters";
@@ -270,44 +274,26 @@ function FinanceMetricCard({
 }
 
 function resolveFinanceRange(searchParams: SearchParams) {
-  const currentWeek = getCurrentWeekRange();
-  const start = parseDateValue(searchParams.start) || toDateValue(currentWeek.start);
-  const end = parseDateValue(searchParams.end) || toDateValue(currentWeek.end);
+  const today = getCurrentScheduleDateValue();
+  const parsedStart = parseDateValue(searchParams.start) || today;
+  const parsedEnd = parseDateValue(searchParams.end) || parsedStart;
+  const start = parsedStart <= parsedEnd ? parsedStart : parsedEnd;
+  const end = parsedStart <= parsedEnd ? parsedEnd : parsedStart;
+  const startRange = getScheduleDayRange(start) || getScheduleDayRange(today)!;
+  const endRange = getScheduleDayRange(end) || startRange;
 
   return {
     start,
     end,
-    startDate: new Date(`${start}T00:00:00`),
-    endDate: new Date(`${end}T23:59:59.999`),
+    startDate: startRange.start,
+    endDate: endRange.end,
   };
 }
 
-function getCurrentWeekRange() {
-  const start = new Date();
-  const day = start.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + diff);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-}
-
 function parseDateValue(value?: string) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !getScheduleDayRange(value)) {
     return null;
   }
 
   return value;
-}
-
-function toDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
 }
