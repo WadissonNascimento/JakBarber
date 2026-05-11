@@ -106,16 +106,6 @@ function formatShortDate(dateString: string) {
   };
 }
 
-function getBarberSpecialty(index: number) {
-  const specialties = [
-    "Especialista em degrade e acabamento fino",
-    "Barba alinhada e corte classico",
-    "Corte moderno e atendimento rápido",
-  ];
-
-  return specialties[index % specialties.length];
-}
-
 function getLocalBarberImage(image: string | null) {
   return image?.startsWith("/") ? image : null;
 }
@@ -170,7 +160,6 @@ export default function BookingClient({
   const [extrasSlot, setExtrasSlot] = useState<string | null>(null);
   const [confirmationSlot, setConfirmationSlot] = useState<string | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
-  const [previewBarber, setPreviewBarber] = useState<BarberOption | null>(null);
   const availabilityCacheRef = useRef<Map<string, AvailabilityCacheEntry>>(new Map());
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>(() =>
     Object.fromEntries(
@@ -199,10 +188,6 @@ export default function BookingClient({
   const selectedBarber = useMemo(
     () => barbers.find((barber) => barber.id === selectedBarberId),
     [barbers, selectedBarberId]
-  );
-  const selectedBarberIndex = Math.max(
-    0,
-    barbers.findIndex((barber) => barber.id === selectedBarberId)
   );
 
   const selectedOccupiedDuration = selectedServices.reduce(
@@ -528,7 +513,7 @@ export default function BookingClient({
                 Barbeiro
               </label>
               <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
-                {barbers.map((barber, index) => {
+                {barbers.map((barber) => {
                   const checked = selectedBarberId === barber.id;
                   const imageSrc = getLocalBarberImage(barber.image);
 
@@ -542,31 +527,22 @@ export default function BookingClient({
                         setBookingSuccess(null);
                         setBookingDetails(null);
                       }}
-                      className={`min-w-[230px] rounded-2xl border px-3 py-3 text-left transition sm:min-w-0 sm:w-full ${
+                      className={`min-w-[168px] rounded-xl border px-2.5 py-2 text-left transition sm:min-w-0 sm:w-full sm:px-3 ${
                         checked
                           ? "border-[var(--brand)] bg-[var(--brand-muted)] text-white shadow-[0_18px_36px_rgba(14,165,233,0.18)]"
                           : "border-white/10 bg-black/20 hover:border-white/20"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <span
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (imageSrc) {
-                              setPreviewBarber(barber);
-                            }
-                          }}
-                          title={imageSrc ? "Ampliar foto" : undefined}
-                          className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-sky-500/30 via-white/10 to-black/20 text-sm font-bold text-[var(--brand-strong)] ${
-                            imageSrc ? "cursor-zoom-in transition hover:border-[var(--brand)]/50" : ""
-                          }`}
+                          className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-sky-500/30 via-white/10 to-black/20 text-sm font-bold text-[var(--brand-strong)] sm:h-11 sm:w-11"
                         >
                           {imageSrc ? (
                             <Image
                               src={imageSrc}
                               alt={barber.name || "Barbeiro"}
                               fill
-                              sizes="48px"
+                              sizes="44px"
                               className="object-cover"
                             />
                           ) : (
@@ -577,9 +553,6 @@ export default function BookingClient({
                           <span className="block truncate text-sm font-semibold">
                             {barber.name}
                           </span>
-                          <span className="mt-0.5 block truncate text-xs text-zinc-400">
-                            {getBarberSpecialty(index)}
-                          </span>
                         </span>
                       </div>
                     </button>
@@ -589,9 +562,7 @@ export default function BookingClient({
               {selectedBarber ? (
                 <BarberProfileStrip
                   barber={selectedBarber}
-                  specialty={getBarberSpecialty(selectedBarberIndex)}
                   servicesCount={visibleServices.length}
-                  onPreview={setPreviewBarber}
                 />
               ) : null}
             </div>
@@ -803,12 +774,6 @@ export default function BookingClient({
         />
       ) : null}
 
-      {previewBarber ? (
-        <BarberPhotoPreviewDialog
-          barber={previewBarber}
-          onClose={() => setPreviewBarber(null)}
-        />
-      ) : null}
     </div>
   );
 }
@@ -905,48 +870,35 @@ function TimeSection({
 
 function BarberProfileStrip({
   barber,
-  specialty,
   servicesCount,
-  onPreview,
 }: {
   barber: BarberOption;
-  specialty: string;
   servicesCount: number;
-  onPreview: (barber: BarberOption) => void;
 }) {
   const imageSrc = getLocalBarberImage(barber.image);
 
   return (
     <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-      <button
-        type="button"
-        onClick={() => {
-          if (imageSrc) {
-            onPreview(barber);
-          }
-        }}
-        disabled={!imageSrc}
-        className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-sky-500/30 via-white/10 to-black/20 text-sm font-bold text-[var(--brand-strong)] transition hover:border-[var(--brand)]/50 disabled:cursor-default"
-        aria-label={imageSrc ? "Ampliar foto do barbeiro" : "Foto do barbeiro"}
+      <div
+        className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-sky-500/30 via-white/10 to-black/20 text-sm font-bold text-[var(--brand-strong)]"
       >
         {imageSrc ? (
           <Image
             src={imageSrc}
             alt={barber.name || "Barbeiro"}
             fill
-            sizes="56px"
+            sizes="48px"
             className="object-cover"
           />
         ) : (
           (barber.name || "B").slice(0, 1)
         )}
-      </button>
+      </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-white">
           {barber.name || "Barbeiro"}
         </p>
-        <p className="mt-1 truncate text-xs text-zinc-400">{specialty}</p>
-        <p className="mt-2 text-xs text-[var(--brand-strong)]">
+        <p className="mt-1 text-xs text-[var(--brand-strong)]">
           {servicesCount} serviço(s) disponíveis
         </p>
       </div>
@@ -1007,65 +959,6 @@ function BookingErrorDialog({
           >
             Sair para tela inicial
           </Link>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function BarberPhotoPreviewDialog({
-  barber,
-  onClose,
-}: {
-  barber: BarberOption;
-  onClose: () => void;
-}) {
-  const imageSrc = getLocalBarberImage(barber.image);
-
-  if (!imageSrc) {
-    return null;
-  }
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Foto ampliada do barbeiro"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#050b16] p-4 text-white shadow-[0_24px_90px_rgba(0,0,0,0.7)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-              Foto do barbeiro
-            </p>
-            <p className="mt-1 truncate text-sm font-semibold">
-              {barber.name || "Barbeiro"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white"
-          >
-            Fechar
-          </button>
-        </div>
-
-        <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-          <Image
-            src={imageSrc}
-            alt={barber.name || "Barbeiro"}
-            fill
-            sizes="(max-width: 640px) 90vw, 420px"
-            className="object-cover"
-            priority
-          />
         </div>
       </div>
     </div>,
