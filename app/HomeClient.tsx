@@ -19,10 +19,9 @@ const corteImages = [
 ];
 
 function formatReviewName(name: string) {
-  const [firstName, ...rest] = name.trim().split(/\s+/);
-  const initial = rest[0]?.slice(0, 1);
+  const [firstName] = name.trim().split(/\s+/);
 
-  return initial ? `${firstName} ${initial}.` : firstName || "Cliente";
+  return firstName || "Cliente";
 }
 
 export default function HomeClient({
@@ -231,12 +230,17 @@ export default function HomeClient({
                 key={review.id}
                 className="rounded-lg border border-white/10 bg-white/[0.04] p-5"
               >
-                <CrownRating rating={review.rating} size="sm" />
+                <p className="text-sm font-semibold text-white">
+                  {formatReviewName(review.customerName)}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <CrownRating rating={review.rating} size="sm" />
+                  <span className="text-xs font-semibold text-zinc-400">
+                    Nota {review.rating}/5
+                  </span>
+                </div>
                 <p className="mt-4 text-sm leading-6 text-zinc-300">
                   {review.comment}
-                </p>
-                <p className="mt-5 text-sm font-semibold text-white">
-                  {formatReviewName(review.customerName)}
                 </p>
               </article>
             ))}

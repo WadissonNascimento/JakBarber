@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import {
   APPOINTMENT_STATUSES,
   normalizeAppointmentStatus,
@@ -69,6 +70,14 @@ function revalidateBarberViews() {
   revalidatePath("/agendar");
   revalidatePath("/admin/agenda");
   revalidatePath("/admin/barbeiros");
+}
+
+function revalidateAppointmentStatusViews() {
+  revalidatePath("/barber");
+  revalidatePath("/barber/agenda");
+  revalidatePath("/customer/agendamentos");
+  revalidatePath("/meu-perfil");
+  revalidatePath("/admin/agenda");
 }
 
 function parseItemDeliveryDecisions(formData: FormData) {
@@ -242,19 +251,21 @@ export async function updateAppointmentStatusAction(
     throw error;
   }
 
-  revalidateBarberViews();
+  after(async () => {
+    revalidateAppointmentStatusViews();
 
-  if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
-    await notifyCustomerAppointmentCompleted(appointmentId);
-  }
+    if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
+      await notifyCustomerAppointmentCompleted(appointmentId);
+    }
 
-  if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
-    await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
-  }
+    if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
+      await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
+    }
 
-  if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
-    await notifyBarberNoShow(appointmentId);
-  }
+    if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
+      await notifyBarberNoShow(appointmentId);
+    }
+  });
 
   return mutationSuccess("Status do agendamento atualizado.");
 }

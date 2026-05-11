@@ -462,6 +462,64 @@ export async function getBarberDashboardData(
   };
 }
 
+export async function getBarberAgendaData(
+  barberId: string,
+  filters: BarberDashboardFilters
+) {
+  const view = normalizeDashboardView(filters.view);
+  const selectedDate = getSelectedDate(filters);
+  const currentScheduleDate = getCurrentScheduleDate();
+  const { start: selectedStart, end: selectedEnd } = getDayRange(
+    getScheduleDateValue(selectedDate)
+  );
+  const rawStatus = filters.status || "ACTIVE";
+  const status = rawStatus === "ACTIVE" ? "ACTIVE" : normalizeAppointmentStatus(rawStatus);
+
+  const appointmentWhere =
+    view === "all"
+      ? {
+          barberId,
+        }
+      : view === "upcoming"
+      ? {
+          barberId,
+          date: {
+            gte: currentScheduleDate,
+          },
+        }
+      : {
+          barberId,
+          date: {
+            gte: selectedStart,
+            lte: selectedEnd,
+          },
+        };
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      ...appointmentWhere,
+      ...(status === "ACTIVE"
+        ? { status: { notIn: ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"] } }
+        : status !== "ALL"
+        ? { status }
+        : {}),
+    },
+    select: appointmentForBarberSelect,
+    orderBy: {
+      date: "asc",
+    },
+  });
+
+  return {
+    appointments,
+    filters: {
+      view,
+      status,
+      date: getScheduleDateValue(selectedDate),
+    },
+  };
+}
+
 export async function getBarberTodayDashboardData(barberId: string) {
   const { start: todayStart, end: todayEnd } = getDayRange(
     getCurrentScheduleDateValue()

@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import BackLink from "@/components/ui/BackLink";
 import PageHeader from "@/components/ui/PageHeader";
 import { AppointmentsSection } from "../_components/AppointmentsSection";
-import { getBarberDashboardData } from "../data";
+import { getBarberAgendaData } from "../data";
 import { requireActiveBarber } from "../guard";
 
 type SearchParams = {
@@ -24,7 +24,7 @@ export default async function BarberAgendaPage({
 
   const { barber } = await requireActiveBarber();
   const filters = await searchParams;
-  const dashboard = await getBarberDashboardData(barber.id, filters);
+  const agenda = await getBarberAgendaData(barber.id, filters);
   const barberName = barber.name || "Barbeiro";
 
   return (
@@ -39,8 +39,8 @@ export default async function BarberAgendaPage({
 
       <div className="mt-6">
         <AppointmentsSection
-          appointments={dashboard.appointments}
-          filters={dashboard.filters}
+          appointments={agenda.appointments}
+          filters={agenda.filters}
           barberName={barberName}
         />
       </div>

@@ -6,7 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
-const ADMIN_LOGIN_ERROR = "Credenciais de administrador invalidas.";
+const ADMIN_EMAIL_ERROR = "Usuario nao encontrado ou e-mail incorreto.";
+const ADMIN_PASSWORD_ERROR = "Senha incorreta.";
+const ADMIN_PERMISSION_ERROR = "Usuario sem permissao de administrador.";
 
 function wantsJson(request: NextRequest) {
   return (
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
 
   if (!user || !user.passwordHash) {
     logSecurityEvent("admin_login_failed", { reason: "not_found", email });
-    return adminLoginError(request, ADMIN_LOGIN_ERROR);
+    return adminLoginError(request, ADMIN_EMAIL_ERROR);
   }
 
   if (!user.isActive || user.role !== "ADMIN") {
@@ -74,14 +76,14 @@ export async function POST(request: NextRequest) {
       reason: !user.isActive ? "inactive" : "not_admin",
       userId: user.id,
     });
-    return adminLoginError(request, ADMIN_LOGIN_ERROR);
+    return adminLoginError(request, ADMIN_PERMISSION_ERROR);
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatch) {
     logSecurityEvent("admin_login_failed", { reason: "bad_password", userId: user.id });
-    return adminLoginError(request, ADMIN_LOGIN_ERROR);
+    return adminLoginError(request, ADMIN_PASSWORD_ERROR);
   }
 
   try {

@@ -43,6 +43,7 @@ type ProfileAppointment = {
   notes: string | null;
   barber: {
     name: string | null;
+    phone: string | null;
   };
   review: {
     id: string;
@@ -119,7 +120,6 @@ export default async function MeuPerfilPage() {
   );
   const customerName = customer?.name || "Cliente";
   const recentAppointments = appointments.slice(0, 3);
-  const whatsappNumber = process.env.BARBER_WHATSAPP_NUMBER || "";
 
   return (
     <DashboardShell size="wide" className="min-w-0 max-w-full overflow-hidden">
@@ -202,7 +202,6 @@ export default async function MeuPerfilPage() {
                       <AppointmentHistoryCard
                         key={appointment.id}
                         appointment={appointment}
-                        whatsappNumber={whatsappNumber}
                       />
                     ))}
 
@@ -251,10 +250,8 @@ function MiniStat({
 
 function AppointmentHistoryCard({
   appointment,
-  whatsappNumber,
 }: {
   appointment: ProfileAppointment;
-  whatsappNumber: string;
 }) {
   const date = new Date(appointment.date);
   const time = formatScheduleTime(date);
@@ -267,7 +264,7 @@ function AppointmentHistoryCard({
   const serviceMetaLine = getAppointmentServiceMetaLine(appointment.services);
   const whatsappMessage =
     `Ola! Quero falar sobre meu agendamento de ${dateLabel} as ${time} com ${appointment.barber.name || "o barbeiro"} para ${serviceLabel}.`;
-  const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
+  const whatsappHref = buildWhatsAppUrl(appointment.barber.phone || "", whatsappMessage);
   const canShowCancel = ![
     "CANCELLED",
     "COMPLETED",

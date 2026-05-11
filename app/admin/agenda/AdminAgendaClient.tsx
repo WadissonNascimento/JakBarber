@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BadgeDollarSign,
@@ -9,10 +9,8 @@ import {
   CheckCircle2,
   Clock3,
   ClipboardList,
-  Search,
   Scissors,
   UserRound,
-  X,
   XCircle,
 } from "lucide-react";
 import BackLink from "@/components/ui/BackLink";
@@ -30,7 +28,6 @@ import {
   normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
-import { sanitizeSearchInput } from "@/lib/inputSanitization";
 import {
   formatScheduleDate,
   formatScheduleTime,
@@ -63,78 +60,36 @@ type AdminAgendaAppointment = {
   }>;
 };
 
-const ADMIN_AGENDA_STATUS_OPTIONS = [
-  "CONFIRMED",
-  "COMPLETED",
-  "CANCELLED",
-] as const;
-
 type AdminAgendaFilters = {
-  barberId: string;
   dateFrom: string;
   dateTo: string;
-  status: string;
-  q: string;
-};
-
-type BarberOption = {
-  id: string;
-  name: string | null;
+  q?: string;
 };
 
 export default function AdminAgendaClient({
   appointments,
-  barbers,
   initialFilters,
   isTruncated = false,
   limit = null,
 }: {
   appointments: AdminAgendaAppointment[];
-  barbers: BarberOption[];
   initialFilters: AdminAgendaFilters;
   isTruncated?: boolean;
   limit?: number | null;
 }) {
   const router = useRouter();
-  const [filters, setFilters] = useState(() => ({
-    ...initialFilters,
-    q: sanitizeSearchInput(initialFilters.q),
-  }));
-  const statusOptions = ADMIN_AGENDA_STATUS_OPTIONS;
-  const deferredSearch = useDeferredValue(filters.q);
-  const controlFilters = useMemo(
-    () => ({
-      barberId: filters.barberId,
-      dateFrom: filters.dateFrom,
-      dateTo: filters.dateTo,
-      status: filters.status,
-      q: "",
-    }),
-    [filters.barberId, filters.dateFrom, filters.dateTo, filters.status]
-  );
-
-  const filteredByControls = useMemo(
-    () =>
-      appointments.filter((appointment) =>
-        matchesAgendaFilters(appointment, controlFilters)
-      ),
-    [appointments, controlFilters]
-  );
+  const [filters, setFilters] = useState(initialFilters);
   const visibleAppointments = useMemo(
     () =>
-      deferredSearch
-        ? filteredByControls.filter((appointment) =>
-            matchesAgendaSearch(appointment, deferredSearch)
-          )
-        : filteredByControls,
-    [deferredSearch, filteredByControls]
+      appointments.filter((appointment) =>
+        matchesAgendaFilters(appointment, filters)
+      ),
+    [appointments, filters]
   );
   const visibleSummary = useMemo(
     () => getVisibleAgendaSummary(visibleAppointments),
     [visibleAppointments]
   );
-  const activeFilterCount = [filters.barberId, filters.dateFrom, filters.dateTo, filters.status]
-    .filter(Boolean).length;
 
   useEffect(() => {
     window.history.replaceState(null, "", buildAgendaUrl(filters));
@@ -143,31 +98,11 @@ export default function AdminAgendaClient({
   function updateFilter(key: keyof AdminAgendaFilters, value: string) {
     const nextFilters = {
       ...filters,
-      [key]: key === "q" ? sanitizeSearchInput(value) : value,
-    };
-
-    setFilters(nextFilters);
-
-    if (key !== "q") {
-      router.replace(buildAgendaUrl(nextFilters), { scroll: false });
-    }
-  }
-
-  function clearFilters() {
-    const nextFilters = {
-      ...filters,
-      barberId: "",
-      dateFrom: "",
-      dateTo: "",
-      status: "",
+      [key]: value,
     };
 
     setFilters(nextFilters);
     router.replace(buildAgendaUrl(nextFilters), { scroll: false });
-  }
-
-  function clearSearch() {
-    updateFilter("q", "");
   }
 
   return (
@@ -217,34 +152,11 @@ export default function AdminAgendaClient({
 
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-              Filtros
+              Filtro por data
             </p>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[var(--brand)]/45 hover:bg-[var(--brand-muted)]"
-            >
-              {activeFilterCount ? `Limpar ${activeFilterCount}` : "Limpar"}
-            </button>
           </div>
 
           <div className="space-y-1.5">
-            <div className="compact-filter-line">
-              <span className="compact-filter-label">Barbeiro</span>
-              <select
-                value={filters.barberId}
-                onChange={(event) => updateFilter("barberId", event.target.value)}
-                className="compact-filter-control compact-filter-control-inline"
-              >
-                <option value="">Todos</option>
-                {barbers.map((barber) => (
-                  <option key={barber.id} value={barber.id}>
-                    {barber.name || "Barbeiro"}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="compact-filter-line">
               <span className="compact-filter-label">Data</span>
               <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
@@ -263,45 +175,7 @@ export default function AdminAgendaClient({
                 />
               </div>
             </div>
-
-            <div className="compact-filter-line">
-              <span className="compact-filter-label">Status</span>
-              <select
-                value={filters.status}
-                onChange={(event) => updateFilter("status", event.target.value)}
-                className="compact-filter-control compact-filter-control-inline"
-              >
-                <option value="">Todos</option>
-                {statusOptions.map((appointmentStatus) => (
-                  <option key={appointmentStatus} value={appointmentStatus}>
-                    {appointmentStatusLabel(appointmentStatus)}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
-        </div>
-
-        <div className="mt-3 grid gap-2 lg:grid-cols-[1fr_auto]">
-          <label className="relative block">
-            <span className="sr-only">Pesquisar agendamentos</span>
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand-strong)]" />
-            <input
-              type="search"
-              value={filters.q}
-              onChange={(event) => updateFilter("q", event.target.value)}
-              placeholder="Pesquisar por ID, cliente ou data"
-              maxLength={120}
-              className="form-control form-control-with-left-icon"
-            />
-          </label>
-
-          {filters.q ? (
-            <button type="button" onClick={clearSearch} className="btn-muted gap-2">
-              <X className="h-4 w-4" />
-              Limpar busca
-            </button>
-          ) : null}
         </div>
 
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -444,16 +318,7 @@ function matchesAgendaFilters(
   appointment: AdminAgendaAppointment,
   filters: AdminAgendaFilters
 ) {
-  const status = normalizeAppointmentStatus(appointment.status);
   const dateValue = getScheduleDateValue(new Date(appointment.date));
-
-  if (filters.barberId && appointment.barber.id !== filters.barberId) {
-    return false;
-  }
-
-  if (filters.status && status !== filters.status) {
-    return false;
-  }
 
   if (filters.dateFrom && dateValue < filters.dateFrom) {
     return false;

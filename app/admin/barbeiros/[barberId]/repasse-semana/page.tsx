@@ -1,21 +1,32 @@
 import { getWeekRange } from "@/lib/financials";
-import PayoutReport from "../PayoutReport";
+import PayoutReport, {
+  getPayoutRangeFromSearchParams,
+  type PayoutSearchParams,
+} from "../PayoutReport";
 
 export const dynamic = "force-dynamic";
 
 type AdminBarberRouteParams = {
   params: Promise<{ barberId: string }>;
+  searchParams?: Promise<PayoutSearchParams>;
 };
 
-export default async function BarberWeekPayoutPage({ params }: AdminBarberRouteParams) {
+export default async function BarberWeekPayoutPage({
+  params,
+  searchParams,
+}: AdminBarberRouteParams) {
   const { barberId } = await params;
+  const range = getPayoutRangeFromSearchParams(
+    (await searchParams) || {},
+    getWeekRange()
+  );
 
   return (
     <PayoutReport
       barberId={barberId}
-      title="Repasse da semana atual"
-      description="Serviços e produtos concluídos nesta semana, com comissão individual."
-      range={getWeekRange()}
+      title="Repasse por periodo"
+      description="Servicos e produtos concluidos no periodo selecionado, com comissao individual."
+      range={range}
     />
   );
 }

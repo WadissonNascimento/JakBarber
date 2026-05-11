@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { getAdminAgendaReport } from "@/lib/adminReports";
 import { toMoneyNumber } from "@/lib/money";
 import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
@@ -9,11 +8,8 @@ import AdminAgendaClient from "./AdminAgendaClient";
 const ADMIN_AGENDA_PAGE_LIMIT = 250;
 
 type SearchParams = {
-  barberId?: string;
   dateFrom?: string;
   dateTo?: string;
-  status?: string;
-  q?: string;
 };
 
 export default async function AdminAgendaPage({
@@ -32,33 +28,14 @@ export default async function AdminAgendaPage({
   }
 
   const initialFilters = {
-    barberId: searchParams.barberId || "",
     dateFrom: searchParams.dateFrom || getCurrentScheduleDateValue(),
     dateTo: searchParams.dateTo || getCurrentScheduleDateValue(),
-    status: searchParams.status === "PENDING" ? "" : searchParams.status || "",
-    q: searchParams.q || "",
   };
 
-  const [barbers, report] = await Promise.all([
-    prisma.user.findMany({
-      where: {
-        role: "BARBER",
-      },
-      orderBy: {
-        name: "asc",
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-    getAdminAgendaReport({
-      barberId: initialFilters.barberId,
-      dateFrom: initialFilters.dateFrom,
-      dateTo: initialFilters.dateTo,
-      status: initialFilters.status,
-    }, { limit: ADMIN_AGENDA_PAGE_LIMIT }),
-  ]);
+  const report = await getAdminAgendaReport({
+    dateFrom: initialFilters.dateFrom,
+    dateTo: initialFilters.dateTo,
+  }, { limit: ADMIN_AGENDA_PAGE_LIMIT });
 
   return (
     <AdminAgendaClient
@@ -73,7 +50,6 @@ export default async function AdminAgendaPage({
           subtotal: toMoneyNumber(item.subtotal),
         })),
       }))}
-      barbers={barbers}
       initialFilters={initialFilters}
       isTruncated={report.isTruncated}
       limit={report.limit}

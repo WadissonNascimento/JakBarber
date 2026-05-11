@@ -415,7 +415,7 @@ export default function BookingClient({
           })),
           date: selectedDate,
           time,
-          notes: sanitizeTextareaInput(notes, 280),
+          notes: sanitizeTextareaInput(notes, 50),
           rescheduleAppointmentId,
         }),
       });
@@ -1475,15 +1475,15 @@ function BookingConfirmationDialog({
           </span>
           <textarea
             value={notes}
-            onChange={(event) => setNotes(sanitizeTextareaInput(event.target.value, 280))}
+            onChange={(event) => setNotes(event.target.value.slice(0, 50))}
             disabled={isSubmitting}
             rows={3}
-            maxLength={280}
+            maxLength={50}
             placeholder="Ex: prefiro acabamento mais baixo, tenho sensibilidade na pele..."
             className="mt-2 min-h-[96px] w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60 disabled:cursor-not-allowed disabled:opacity-60"
           />
           <span className="mt-2 block text-right text-xs text-zinc-500">
-            {notes.length}/280
+            {notes.length}/50
           </span>
         </label>
 

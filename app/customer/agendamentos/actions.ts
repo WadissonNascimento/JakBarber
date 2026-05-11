@@ -117,8 +117,8 @@ export async function submitAppointmentReviewAction(
     return mutationError("Escolha uma nota de 1 a 5.");
   }
 
-  if (comment.length > 400) {
-    return mutationError("Escreva uma avaliacao com ate 400 caracteres.");
+  if (comment.length > 50) {
+    return mutationError("Escreva uma avaliacao com ate 50 caracteres.");
   }
 
   const appointment = await prisma.appointment.findUnique({

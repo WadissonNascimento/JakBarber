@@ -7,6 +7,8 @@ import CrownRating from "@/components/ui/CrownRating";
 import { sanitizeTextareaInput } from "@/lib/inputSanitization";
 import { submitAppointmentReviewAction } from "./actions";
 
+const REVIEW_COMMENT_MAX_LENGTH = 50;
+
 export default function ReviewForm({
   appointmentId,
 }: {
@@ -32,7 +34,10 @@ export default function ReviewForm({
         }
 
         const formData = new FormData(event.currentTarget);
-        formData.set("comment", sanitizeTextareaInput(comment, 400));
+        formData.set(
+          "comment",
+          sanitizeTextareaInput(comment, REVIEW_COMMENT_MAX_LENGTH)
+        );
 
         startTransition(async () => {
           const result = await submitAppointmentReviewAction(formData);
@@ -69,15 +74,17 @@ export default function ReviewForm({
         <textarea
           name="comment"
           value={comment}
-          onChange={(event) => setComment(sanitizeTextareaInput(event.target.value, 400))}
+          onChange={(event) =>
+            setComment(event.target.value.slice(0, REVIEW_COMMENT_MAX_LENGTH))
+          }
           rows={3}
-          maxLength={400}
+          maxLength={REVIEW_COMMENT_MAX_LENGTH}
           disabled={isPending}
           placeholder="Conte como foi o atendimento..."
           className="form-control resize-none text-sm"
         />
         <span className="mt-1 block text-right text-xs text-zinc-500">
-          {comment.length}/400
+          {comment.length}/{REVIEW_COMMENT_MAX_LENGTH}
         </span>
       </label>
 

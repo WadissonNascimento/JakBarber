@@ -1,6 +1,5 @@
 ﻿import Link from "next/link";
 import { auth } from "@/auth";
-import type { Prisma } from "@prisma/client";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -23,31 +22,13 @@ import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   formatScheduleDate,
   formatScheduleTime,
-  getScheduleDayRange,
   isScheduleDateTimePast,
 } from "@/lib/scheduleTime";
 import CancelAppointmentButton from "./CancelAppointmentButton";
 import ReviewForm from "./ReviewForm";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
-type CustomerAppointmentsSearchParams = {
-  from?: string | string[];
-  to?: string | string[];
-};
-
-function getSearchParam(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] || "" : value || "";
-}
-
-function normalizeDateFilter(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
-}
-
-export default async function CustomerAppointmentsPage({
-  searchParams = {},
-}: {
-  searchParams?: CustomerAppointmentsSearchParams;
-}) {
+export default async function CustomerAppointmentsPage() {
   noStore();
 
   const session = await auth();
@@ -60,31 +41,10 @@ export default async function CustomerAppointmentsPage({
     redirect("/painel");
   }
 
-  const fromFilter = normalizeDateFilter(getSearchParam(searchParams.from));
-  const toFilter = normalizeDateFilter(getSearchParam(searchParams.to));
-  const where: Prisma.AppointmentWhereInput = {
-    customerId: session.user.id,
-  };
-
-  const dateFilter: Prisma.DateTimeFilter = {};
-
-  const fromRange = fromFilter ? getScheduleDayRange(fromFilter) : null;
-  const toRange = toFilter ? getScheduleDayRange(toFilter) : null;
-
-  if (fromRange) {
-    dateFilter.gte = fromRange.start;
-  }
-
-  if (toRange) {
-    dateFilter.lte = toRange.end;
-  }
-
-  if (Object.keys(dateFilter).length > 0) {
-    where.date = dateFilter;
-  }
-
   const appointments = await prisma.appointment.findMany({
-    where,
+    where: {
+      customerId: session.user.id,
+    },
     include: {
       barber: true,
       items: true,
@@ -95,8 +55,6 @@ export default async function CustomerAppointmentsPage({
       date: "desc",
     },
   });
-  const hasFilters = Boolean(fromFilter) || Boolean(toFilter);
-  const whatsappNumber = process.env.BARBER_WHATSAPP_NUMBER || "";
 
   return (
     <DashboardShell>
@@ -115,80 +73,16 @@ export default async function CustomerAppointmentsPage({
         </div>
       </section>
 
-      <section className="mb-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3 shadow-[0_14px_34px_rgba(0,0,0,0.18)] sm:mb-5">
-        <form
-          action="/customer/agendamentos"
-          className="grid min-w-0 gap-2"
-        >
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <p className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-              Filtros
-            </p>
-            <p className="shrink-0 text-xs text-zinc-500">
-              {appointments.length} registro{appointments.length === 1 ? "" : "s"}
-            </p>
-          </div>
-
-          <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
-            <label className="compact-filter-line">
-              <span className="compact-filter-label">Data</span>
-              <input
-                type="date"
-                name="from"
-                defaultValue={fromFilter}
-                className="compact-filter-control compact-filter-control-inline"
-              />
-            </label>
-
-            <label className="compact-filter-line">
-              <span className="compact-filter-label">Até</span>
-              <input
-                type="date"
-                name="to"
-                defaultValue={toFilter}
-                className="compact-filter-control compact-filter-control-inline"
-              />
-            </label>
-
-            <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-2 lg:col-span-1">
-              <button type="submit" className="btn-primary min-h-9 rounded-xl px-3 py-2 text-xs">
-                Filtrar
-              </button>
-              {hasFilters ? (
-                <Link
-                  href="/customer/agendamentos"
-                  className="btn-secondary min-h-9 rounded-xl px-3 py-2 text-xs"
-                >
-                  Limpar
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        </form>
-      </section>
-
       {appointments.length === 0 ? (
         <SectionCard
-          title={hasFilters ? "Nenhum resultado" : "Agenda do cliente"}
-          description={
-            hasFilters
-              ? "Ajuste os filtros para encontrar outros registros."
-              : "Cada card abaixo concentra data, hora, barbeiro, serviços e status."
-          }
+          title="Agenda do cliente"
+          description="Cada card abaixo concentra data, hora, barbeiro, serviços e status."
         >
           <EmptyState
-            title={
-              hasFilters
-                ? "Nenhum agendamento encontrado"
-                : "Nenhum agendamento por enquanto"
-            }
-            description={
-              hasFilters
-                ? "Não encontramos registros com os filtros selecionados."
-                : "Quando você reservar seu primeiro horário, ele aparecerá aqui."
-            }
-            actionLabel={hasFilters ? "Limpar filtros" : "Agendar agora"}
-            actionHref={hasFilters ? "/customer/agendamentos" : "/agendar"}
+            title="Nenhum agendamento por enquanto"
+            description="Quando você reservar seu primeiro horário, ele aparecerá aqui."
+            actionLabel="Agendar agora"
+            actionHref="/agendar"
           />
         </SectionCard>
       ) : (
@@ -207,7 +101,7 @@ export default async function CustomerAppointmentsPage({
             );
             const whatsappMessage =
               `Ola! Quero falar sobre meu agendamento de ${dateLabel} as ${time} com ${appointment.barber.name || "o barbeiro"} para ${serviceLabel}.`;
-            const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
+            const whatsappHref = buildWhatsAppUrl(appointment.barber.phone || "", whatsappMessage);
             const canShowCancel = ![
               "CANCELLED",
               "COMPLETED",

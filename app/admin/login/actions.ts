@@ -8,7 +8,9 @@ import { prisma } from "@/lib/prisma";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
-const ADMIN_LOGIN_ERROR = "Credenciais de administrador invalidas.";
+const ADMIN_EMAIL_ERROR = "Usuario nao encontrado ou e-mail incorreto.";
+const ADMIN_PASSWORD_ERROR = "Senha incorreta.";
+const ADMIN_PERMISSION_ERROR = "Usuario sem permissao de administrador.";
 
 async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
   const email = String(formData.get("email") || "")
@@ -40,7 +42,7 @@ async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
 
   if (!user || !user.passwordHash) {
     logSecurityEvent("admin_login_failed", { reason: "not_found", email });
-    return { error: ADMIN_LOGIN_ERROR, success: null };
+    return { error: ADMIN_EMAIL_ERROR, success: null };
   }
 
   if (!user.isActive || user.role !== "ADMIN") {
@@ -48,14 +50,14 @@ async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
       reason: !user.isActive ? "inactive" : "not_admin",
       userId: user.id,
     });
-    return { error: ADMIN_LOGIN_ERROR, success: null };
+    return { error: ADMIN_PERMISSION_ERROR, success: null };
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatch) {
     logSecurityEvent("admin_login_failed", { reason: "bad_password", userId: user.id });
-    return { error: ADMIN_LOGIN_ERROR, success: null };
+    return { error: ADMIN_PASSWORD_ERROR, success: null };
   }
 
   try {

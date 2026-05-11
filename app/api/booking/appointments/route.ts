@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       : [];
     const date = String(body.date || "").trim();
     const time = String(body.time || "").trim();
-    const notes = String(body.notes || "").trim();
+    const notes = String(body.notes || "").trim().slice(0, 50);
     const rescheduleAppointmentId = String(body.rescheduleAppointmentId || "").trim();
 
     const result = rescheduleAppointmentId

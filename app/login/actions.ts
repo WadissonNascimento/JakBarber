@@ -2,11 +2,31 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+import bcrypt from "bcryptjs";
 import { signIn } from "@/auth";
 import { getPostLoginRedirect } from "@/lib/authRedirect";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+
+async function getLoginFailureMessage(email: string, password: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      isActive: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user || !user.isActive || !user.passwordHash) {
+    return "Usuario nao encontrado ou e-mail incorreto.";
+  }
+
+  const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+
+  return passwordMatch ? null : "Senha incorreta.";
+}
 
 async function runLogin(formData: FormData): Promise<FormFeedbackState> {
   const email = String(formData.get("email") || "")
@@ -41,7 +61,12 @@ async function runLogin(formData: FormData): Promise<FormFeedbackState> {
   } catch (error) {
     if (error instanceof AuthError) {
       logSecurityEvent("login_action_failed", { email });
-      return { error: "E-mail ou senha invalidos.", success: null };
+      return {
+        error:
+          (await getLoginFailureMessage(email, password)) ||
+          "Nao foi possivel autenticar. Confira e-mail e senha.",
+        success: null,
+      };
     }
 
     throw error;

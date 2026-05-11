@@ -6,11 +6,45 @@ import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { getScheduleDayRange, getScheduleDateValue } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 
 function formatCommission(type: string, value: MoneyValue) {
   const numericValue = toMoneyNumber(value);
   return type === "FIXED" ? formatCurrency(numericValue) : `${numericValue}%`;
+}
+
+type PayoutRange = {
+  start: Date;
+  end: Date;
+};
+
+export type PayoutSearchParams = {
+  start?: string;
+  end?: string;
+};
+
+function isDateValue(value?: string) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+export function getPayoutRangeFromSearchParams(
+  searchParams: PayoutSearchParams,
+  fallback: PayoutRange
+): PayoutRange {
+  const startValue = isDateValue(searchParams.start) ? searchParams.start! : "";
+  const endValue = isDateValue(searchParams.end) ? searchParams.end! : "";
+  const startRange = startValue ? getScheduleDayRange(startValue) : null;
+  const endRange = endValue ? getScheduleDayRange(endValue) : null;
+
+  return {
+    start: startRange?.start || fallback.start,
+    end: endRange?.end || fallback.end,
+  };
+}
+
+function formatDateInputValue(date: Date) {
+  return getScheduleDateValue(date);
 }
 
 export default async function PayoutReport({
@@ -106,6 +140,8 @@ export default async function PayoutReport({
   const rows = [...serviceRows, ...productRows];
   const totalGross = rows.reduce((sum, row) => sum + row.gross, 0);
   const totalPayout = rows.reduce((sum, row) => sum + row.payout, 0);
+  const startValue = formatDateInputValue(range.start);
+  const endValue = formatDateInputValue(range.end);
 
   return (
     <DashboardShell>
@@ -122,6 +158,39 @@ export default async function PayoutReport({
         <SummaryCard label="Total vendido" value={formatCurrency(totalGross)} />
         <SummaryCard label="Repasse do barbeiro" value={formatCurrency(totalPayout)} />
       </div>
+
+      <form className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300">
+          Filtrar periodo
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold text-zinc-400">
+              Inicio
+            </span>
+            <input
+              type="date"
+              name="start"
+              defaultValue={startValue}
+              className="form-control"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold text-zinc-400">
+              Fim
+            </span>
+            <input
+              type="date"
+              name="end"
+              defaultValue={endValue}
+              className="form-control"
+            />
+          </label>
+          <button type="submit" className="btn-primary self-end">
+            Aplicar
+          </button>
+        </div>
+      </form>
 
       <div className="mt-5 space-y-3">
         {rows.length === 0 ? (

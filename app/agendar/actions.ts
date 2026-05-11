@@ -65,7 +65,7 @@ export async function createAppointmentAction(
     : [];
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
-  const notes = String(formData.get("notes") || "").trim();
+  const notes = String(formData.get("notes") || "").trim().slice(0, 50);
 
   if (!barberId || serviceIds.length === 0 || !date || !time) {
     return {

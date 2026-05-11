@@ -74,6 +74,7 @@ export default function BarberAppointmentActions({
     }
 
     setPendingStatus(nextStatus);
+    onStatusUpdated?.(appointmentId, nextStatus);
 
     startTransition(async () => {
       const formData = new FormData();
@@ -100,7 +101,9 @@ export default function BarberAppointmentActions({
         setIsCancelOpen(false);
         setCancellationReason("");
         setCancelError(null);
-        onStatusUpdated?.(appointmentId, nextStatus);
+        router.refresh();
+      } else {
+        onStatusUpdated?.(appointmentId, status);
         router.refresh();
       }
 
