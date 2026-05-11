@@ -4,22 +4,33 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import PhoneInput from "@/components/ui/PhoneInput";
+import {
+  FULL_NAME_REQUIREMENT_MESSAGE,
+  isValidCustomerFullName,
+  normalizeCustomerName,
+} from "@/lib/customerRegistrationValidation";
 import { formatBrazilianPhone } from "@/lib/phone";
 import {
   updateCustomerPasswordAction,
   updateCustomerProfileAction,
+  verifyCustomerEmailChangeAction,
 } from "./actions";
 
 type ProfileMode = "view" | "contact" | "password";
 
 export default function ProfileForm({
   customer,
+  pendingEmailChange,
 }: {
   customer: {
     name: string | null;
     email: string | null;
     phone: string | null;
   };
+  pendingEmailChange: {
+    email: string;
+    expiresAt: string;
+  } | null;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<ProfileMode>("view");
@@ -43,7 +54,21 @@ export default function ProfileForm({
           className="mt-4 space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
-            const formData = new FormData(event.currentTarget);
+            const form = event.currentTarget;
+            const formData = new FormData(form);
+            const normalizedName = normalizeCustomerName(
+              String(formData.get("name") || "")
+            );
+
+            if (!isValidCustomerFullName(normalizedName)) {
+              setFeedback({
+                message: FULL_NAME_REQUIREMENT_MESSAGE,
+                tone: "error",
+              });
+              return;
+            }
+
+            formData.set("name", normalizedName);
 
             startTransition(async () => {
               const result = await updateCustomerProfileAction(formData);
@@ -67,6 +92,12 @@ export default function ProfileForm({
               defaultValue={customer.name || ""}
               required
               maxLength={120}
+              title={FULL_NAME_REQUIREMENT_MESSAGE}
+              onBlur={(event) => {
+                event.currentTarget.value = normalizeCustomerName(
+                  event.currentTarget.value
+                );
+              }}
               className="form-control text-sm"
             />
           </label>
@@ -202,6 +233,53 @@ export default function ProfileForm({
           </div>
 
           <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+          {pendingEmailChange ? (
+            <form
+              className="mt-4 rounded-2xl border border-[var(--brand)]/25 bg-[var(--brand-muted)] p-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const formData = new FormData(form);
+
+                startTransition(async () => {
+                  const result = await verifyCustomerEmailChangeAction(formData);
+                  setFeedback({ message: result.message, tone: result.tone });
+
+                  if (result.ok) {
+                    form.reset();
+                    router.refresh();
+                  }
+                });
+              }}
+            >
+              <p className="text-xs font-semibold text-white">
+                Confirme seu novo e-mail
+              </p>
+              <p className="mt-1 text-xs leading-5 text-zinc-300">
+                Enviamos um codigo para {pendingEmailChange.email}. O telefone
+                nao precisa de verificacao por SMS.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                  name="code"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  placeholder="Codigo"
+                  className="form-control text-sm sm:flex-1"
+                />
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="btn-primary px-4 py-3 text-sm sm:w-auto"
+                >
+                  {isPending ? "Verificando..." : "Verificar e-mail"}
+                </button>
+              </div>
+            </form>
+          ) : null}
 
           <button
             type="button"

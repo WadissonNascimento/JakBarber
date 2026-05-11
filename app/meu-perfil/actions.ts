@@ -2,13 +2,24 @@
 
 import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
+import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
 import {
   mutationError,
   mutationSuccess,
   type MutationResult,
 } from "@/lib/mutationResult";
+import { getConfiguredAppUrl } from "@/lib/appUrl";
+import {
+  FULL_NAME_REQUIREMENT_MESSAGE,
+  isValidCustomerFullName,
+  normalizeCustomerName,
+} from "@/lib/customerRegistrationValidation";
 import { sanitizeEmailInput } from "@/lib/inputSanitization";
+import {
+  isUsingDevelopmentMailFallback,
+  sendVerificationCodeEmail,
+} from "@/lib/mail";
 import {
   BRAZILIAN_PHONE_EXAMPLE,
   isValidBrazilianPhone,
@@ -21,6 +32,20 @@ import {
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
+const MAX_EMAIL_CHANGE_ATTEMPTS = 5;
+
+function generateVerificationCode() {
+  return randomInt(100000, 1000000).toString();
+}
+
+function getEmailChangeExpirationDate() {
+  return new Date(Date.now() + 10 * 60 * 1000);
+}
+
+function buildEmailChangeVerifyUrl() {
+  return `${getConfiguredAppUrl()}/meu-perfil`;
+}
+
 export async function updateCustomerProfileAction(
   formData: FormData
 ): Promise<MutationResult> {
@@ -30,7 +55,7 @@ export async function updateCustomerProfileAction(
     throw new Error("Nao autorizado.");
   }
 
-  const name = String(formData.get("name") || "").trim();
+  const name = normalizeCustomerName(String(formData.get("name") || ""));
   const email = sanitizeEmailInput(formData.get("email")?.toString() || "");
   const rawPhone = formData.get("phone")?.toString() || "";
   const phone = rawPhone.trim()
@@ -39,6 +64,10 @@ export async function updateCustomerProfileAction(
 
   if (!name) {
     return mutationError("Informe seu nome.");
+  }
+
+  if (!isValidCustomerFullName(name)) {
+    return mutationError(FULL_NAME_REQUIREMENT_MESSAGE);
   }
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -71,6 +100,8 @@ export async function updateCustomerProfileAction(
     },
     select: {
       email: true,
+      name: true,
+      shopId: true,
     },
   });
 
@@ -80,24 +111,220 @@ export async function updateCustomerProfileAction(
 
   const emailChanged = currentUser.email?.toLowerCase() !== email;
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: {
-      name,
-      email,
-      phone: phone || null,
-      ...(emailChanged ? { emailVerified: null } : {}),
-    },
-  });
-
   if (emailChanged) {
-    logSecurityEvent("customer_email_changed", {
+    const rateLimit = await enforceRateLimit({
+      scope: "customer_email_change:start",
+      identifier: session.user.id,
+      limit: 4,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return mutationError("Muitas tentativas de troca de e-mail. Aguarde e tente novamente.");
+    }
+
+    const pendingEmailOwner = await prisma.emailChangeRequest.findFirst({
+      where: {
+        email,
+        NOT: {
+          userId: session.user.id,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (pendingEmailOwner) {
+      return mutationError("Esse e-mail ja possui uma verificacao pendente.");
+    }
+
+    const code = generateVerificationCode();
+    const expiresAt = getEmailChangeExpirationDate();
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: session.user.id },
+        data: {
+          name,
+          phone: phone || null,
+        },
+      }),
+      prisma.emailChangeRequest.deleteMany({
+        where: {
+          userId: session.user.id,
+        },
+      }),
+      prisma.emailChangeRequest.create({
+        data: {
+          shopId: currentUser.shopId,
+          userId: session.user.id,
+          email,
+          code,
+          expiresAt,
+          attempts: 0,
+        },
+      }),
+    ]);
+
+    try {
+      await sendVerificationCodeEmail({
+        to: email,
+        name,
+        code,
+        verifyUrl: buildEmailChangeVerifyUrl(),
+        accountLabel: "troca de e-mail",
+      });
+    } catch {
+      await prisma.emailChangeRequest.deleteMany({
+        where: {
+          userId: session.user.id,
+        },
+      });
+
+      return mutationError("Nao foi possivel enviar o codigo de verificacao do e-mail.");
+    }
+
+    logSecurityEvent("customer_email_change_requested", {
       userId: session.user.id,
     });
+
+    revalidatePath("/meu-perfil");
+    return mutationSuccess(
+      isUsingDevelopmentMailFallback()
+        ? `Codigo de verificacao local: ${code}`
+        : "Enviamos um codigo para confirmar o novo e-mail. O telefone foi salvo sem verificacao por SMS."
+    );
   }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        name,
+        email,
+        phone: phone || null,
+      },
+    }),
+    prisma.emailChangeRequest.deleteMany({
+      where: {
+        userId: session.user.id,
+      },
+    }),
+  ]);
 
   revalidatePath("/meu-perfil");
   return mutationSuccess("Perfil atualizado com sucesso.");
+}
+
+export async function verifyCustomerEmailChangeAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const session = await auth();
+
+  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+    throw new Error("Nao autorizado.");
+  }
+
+  const code = String(formData.get("code") || "").trim();
+
+  if (!code) {
+    return mutationError("Informe o codigo de verificacao do e-mail.");
+  }
+
+  const rateLimit = await enforceRateLimit({
+    scope: "customer_email_change:verify",
+    identifier: session.user.id,
+    limit: 10,
+    windowMs: 15 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return mutationError("Muitas tentativas de verificacao. Aguarde e tente novamente.");
+  }
+
+  const pending = await prisma.emailChangeRequest.findFirst({
+    where: {
+      userId: session.user.id,
+    },
+  });
+
+  if (!pending) {
+    return mutationError("Nao ha troca de e-mail pendente para confirmar.");
+  }
+
+  if (pending.expiresAt.getTime() < Date.now()) {
+    await prisma.emailChangeRequest.deleteMany({
+      where: {
+        userId: session.user.id,
+      },
+    });
+
+    return mutationError("Esse codigo expirou. Solicite a troca de e-mail novamente.");
+  }
+
+  if (pending.attempts >= MAX_EMAIL_CHANGE_ATTEMPTS) {
+    return mutationError("Muitas tentativas invalidas. Solicite um novo codigo.");
+  }
+
+  if (pending.code !== code) {
+    await prisma.emailChangeRequest.update({
+      where: {
+        userId: session.user.id,
+      },
+      data: {
+        attempts: {
+          increment: 1,
+        },
+      },
+    });
+
+    return mutationError("Codigo invalido. Confira o e-mail e tente novamente.");
+  }
+
+  const emailOwner = await prisma.user.findFirst({
+    where: {
+      email: pending.email,
+      NOT: {
+        id: session.user.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (emailOwner) {
+    await prisma.emailChangeRequest.deleteMany({
+      where: {
+        userId: session.user.id,
+      },
+    });
+
+    return mutationError("Este e-mail ja esta em uso.");
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        email: pending.email,
+        emailVerified: new Date(),
+      },
+    }),
+    prisma.emailChangeRequest.deleteMany({
+      where: {
+        userId: session.user.id,
+      },
+    }),
+  ]);
+
+  logSecurityEvent("customer_email_change_verified", {
+    userId: session.user.id,
+  });
+
+  revalidatePath("/meu-perfil");
+  return mutationSuccess("E-mail verificado e atualizado com sucesso.");
 }
 
 export async function updateCustomerPasswordAction(

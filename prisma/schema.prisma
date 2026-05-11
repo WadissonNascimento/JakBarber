@@ -44,6 +44,7 @@ model Shop {
   users                    User[]
   pendingRegistrations     PendingRegistration[]
   passwordResetRequests    PasswordResetRequest[]
+  emailChangeRequests      EmailChangeRequest[]
   services                 Service[]
   appointments             Appointment[]
   appointmentServices      AppointmentService[]
@@ -101,6 +102,7 @@ model User {
   customerProfile          CustomerProfile?          @relation("CustomerProfileOwner")
   preferredByProfiles      CustomerProfile[]         @relation("PreferredBarber")
   emailDeliveryLogs        EmailDeliveryLog[]        @relation("EmailDeliveryRecipient")
+  emailChangeRequests      EmailChangeRequest[]
 
   @@unique([id, shopId])
   @@index([shopId, role, isActive])
@@ -214,6 +216,25 @@ model PasswordResetRequest {
 
   @@unique([id, shopId])
   @@index([shopId, email, expiresAt])
+}
+
+model EmailChangeRequest {
+  id        String   @id @default(cuid())
+  shopId    String   @default("shop_jak_barber")
+  userId    String   @unique
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, email, expiresAt])
+  @@index([shopId, userId, expiresAt])
 }
 
 model Service {

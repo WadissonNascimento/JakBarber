@@ -35,6 +35,22 @@ test("customer appointment actions reject manipulated appointment ids", () => {
   assert.match(actions, /scope:\s*"review:create"/);
 });
 
+test("customer profile email changes require code verification and do not verify phones", () => {
+  const actions = read("app/meu-perfil/actions.ts");
+  const form = read("app/meu-perfil/ProfileForm.tsx");
+  const schema = read("prisma/schema.prisma");
+
+  assert.match(actions, /isValidCustomerFullName\(name\)/);
+  assert.match(actions, /emailChangeRequest\.create/);
+  assert.match(actions, /sendVerificationCodeEmail/);
+  assert.match(actions, /verifyCustomerEmailChangeAction/);
+  assert.match(actions, /emailVerified:\s*new Date\(\)/);
+  assert.doesNotMatch(actions, /emailVerified:\s*null/);
+  assert.match(form, /verifyCustomerEmailChangeAction/);
+  assert.match(form, /nao precisa de verificacao por SMS/);
+  assert.match(schema, /model EmailChangeRequest/);
+});
+
 test("barber actions use the authenticated barber id instead of trusting form ids", () => {
   const actions = read("app/barber/actions.ts");
 

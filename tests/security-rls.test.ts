@@ -18,6 +18,7 @@ const protectedTables = [
   "VerificationToken",
   "PendingRegistration",
   "PasswordResetRequest",
+  "EmailChangeRequest",
   "Service",
   "Appointment",
   "AppointmentService",

@@ -72,7 +72,7 @@ export default async function MeuPerfilPage() {
     redirect("/painel");
   }
 
-  const [customer, appointments] = await Promise.all([
+  const [customer, appointments, pendingEmailChange] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
     }),
@@ -88,6 +88,15 @@ export default async function MeuPerfilPage() {
       },
       orderBy: {
         date: "desc",
+      },
+    }),
+    prisma.emailChangeRequest.findFirst({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        email: true,
+        expiresAt: true,
       },
     }),
   ]);
@@ -141,6 +150,14 @@ export default async function MeuPerfilPage() {
               email: customer?.email || "",
               phone: customer?.phone || "",
             }}
+            pendingEmailChange={
+              pendingEmailChange
+                ? {
+                    email: pendingEmailChange.email,
+                    expiresAt: pendingEmailChange.expiresAt.toISOString(),
+                  }
+                : null
+            }
           />
         </div>
 
