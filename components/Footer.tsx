@@ -2,12 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
+const JAK_BARBER_MAPS_URL =
+  "https://www.google.com/maps?ftid=0x94cefd02794bf5e3:0xd23868a9ee010185";
+
 export default function Footer({
   brandName,
   logoPath,
   whatsappNumber,
   instagramUrl,
-  addressLine,
   businessHours,
 }: {
   brandName: string;
@@ -21,6 +23,9 @@ export default function Footer({
     `Ola! Vim pelo site da ${brandName} e queria tirar uma dúvida.`
   ;
   const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
+  const displayedBusinessHours = businessHours.replace(/\b[Tt]erca\b/g, (match) =>
+    match.startsWith("t") ? "terça" : "Terça"
+  );
 
   return (
     <footer className="relative mt-14 border-t border-white/10 bg-[#030712] text-white">
@@ -48,7 +53,7 @@ export default function Footer({
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Funcionamento
               </p>
-              <p className="mt-2 text-zinc-200">{businessHours}</p>
+              <p className="mt-2 text-zinc-200">{displayedBusinessHours}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -80,11 +85,11 @@ export default function Footer({
             </a>
 
             <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(addressLine)}`}
+              href={JAK_BARBER_MAPS_URL}
               target="_blank"
               rel="noreferrer"
               className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--brand-strong)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand-muted)] hover:text-[var(--brand-strong)]"
-              aria-label="Localizacao"
+              aria-label="Localizacao da barbearia"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -118,7 +123,7 @@ export default function Footer({
               href="/sobre-nos"
               className="text-zinc-400 transition hover:text-[var(--brand-strong)]"
             >
-              Sobre nos
+              Sobre nós
             </Link>
             <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
             <Link

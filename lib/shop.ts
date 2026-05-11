@@ -24,7 +24,7 @@ const FALLBACK_SHOP_CONFIG: ShopRuntimeConfig = {
   whatsappNumber: "5511961971267",
   instagramUrl: "https://www.instagram.com/jakcompany_/",
   addressLine: "Osasco, SP",
-  businessHours: "Terca a domingo, das 09h as 20h",
+  businessHours: "Terça a domingo, das 09h as 20h",
   logoPath: "/logo.png",
   faviconPath: "/favicon.png?v=20260503-j",
   brandColor: "#0ea5e9",

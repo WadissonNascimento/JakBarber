@@ -13,9 +13,12 @@ import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { getCurrentShopId } from "@/lib/shop";
 import {
-  isStrongPassword,
-  PASSWORD_REQUIREMENT_MESSAGE,
-} from "@/lib/passwordPolicy";
+  CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE,
+  FULL_NAME_REQUIREMENT_MESSAGE,
+  isValidCustomerFullName,
+  isValidCustomerPassword,
+  normalizeCustomerName,
+} from "@/lib/customerRegistrationValidation";
 
 function generateVerificationCode() {
   return randomInt(100000, 1000000).toString();
@@ -45,7 +48,7 @@ export async function registerCustomerAction(
   formData: FormData
 ): Promise<FormFeedbackState> {
   const shopId = await getCurrentShopId();
-  const name = String(formData.get("name") || "").trim();
+  const name = normalizeCustomerName(String(formData.get("name") || ""));
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
@@ -55,6 +58,13 @@ export async function registerCustomerAction(
   if (!name || !email || !phone || !password) {
     return {
       error: "Nome, e-mail, telefone e senha sao obrigatorios.",
+      success: null,
+    };
+  }
+
+  if (!isValidCustomerFullName(name)) {
+    return {
+      error: FULL_NAME_REQUIREMENT_MESSAGE,
       success: null,
     };
   }
@@ -73,9 +83,9 @@ export async function registerCustomerAction(
     };
   }
 
-  if (!isStrongPassword(password)) {
+  if (!isValidCustomerPassword(password)) {
     return {
-      error: PASSWORD_REQUIREMENT_MESSAGE,
+      error: CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE,
       success: null,
     };
   }

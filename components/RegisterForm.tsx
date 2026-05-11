@@ -7,6 +7,13 @@ import { registerCustomerAction } from "@/app/register/actions";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import PhoneInput from "@/components/ui/PhoneInput";
 import SubmitButton from "@/components/SubmitButton";
+import {
+  CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE,
+  FULL_NAME_REQUIREMENT_MESSAGE,
+  isValidCustomerFullName,
+  isValidCustomerPassword,
+  normalizeCustomerName,
+} from "@/lib/customerRegistrationValidation";
 import { initialFormFeedbackState } from "@/lib/formFeedbackState";
 
 const inputClassName =
@@ -15,26 +22,19 @@ const inputClassName =
 const passwordInputClassName =
   "w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-white outline-none transition focus:border-[var(--brand)]/50 focus:ring-2 focus:ring-[var(--brand)]/20 placeholder:text-zinc-400";
 
-const passwordErrorMessage =
-  "A senha deve ter no minimo 7 caracteres, uma letra e um caractere especial.";
-
-function isValidPassword(password: string) {
-  return (
-    password.length >= 7 &&
-    /[A-Za-z]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
-  );
-}
-
 export default function RegisterForm() {
   const [state, formAction] = useFormState(
     registerCustomerAction,
     initialFormFeedbackState
   );
   const formState = state ?? initialFormFeedbackState;
+  const [name, setName] = useState("");
+  const [showNameError, setShowNameError] = useState(false);
   const [password, setPassword] = useState("");
   const [showPasswordError, setShowPasswordError] = useState(false);
-  const hasPasswordError = showPasswordError && !isValidPassword(password);
+  const hasNameError = showNameError && !isValidCustomerFullName(name);
+  const hasPasswordError =
+    showPasswordError && !isValidCustomerPassword(password);
 
   return (
     <div className="surface-card-strong w-full max-w-md rounded-[32px] p-6 shadow-2xl sm:p-8">
@@ -48,7 +48,23 @@ export default function RegisterForm() {
         </p>
       </div>
 
-      <form action={formAction} className="space-y-5">
+      <form
+        action={formAction}
+        className="space-y-5"
+        onSubmit={(event) => {
+          const normalizedName = normalizeCustomerName(name);
+          const validName = isValidCustomerFullName(normalizedName);
+          const validPassword = isValidCustomerPassword(password);
+
+          setName(normalizedName);
+          setShowNameError(!validName);
+          setShowPasswordError(!validPassword);
+
+          if (!validName || !validPassword) {
+            event.preventDefault();
+          }
+        }}
+      >
         <FeedbackMessage message={formState.error} tone="error" />
 
         <div>
@@ -63,9 +79,42 @@ export default function RegisterForm() {
             name="name"
             type="text"
             required
-            className={inputClassName}
-            placeholder="Seu nome"
+            value={name}
+            onBlur={() => {
+              setName((currentName) => normalizeCustomerName(currentName));
+              setShowNameError(true);
+            }}
+            onChange={(event) => {
+              setName(event.target.value);
+              if (showNameError || event.target.value.length > 0) {
+                setShowNameError(true);
+              }
+            }}
+            onInvalid={() => setShowNameError(true)}
+            aria-invalid={hasNameError}
+            aria-describedby="name-error"
+            className={`${inputClassName} ${
+              hasNameError
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : ""
+            }`}
+            placeholder="Nome e sobrenome"
+            title={FULL_NAME_REQUIREMENT_MESSAGE}
           />
+          {hasNameError && (
+            <p
+              id="name-error"
+              className="mt-2 flex items-start gap-2 text-sm text-red-400"
+            >
+              <span
+                aria-hidden="true"
+                className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-red-400 text-[10px] font-semibold"
+              >
+                !
+              </span>
+              <span>{FULL_NAME_REQUIREMENT_MESSAGE}</span>
+            </p>
+          )}
         </div>
 
         <div>
@@ -112,8 +161,7 @@ export default function RegisterForm() {
             name="password"
             type="password"
             required
-            minLength={7}
-            pattern="^(?=.*[A-Za-z])(?=.*[^A-Za-z0-9]).{7,}$"
+            pattern="^(?=.*[A-Za-zÀ-ÿ])(?=.*[0-9]).+$"
             value={password}
             onBlur={() => setShowPasswordError(true)}
             onChange={(event) => {
@@ -131,7 +179,7 @@ export default function RegisterForm() {
                 : ""
             }`}
             placeholder="Senha"
-            title={passwordErrorMessage}
+            title={CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE}
           />
           {hasPasswordError && (
             <p
@@ -144,7 +192,7 @@ export default function RegisterForm() {
               >
                 !
               </span>
-              <span>{passwordErrorMessage}</span>
+              <span>{CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE}</span>
             </p>
           )}
         </div>

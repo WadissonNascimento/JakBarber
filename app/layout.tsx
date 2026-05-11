@@ -104,7 +104,7 @@ export default async function RootLayout({
           whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
           instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
           addressLine={shop.addressLine || "Osasco, SP"}
-          businessHours={shop.businessHours || "Terca a domingo, das 09h as 20h"}
+          businessHours={shop.businessHours || "Terça a domingo, das 09h as 20h"}
         >
           {children}
         </AppChrome>

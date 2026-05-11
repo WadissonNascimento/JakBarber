@@ -100,7 +100,7 @@ export default function HomeClient({
         <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
           <div className="order-2 lg:order-1">
             <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-              Seu estilo comeca aqui.
+              Seu estilo começa aqui.
             </h1>
 
             <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">
@@ -132,7 +132,7 @@ export default function HomeClient({
 
               <div className="surface-card rounded-lg p-4">
                 <p className="text-xs text-[var(--brand-strong)]">Horário</p>
-                <p className="mt-2 text-sm text-zinc-200">Terca a domingo</p>
+                <p className="mt-2 text-sm text-zinc-200">Terça a domingo</p>
               </div>
 
               <div className="surface-card rounded-lg p-4">

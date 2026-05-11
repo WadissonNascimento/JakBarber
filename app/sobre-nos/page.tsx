@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Clock3 } from "lucide-react";
 
 export const metadata = {
-  title: "Sobre nos",
+  title: "Sobre nós",
   description: "Pagina em manutencao enquanto preparamos a historia da barbearia.",
 };
 
@@ -15,7 +15,7 @@ export default function SobreNosPage() {
         </div>
 
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-          Sobre nos
+          Sobre nós
         </p>
         <h1 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
           Pagina em manutencao
