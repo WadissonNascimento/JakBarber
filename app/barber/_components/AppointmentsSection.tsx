@@ -75,6 +75,7 @@ export function AppointmentsSection({
     message: string | null;
     tone: "success" | "error" | "info";
   }>({ message: null, tone: "success" });
+  const [visibleAppointments, setVisibleAppointments] = useState(appointments);
   const [isFilterPending, startFilterTransition] = useTransition();
   const [selectedStatus, setSelectedStatus] = useState(filters.status);
   const [selectedDate, setSelectedDate] = useState(filters.date);
@@ -90,7 +91,7 @@ export function AppointmentsSection({
     [filters.date, filters.status]
   );
   const highlightedAppointmentId = useMemo(() => {
-    const visibleAppointments = appointments.filter(
+    const openAppointments = visibleAppointments.filter(
       (appointment) =>
         !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(
           appointment.status
@@ -99,18 +100,36 @@ export function AppointmentsSection({
     const currentDate = getCurrentScheduleDate().getTime();
 
     return (
-      visibleAppointments.find(
+      openAppointments.find(
         (appointment) => new Date(appointment.date).getTime() >= currentDate
       )?.id ||
-      visibleAppointments[0]?.id ||
+      openAppointments[0]?.id ||
       null
     );
-  }, [appointments]);
+  }, [visibleAppointments]);
 
   useEffect(() => {
     setSelectedStatus(filterDefaults.status);
     setSelectedDate(filterDefaults.date);
   }, [filterDefaults.date, filterDefaults.status]);
+
+  useEffect(() => {
+    setVisibleAppointments(appointments);
+  }, [appointments]);
+
+  function handleStatusUpdated(appointmentId: string, status: string) {
+    const finalStatuses = ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"];
+
+    setVisibleAppointments((current) => {
+      if (selectedStatus === "ACTIVE" && finalStatuses.includes(status)) {
+        return current.filter((appointment) => appointment.id !== appointmentId);
+      }
+
+      return current.map((appointment) =>
+        appointment.id === appointmentId ? { ...appointment, status } : appointment
+      );
+    });
+  }
 
   function applyFilters(nextFilters = {
     status: selectedStatus,
@@ -235,13 +254,13 @@ export function AppointmentsSection({
       </div>
 
       <div className="mt-6 space-y-4">
-        {appointments.length === 0 ? (
+        {visibleAppointments.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento encontrado"
             description="Ajuste os filtros acima para ver outros horários ou volte mais tarde."
           />
         ) : (
-          appointments.map((appointment) => {
+          visibleAppointments.map((appointment) => {
             const serviceName = getAppointmentDisplayName(appointment.services);
             const serviceMeta = getAppointmentServiceMetaLine(appointment.services);
             const cardAppointment = {
@@ -286,6 +305,7 @@ export function AppointmentsSection({
                     appointmentId={appointment.id}
                     status={appointment.status}
                     onFeedback={setFeedback}
+                    onStatusUpdated={handleStatusUpdated}
                     hasPickupItems={review.hasPickupItems}
                     allPickupItemsReviewed={review.allPickupItemsReviewed}
                     itemDeliveryDecisions={review.itemDeliveryDecisions}

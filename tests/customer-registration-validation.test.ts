@@ -14,9 +14,10 @@ test("customer registration requires first and last name", () => {
   assert.equal(isValidCustomerFullName("A Silva"), false);
 });
 
-test("customer registration password requires letters and at least one number", () => {
+test("customer registration password requires 8 characters, letters and at least one number", () => {
   assert.equal(isValidCustomerPassword("senha123"), true);
   assert.equal(isValidCustomerPassword("Cliente2024"), true);
+  assert.equal(isValidCustomerPassword("senha12"), false);
   assert.equal(isValidCustomerPassword("senha"), false);
   assert.equal(isValidCustomerPassword("12345678"), false);
 });

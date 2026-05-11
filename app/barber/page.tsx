@@ -1,11 +1,9 @@
 import BarberTodayDashboard from "./_components/BarberTodayDashboard";
 import BarberProfileSettings from "./_components/BarberProfileSettings";
 import AccountPasswordForm from "@/components/AccountPasswordForm";
-import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
 import { updateOwnAccountPasswordAction } from "@/app/accountPasswordActions";
 import { getBarberTodayDashboardData } from "./data";
 import { requireActiveBarber } from "./guard";
-import { PiggyBank } from "lucide-react";
 import {
   updateOwnBarberContactAction,
   updateOwnBarberPhotoAction,
@@ -49,19 +47,11 @@ export default async function BarberPage() {
           />
         </div>
 
-        <div className="mb-4 max-w-xl">
-          <DashboardEntryCard
-            href="/barber/caixinhas"
-            icon={PiggyBank}
-            title="Anotar caixinha"
-            description="Registre uma caixinha recebida de cliente."
-          />
-        </div>
-
         <BarberTodayDashboard
           barberName={barberName}
           summary={dashboard.summary}
           walkInServices={dashboard.walkInServices}
+          walkInExtras={dashboard.walkInExtras}
           clients={dashboard.clients}
         />
       </div>

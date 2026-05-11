@@ -6,6 +6,7 @@ import {
   CalendarRange,
   Clock3,
   DollarSign,
+  PiggyBank,
   UserRound,
   Users,
 } from "lucide-react";
@@ -32,11 +33,13 @@ export default function BarberTodayDashboard({
   barberName,
   summary,
   walkInServices,
+  walkInExtras,
   clients,
 }: {
   barberName: string;
   summary: BarberTodayDashboardData["summary"];
   walkInServices: BarberTodayDashboardData["walkInServices"];
+  walkInExtras: BarberTodayDashboardData["walkInExtras"];
   clients: BarberTodayDashboardData["clients"];
 }) {
   const [appointments, setAppointments] = useState(summary.todayAppointments);
@@ -108,8 +111,12 @@ export default function BarberTodayDashboard({
           <QuickLink href="/barber/clientes" icon={<Users />}>
             Clientes
           </QuickLink>
+          <QuickLink href="/barber/caixinhas" icon={<PiggyBank />}>
+            Anotar caixinha
+          </QuickLink>
           <WalkInAppointmentCard
             services={walkInServices}
+            extras={walkInExtras}
             clients={clients}
             activeAppointments={summary.todayAppointments.map((appointment) => ({
               date: appointment.date,
@@ -122,7 +129,7 @@ export default function BarberTodayDashboard({
           </QuickLink>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetricCard
             icon={<CalendarRange />}
             label="Atendimentos"
@@ -134,12 +141,6 @@ export default function BarberTodayDashboard({
             label="Clientes"
             value={`${summary.clientsToday}`}
             helper="passam hoje"
-          />
-          <MetricCard
-            icon={<DollarSign />}
-            label="Previsto"
-            value={formatCurrency(summary.scheduledRevenueToday)}
-            helper="agenda ativa"
           />
           <MetricCard
             icon={<DollarSign />}

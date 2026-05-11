@@ -161,7 +161,8 @@ export default function RegisterForm() {
             name="password"
             type="password"
             required
-            pattern="^(?=.*[A-Za-zÀ-ÿ])(?=.*[0-9]).+$"
+            minLength={8}
+            pattern="^(?=.*[A-Za-zÀ-ÿ])(?=.*[0-9]).{8,}$"
             value={password}
             onBlur={() => setShowPasswordError(true)}
             onChange={(event) => {

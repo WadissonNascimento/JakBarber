@@ -22,6 +22,11 @@ import {
   getScheduleMinutes,
 } from "@/lib/scheduleTime";
 import { formatBrazilianPhone, maskBrazilianPhone } from "@/lib/phone";
+import { isValidBrazilianPhone } from "@/lib/phone";
+import {
+  isValidCustomerFullName,
+  normalizeCustomerName,
+} from "@/lib/customerRegistrationValidation";
 import { formatCurrency } from "@/lib/utils";
 import { createWalkInAppointmentAction } from "../actions";
 import type { getBarberDashboardData } from "../data";
@@ -30,6 +35,7 @@ type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
 
 type WalkInAppointmentCardProps = {
   services: BarberDashboardData["walkInServices"];
+  extras: BarberDashboardData["walkInExtras"];
   clients: BarberDashboardData["clients"];
   activeAppointments: Array<{
     date: Date;
@@ -86,10 +92,6 @@ function getSuggestedStartTime(
   return minutesToTime(candidateMinutes);
 }
 
-function formatTime(date: Date) {
-  return formatScheduleTime(new Date(date));
-}
-
 function formatDateValue(value: string) {
   const [year, month, day] = value.split("-");
 
@@ -98,6 +100,10 @@ function formatDateValue(value: string) {
   }
 
   return `${day}/${month}/${year}`;
+}
+
+function formatTime(date: Date) {
+  return formatScheduleTime(new Date(date));
 }
 
 function getGapLabel(nextAppointmentDate: Date | null) {
@@ -118,6 +124,7 @@ function getGapLabel(nextAppointmentDate: Date | null) {
 
 export default function WalkInAppointmentCard({
   services,
+  extras,
   clients,
   activeAppointments,
 }: WalkInAppointmentCardProps) {
@@ -136,6 +143,7 @@ export default function WalkInAppointmentCard({
     date: string;
     startTime: string;
     notes: string;
+    extrasLabel: string;
   } | null>(null);
   const [feedback, setFeedback] = useState<{
     message: string | null;
@@ -146,10 +154,9 @@ export default function WalkInAppointmentCard({
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const defaultService = services[0];
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
-    defaultService ? [defaultService.id] : []
-  );
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [hasExtras, setHasExtras] = useState(false);
+  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
   const selectedServices = useMemo(
     () => services.filter((service) => selectedServiceIds.includes(service.id)),
     [selectedServiceIds, services]
@@ -159,6 +166,12 @@ export default function WalkInAppointmentCard({
     0
   );
   const selectedTotal = selectedServices.reduce((sum, service) => sum + service.price, 0);
+  const selectedExtras = useMemo(
+    () => extras.filter((extra) => selectedExtraIds.includes(extra.id)),
+    [selectedExtraIds, extras]
+  );
+  const selectedExtrasTotal = selectedExtras.reduce((sum, extra) => sum + extra.price, 0);
+  const selectedGrandTotal = selectedTotal + selectedExtrasTotal;
   const selectedCustomer = clients.find((client) => client.id === selectedCustomerId) || null;
   const filteredClients = useMemo(() => {
     const search = clientSearch.trim().toLowerCase();
@@ -174,35 +187,26 @@ export default function WalkInAppointmentCard({
     );
   }, [clientSearch, clients]);
   const [startTime, setStartTime] = useState(() =>
-    getSuggestedStartTime(activeAppointments, defaultService?.duration || 30)
+    getSuggestedStartTime(activeAppointments, 30)
   );
   const [selectedDate, setSelectedDate] = useState(() => getCurrentScheduleDateValue());
   const isDisabled = services.length === 0;
-
-  const nextAppointmentDate = useMemo(() => {
-    const nextDates = activeAppointments
-      .filter((appointment) => isActiveAppointmentStatus(appointment.status))
-      .map((appointment) => new Date(appointment.date))
-      .sort((a, b) => a.getTime() - b.getTime());
-
-    return nextDates[0] || null;
-  }, [activeAppointments]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!defaultService) {
-      return;
-    }
-
     setSelectedServiceIds((current) =>
-      current.some((serviceId) => services.some((service) => service.id === serviceId))
-        ? current.filter((serviceId) => services.some((service) => service.id === serviceId))
-        : [defaultService.id]
+      current.filter((serviceId) => services.some((service) => service.id === serviceId))
     );
-  }, [defaultService, services]);
+  }, [services]);
+
+  useEffect(() => {
+    setSelectedExtraIds((current) =>
+      current.filter((extraId) => extras.some((extra) => extra.id === extraId))
+    );
+  }, [extras]);
 
   useEffect(() => {
     if (!mounted || (!isOpen && !isSuccessOpen && !isClientPickerOpen && !isConfirmOpen)) {
@@ -241,8 +245,6 @@ export default function WalkInAppointmentCard({
   }
 
   function openWalkInModal() {
-    const initialService = defaultService || services[0] || null;
-    const initialServiceIds = initialService ? [initialService.id] : [];
     setSelectedCustomerId("");
     setCustomerName("");
     setCustomerPhone("");
@@ -251,9 +253,11 @@ export default function WalkInAppointmentCard({
     setIsConfirmOpen(false);
     setPendingFormData(null);
     setPendingSummary(null);
-    setSelectedServiceIds(initialServiceIds);
+    setSelectedServiceIds([]);
+    setHasExtras(false);
+    setSelectedExtraIds([]);
     setSelectedDate(getCurrentScheduleDateValue());
-    setStartTime(getSuggestedStartTime(activeAppointments, initialService?.duration || 30));
+    setStartTime(getSuggestedStartTime(activeAppointments, 30));
     setFeedback({ message: null, tone: "success" });
     setIsOpen(true);
   }
@@ -269,6 +273,14 @@ export default function WalkInAppointmentCard({
       setStartTime(getSuggestedStartTime(activeAppointments, nextDuration || 30));
       return next;
     });
+  }
+
+  function toggleExtra(extraId: string) {
+    setSelectedExtraIds((current) =>
+      current.includes(extraId)
+        ? current.filter((id) => id !== extraId)
+        : [...current, extraId]
+    );
   }
 
   function selectExistingCustomer(customerId: string) {
@@ -315,6 +327,8 @@ export default function WalkInAppointmentCard({
         setSelectedCustomerId("");
         setCustomerName("");
         setCustomerPhone("");
+        setHasExtras(false);
+        setSelectedExtraIds([]);
         setPendingFormData(null);
         setPendingSummary(null);
         setIsConfirmOpen(false);
@@ -323,7 +337,7 @@ export default function WalkInAppointmentCard({
         setStartTime(
           getSuggestedStartTime(
             activeAppointments,
-            selectedDuration || defaultService?.duration || 30
+            selectedDuration || 30
           )
         );
         router.refresh();
@@ -358,9 +372,6 @@ export default function WalkInAppointmentCard({
                       <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
                         Criar encaixe manual
                       </h2>
-                      <p className="mt-1 text-sm leading-6 text-zinc-400">
-                        Informe data e horario livremente. {getGapLabel(nextAppointmentDate)}
-                      </p>
                     </div>
 
                     <button
@@ -390,7 +401,12 @@ export default function WalkInAppointmentCard({
                         event.preventDefault();
                         const form = event.currentTarget;
                         const formData = new FormData(form);
-                        const submittedCustomerName = String(formData.get("customerName") || "").trim();
+                        const submittedCustomerName = normalizeCustomerName(
+                          String(formData.get("customerName") || "")
+                        );
+                        const submittedCustomerPhone = String(
+                          formData.get("customerPhone") || ""
+                        );
                         const submittedDate = String(formData.get("date") || "").trim();
                         const selectedStartTime = String(formData.get("startTime") || "").trim();
                         const notes = String(formData.get("notes") || "").trim();
@@ -398,11 +414,35 @@ export default function WalkInAppointmentCard({
                           selectedServices.map((service) => service.name).join(" + ") ||
                           "Serviço";
 
+                        const extrasLabel =
+                          hasExtras && selectedExtras.length > 0
+                            ? selectedExtras.map((extra) => extra.name).join(" + ")
+                            : "";
+
+                        if (!selectedCustomerId) {
+                          if (!isValidCustomerFullName(submittedCustomerName)) {
+                            setFeedback({
+                              message: "Informe nome e sobrenome do cliente.",
+                              tone: "error",
+                            });
+                            return;
+                          }
+
+                          if (!isValidBrazilianPhone(submittedCustomerPhone)) {
+                            setFeedback({
+                              message: "Informe um telefone valido.",
+                              tone: "error",
+                            });
+                            return;
+                          }
+                        }
+
                         setPendingFormData(formData);
                         setPendingSummary({
                           customerName: submittedCustomerName || "Cliente",
-                          customerPhone: formatBrazilianPhone(String(formData.get("customerPhone") || "")),
+                          customerPhone: formatBrazilianPhone(submittedCustomerPhone),
                           serviceName,
+                          extrasLabel,
                           date: submittedDate || selectedDate,
                           startTime: selectedStartTime || startTime,
                           notes,
@@ -413,6 +453,16 @@ export default function WalkInAppointmentCard({
                       {selectedServiceIds.map((serviceId) => (
                         <input key={serviceId} type="hidden" name="serviceIds" value={serviceId} />
                       ))}
+                      {hasExtras
+                        ? selectedExtraIds.map((extraId) => (
+                            <input
+                              key={extraId}
+                              type="hidden"
+                              name="extraProductIds"
+                              value={extraId}
+                            />
+                          ))
+                        : null}
                       <input type="hidden" name="customerId" value={selectedCustomerId} />
 
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -424,9 +474,16 @@ export default function WalkInAppointmentCard({
                             name="customerName"
                             value={customerName}
                             onChange={(event) => setCustomerName(event.target.value)}
+                            onBlur={() =>
+                              setCustomerName((current) => normalizeCustomerName(current))
+                            }
+                            type="text"
+                            inputMode="text"
+                            autoCapitalize="words"
+                            autoComplete="name"
                             required
                             maxLength={80}
-                            placeholder="Nome do cliente"
+                            placeholder="Nome e sobrenome"
                             className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
                           />
                         </label>
@@ -439,7 +496,12 @@ export default function WalkInAppointmentCard({
                             name="customerPhone"
                             value={customerPhone}
                             onChange={(event) => setCustomerPhone(maskBrazilianPhone(event.target.value))}
+                            type="tel"
+                            inputMode="numeric"
+                            autoComplete="tel"
+                            pattern="\([1-9][0-9]\) 9[0-9]{4}-[0-9]{4}"
                             maxLength={15}
+                            required={!selectedCustomerId}
                             placeholder="(11) 96590-0713"
                             className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
                           />
@@ -528,10 +590,87 @@ export default function WalkInAppointmentCard({
                         </div>
                       </div>
 
+                      <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+                          Extras do atendimento
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-400">
+                          Teve algum extra nesse encaixe?
+                        </p>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHasExtras(false);
+                              setSelectedExtraIds([]);
+                            }}
+                            className={`min-h-11 rounded-2xl border px-4 py-2 text-sm font-bold transition ${
+                              !hasExtras
+                                ? "border-[var(--brand)]/45 bg-[var(--brand-muted)] text-white"
+                                : "border-white/10 text-zinc-300 hover:bg-white/[0.04]"
+                            }`}
+                          >
+                            Nao
+                          </button>
+                          <button
+                            type="button"
+                            disabled={extras.length === 0}
+                            onClick={() => setHasExtras(true)}
+                            className={`min-h-11 rounded-2xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              hasExtras
+                                ? "border-[var(--brand)]/45 bg-[var(--brand-muted)] text-white"
+                                : "border-white/10 text-zinc-300 hover:bg-white/[0.04]"
+                            }`}
+                          >
+                            Sim
+                          </button>
+                        </div>
+
+                        {hasExtras ? (
+                          extras.length === 0 ? (
+                            <p className="mt-3 rounded-2xl border border-dashed border-white/10 p-3 text-sm text-zinc-400">
+                              Nenhum extra disponivel no estoque.
+                            </p>
+                          ) : (
+                            <div className="mt-3 space-y-2">
+                              {extras.map((extra) => {
+                                const selected = selectedExtraIds.includes(extra.id);
+
+                                return (
+                                  <button
+                                    key={extra.id}
+                                    type="button"
+                                    onClick={() => toggleExtra(extra.id)}
+                                    className={`flex min-h-[54px] w-full items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left transition ${
+                                      selected
+                                        ? "border-[var(--brand)]/45 bg-[var(--brand-muted)]"
+                                        : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
+                                    }`}
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="block truncate text-sm font-bold text-white">
+                                        {extra.name}
+                                      </span>
+                                      <span className="mt-0.5 block text-[11px] text-zinc-400">
+                                        {formatCurrency(extra.price)} - estoque {extra.stock}
+                                      </span>
+                                    </span>
+                                    {selected ? (
+                                      <Check className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
+                                    ) : null}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )
+                        ) : null}
+                      </div>
+
                       <div className="grid grid-cols-3 gap-2 rounded-3xl border border-white/10 bg-black/20 p-3">
                         <SummaryTile label="Serviços" value={String(selectedServiceIds.length)} />
                         <SummaryTile label="Duração" value={`${selectedDuration || 0} min`} />
-                        <SummaryTile label="Total" value={formatCurrency(selectedTotal)} />
+                        <SummaryTile label="Total" value={formatCurrency(selectedGrandTotal)} />
                       </div>
 
                       <label className="block">
@@ -622,7 +761,7 @@ export default function WalkInAppointmentCard({
             <WalkInConfirmPopup
               summary={pendingSummary}
               duration={selectedDuration}
-              total={selectedTotal}
+              total={selectedGrandTotal}
               isPending={isPending}
               onConfirm={confirmWalkInCreation}
               onClose={() => {
@@ -865,6 +1004,7 @@ function WalkInConfirmPopup({
     customerName: string;
     customerPhone: string;
     serviceName: string;
+    extrasLabel: string;
     date: string;
     startTime: string;
     notes: string;

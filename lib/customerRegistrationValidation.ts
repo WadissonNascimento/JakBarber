@@ -1,7 +1,7 @@
 export const FULL_NAME_REQUIREMENT_MESSAGE = "Informe nome e sobrenome.";
 
 export const CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE =
-  "A senha deve conter letras e pelo menos 1 número.";
+  "A senha deve ter no minimo 8 caracteres, uma letra e um numero.";
 
 export function normalizeCustomerName(name: string) {
   return name.trim().replace(/\s+/g, " ");
@@ -14,5 +14,5 @@ export function isValidCustomerFullName(name: string) {
 }
 
 export function isValidCustomerPassword(password: string) {
-  return /[A-Za-zÀ-ÿ]/.test(password) && /\d/.test(password);
+  return password.length >= 8 && /[A-Za-zÀ-ÿ]/.test(password) && /\d/.test(password);
 }

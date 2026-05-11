@@ -21,7 +21,7 @@ import {
   createBarberBlockAction,
   createRecurringBarberBlockAction,
   deleteBarberBlockAction,
-  saveWeeklyBarberAvailabilityAction,
+  saveBarberAvailabilityAction,
 } from "../actions";
 import type { getBarberDashboardData } from "../data";
 
@@ -141,9 +141,17 @@ export function AvailabilitySection({
           availabilities={availabilities}
           blocks={blocks}
           recurringBlocks={recurringBlocks}
-          isPending={isPending && pendingKey === "weekly-availability"}
-          onSave={(formData) =>
-            runAction("weekly-availability", saveWeeklyBarberAvailabilityAction, formData)
+          savingWeekDay={
+            pendingKey?.startsWith("availability-day-")
+              ? Number(pendingKey.replace("availability-day-", ""))
+              : null
+          }
+          onSaveDay={(formData) =>
+            runAction(
+              `availability-day-${String(formData.get("weekDay") || "")}`,
+              saveBarberAvailabilityAction,
+              formData
+            )
           }
         />
 

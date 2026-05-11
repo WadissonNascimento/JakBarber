@@ -185,7 +185,7 @@ export async function getBarberDashboardData(
     where: {
       ...appointmentWhere,
       ...(status === "ACTIVE"
-        ? { status: { notIn: ["CANCELLED"] } }
+        ? { status: { notIn: ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"] } }
         : status !== "ALL"
         ? { status }
         : {}),
@@ -208,6 +208,7 @@ export async function getBarberDashboardData(
     clientNotes,
     allBarberAppointments,
     walkInServices,
+    walkInExtras,
   ] =
     await Promise.all([
       prisma.appointment.count({
@@ -333,6 +334,23 @@ export async function getBarberDashboardData(
           },
         ],
       }),
+      prisma.extraProduct.findMany({
+        where: {
+          isActive: true,
+          stock: {
+            gt: 0,
+          },
+        },
+        orderBy: {
+          name: "asc",
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          stock: true,
+        },
+      }),
     ]);
 
   const normalizedTodayAppointments = todayAppointments.map((appointment) => ({
@@ -433,6 +451,10 @@ export async function getBarberDashboardData(
     })),
     services: serializeServicesForClient(services),
     walkInServices: serializeServicesForClient(walkInServices),
+    walkInExtras: walkInExtras.map((extra) => ({
+      ...extra,
+      price: toMoneyNumber(extra.price),
+    })),
     availabilities,
     blocks,
     recurringBlocks,
@@ -450,6 +472,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
     completedToday,
     todayAppointments,
     walkInServices,
+    walkInExtras,
     clientNotes,
     allBarberAppointments,
   ] = await Promise.all([
@@ -506,6 +529,23 @@ export async function getBarberTodayDashboardData(barberId: string) {
           name: "asc",
         },
       ],
+    }),
+    prisma.extraProduct.findMany({
+      where: {
+        isActive: true,
+        stock: {
+          gt: 0,
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+      },
     }),
     prisma.clientNote.findMany({
       where: { barberId },
@@ -593,6 +633,10 @@ export async function getBarberTodayDashboardData(barberId: string) {
       nextAppointments: [],
     },
     walkInServices: serializeServicesForClient(walkInServices),
+    walkInExtras: walkInExtras.map((extra) => ({
+      ...extra,
+      price: toMoneyNumber(extra.price),
+    })),
     clients: buildClientsFromHistory(clientNotes, allBarberAppointments),
   };
 }

@@ -33,6 +33,10 @@ import {
 } from "@/lib/phone";
 import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
 import { enforceRateLimit } from "@/lib/security";
+import {
+  isValidCustomerFullName,
+  normalizeCustomerName,
+} from "@/lib/customerRegistrationValidation";
 
 async function requireBarber() {
   const session = await auth();
@@ -296,14 +300,20 @@ export async function createWalkInAppointmentAction(
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const customerId = String(formData.get("customerId") || "").trim();
-  const customerName = String(formData.get("customerName") || "").trim();
-  const customerPhone = String(formData.get("customerPhone") || "").trim();
+  const customerName = normalizeCustomerName(String(formData.get("customerName") || ""));
+  const rawCustomerPhone = String(formData.get("customerPhone") || "");
+  const customerPhone = normalizeBrazilianPhoneForSubmit(rawCustomerPhone);
   const serviceIds = formData
     .getAll("serviceIds")
     .map((value) => String(value).trim())
     .filter(Boolean);
   const legacyServiceId = String(formData.get("serviceId") || "").trim();
   const selectedServiceIds = serviceIds.length > 0 ? serviceIds : [legacyServiceId].filter(Boolean);
+  const selectedExtras = formData
+    .getAll("extraProductIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .map((extraProductId) => ({ extraProductId, quantity: 1 }));
   const date = String(formData.get("date") || "").trim();
   const startTime = String(formData.get("startTime") || "").trim();
   const extraNotes = String(formData.get("notes") || "").trim();
@@ -320,16 +330,20 @@ export async function createWalkInAppointmentAction(
   }
 
   if (
-    (!customerId && !customerName) ||
+    (!customerId && !isValidCustomerFullName(customerName)) ||
+    (!customerId && !isValidBrazilianPhone(rawCustomerPhone)) ||
+    (Boolean(rawCustomerPhone.trim()) && !customerPhone) ||
     customerName.length > 80 ||
-    customerPhone.length > 30 ||
     selectedServiceIds.length === 0 ||
     selectedServiceIds.length > 8 ||
+    selectedExtras.length > 12 ||
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !/^\d{2}:\d{2}$/.test(startTime) ||
     extraNotes.length > 200
   ) {
-    return mutationError("Preencha cliente, servicos, data e horario corretamente.");
+    return mutationError(
+      "Preencha nome completo, telefone valido, servicos, data e horario corretamente."
+    );
   }
 
   const services = await prisma.service.findMany({
@@ -402,6 +416,7 @@ export async function createWalkInAppointmentAction(
       customerId: customer.id,
       barberId: barber.id,
       serviceIds: selectedServiceIds,
+      extras: selectedExtras,
       date,
       time: startTime,
       notes: `Encaixe Manual${extraNotes ? ` - ${extraNotes}` : ""}`,
