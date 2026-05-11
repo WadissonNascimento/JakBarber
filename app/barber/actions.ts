@@ -8,7 +8,7 @@ import {
 } from "@/lib/appointmentStatus";
 import {
   AppointmentMutationError,
-  createCustomerAppointment,
+  createManualFitInAppointment,
   setAppointmentItemDeliveryStatus,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
@@ -31,11 +31,7 @@ import {
   isValidBrazilianPhone,
   normalizeBrazilianPhoneForSubmit,
 } from "@/lib/phone";
-import {
-  createScheduleDateTimeInput,
-  getCurrentScheduleDateValue,
-  getCurrentScheduleMinutes,
-} from "@/lib/scheduleTime";
+import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
 import { enforceRateLimit } from "@/lib/security";
 
 async function requireBarber() {
@@ -84,15 +80,6 @@ function parseItemDeliveryDecisions(formData: FormData) {
       };
     })
     .filter((decision) => decision.appointmentItemId);
-}
-
-function getTodayValue() {
-  return getCurrentScheduleDateValue();
-}
-
-function getMinutesFromTime(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
 }
 
 export async function updateOwnBarberPhotoAction(
@@ -317,6 +304,7 @@ export async function createWalkInAppointmentAction(
     .filter(Boolean);
   const legacyServiceId = String(formData.get("serviceId") || "").trim();
   const selectedServiceIds = serviceIds.length > 0 ? serviceIds : [legacyServiceId].filter(Boolean);
+  const date = String(formData.get("date") || "").trim();
   const startTime = String(formData.get("startTime") || "").trim();
   const extraNotes = String(formData.get("notes") || "").trim();
 
@@ -337,18 +325,11 @@ export async function createWalkInAppointmentAction(
     customerPhone.length > 30 ||
     selectedServiceIds.length === 0 ||
     selectedServiceIds.length > 8 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !/^\d{2}:\d{2}$/.test(startTime) ||
     extraNotes.length > 200
   ) {
-    return mutationError("Preencha cliente, servicos e horario corretamente.");
-  }
-
-  const now = new Date();
-  const nowMinutes = getCurrentScheduleMinutes(now);
-  const selectedMinutes = getMinutesFromTime(startTime);
-
-  if (selectedMinutes < nowMinutes) {
-    return mutationError("Encaixe precisa usar um horario que ainda nao passou.");
+    return mutationError("Preencha cliente, servicos, data e horario corretamente.");
   }
 
   const services = await prisma.service.findMany({
@@ -414,23 +395,17 @@ export async function createWalkInAppointmentAction(
       select: {
         id: true,
       },
-    }));
+  }));
 
   try {
-    const appointment = await createCustomerAppointment({
+    await createManualFitInAppointment({
       customerId: customer.id,
       barberId: barber.id,
       serviceIds: selectedServiceIds,
-      date: getTodayValue(),
+      date,
       time: startTime,
-      notes: `Encaixe${extraNotes ? ` - ${extraNotes}` : ""}`,
-      now: new Date(now.getTime() - 60 * 1000),
+      notes: `Encaixe Manual${extraNotes ? ` - ${extraNotes}` : ""}`,
       conflictMode: "SAME_START_ONLY",
-    });
-
-    await prisma.appointment.update({
-      where: { id: appointment.id },
-      data: { status: "CONFIRMED" },
     });
   } catch (error) {
     if (error instanceof AppointmentMutationError) {

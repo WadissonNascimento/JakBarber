@@ -50,6 +50,7 @@ const appointmentBaseSelect = {
   date: true,
   status: true,
   notes: true,
+  isManualFitIn: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.AppointmentSelect;

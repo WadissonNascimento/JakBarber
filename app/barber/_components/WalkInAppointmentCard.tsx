@@ -6,20 +6,18 @@ import { createPortal } from "react-dom";
 import {
   Check,
   CheckCircle2,
-  Clock3,
   Plus,
   Scissors,
   Search,
-  Sparkles,
-  UserRound,
   X,
 } from "lucide-react";
 import FeedbackMessage from "@/components/FeedbackMessage";
-import { PremiumTimePicker } from "@/components/ui/PremiumFilters";
+import { PremiumDatePicker, PremiumTimePicker } from "@/components/ui/PremiumFilters";
 import { isActiveAppointmentStatus, minutesToTime, toMinutes } from "@/lib/barberSchedule";
 import {
   formatScheduleTime,
   getCurrentScheduleDate,
+  getCurrentScheduleDateValue,
   getCurrentScheduleMinutes,
   getScheduleMinutes,
 } from "@/lib/scheduleTime";
@@ -43,6 +41,7 @@ type WalkInAppointmentCardProps = {
 type WalkInSuccessDetails = {
   customerName: string;
   serviceName: string;
+  date: string;
   startTime: string;
 };
 
@@ -91,6 +90,16 @@ function formatTime(date: Date) {
   return formatScheduleTime(new Date(date));
 }
 
+function formatDateValue(value: string) {
+  const [year, month, day] = value.split("-");
+
+  if (!year || !month || !day) {
+    return value || "Data nao informada";
+  }
+
+  return `${day}/${month}/${year}`;
+}
+
 function getGapLabel(nextAppointmentDate: Date | null) {
   if (!nextAppointmentDate) {
     return "Sem próximo atendimento hoje.";
@@ -124,6 +133,7 @@ export default function WalkInAppointmentCard({
     customerName: string;
     customerPhone: string;
     serviceName: string;
+    date: string;
     startTime: string;
     notes: string;
   } | null>(null);
@@ -166,6 +176,7 @@ export default function WalkInAppointmentCard({
   const [startTime, setStartTime] = useState(() =>
     getSuggestedStartTime(activeAppointments, defaultService?.duration || 30)
   );
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentScheduleDateValue());
   const isDisabled = services.length === 0;
 
   const nextAppointmentDate = useMemo(() => {
@@ -241,6 +252,7 @@ export default function WalkInAppointmentCard({
     setPendingFormData(null);
     setPendingSummary(null);
     setSelectedServiceIds(initialServiceIds);
+    setSelectedDate(getCurrentScheduleDateValue());
     setStartTime(getSuggestedStartTime(activeAppointments, initialService?.duration || 30));
     setFeedback({ message: null, tone: "success" });
     setIsOpen(true);
@@ -297,6 +309,7 @@ export default function WalkInAppointmentCard({
         setSuccessDetails({
           customerName: summary.customerName || "Cliente",
           serviceName: summary.serviceName,
+          date: summary.date,
           startTime: summary.startTime || startTime,
         });
         setSelectedCustomerId("");
@@ -340,13 +353,13 @@ export default function WalkInAppointmentCard({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--brand-strong)]">
-                        Encaixe
+                        Encaixe manual
                       </p>
                       <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
-                        Criar encaixe
+                        Criar encaixe manual
                       </h2>
                       <p className="mt-1 text-sm leading-6 text-zinc-400">
-                        {getGapLabel(nextAppointmentDate)}
+                        Informe data e horario livremente. {getGapLabel(nextAppointmentDate)}
                       </p>
                     </div>
 
@@ -378,6 +391,7 @@ export default function WalkInAppointmentCard({
                         const form = event.currentTarget;
                         const formData = new FormData(form);
                         const submittedCustomerName = String(formData.get("customerName") || "").trim();
+                        const submittedDate = String(formData.get("date") || "").trim();
                         const selectedStartTime = String(formData.get("startTime") || "").trim();
                         const notes = String(formData.get("notes") || "").trim();
                         const serviceName =
@@ -389,6 +403,7 @@ export default function WalkInAppointmentCard({
                           customerName: submittedCustomerName || "Cliente",
                           customerPhone: formatBrazilianPhone(String(formData.get("customerPhone") || "")),
                           serviceName,
+                          date: submittedDate || selectedDate,
                           startTime: selectedStartTime || startTime,
                           notes,
                         });
@@ -521,7 +536,19 @@ export default function WalkInAppointmentCard({
 
                       <label className="block">
                         <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                          Início
+                          Data
+                        </span>
+                        <PremiumDatePicker
+                          name="date"
+                          value={selectedDate}
+                          onChange={setSelectedDate}
+                          required
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                          Horário
                         </span>
                         <PremiumTimePicker
                           name="startTime"
@@ -647,6 +674,7 @@ export default function WalkInAppointmentCard({
                 <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
                   <SummaryRow label="Cliente" value={successDetails.customerName} />
                   <SummaryRow label="Serviços" value={successDetails.serviceName} />
+                  <SummaryRow label="Data" value={formatDateValue(successDetails.date)} />
                   <SummaryRow label="Horário" value={successDetails.startTime} />
                 </div>
 
@@ -837,6 +865,7 @@ function WalkInConfirmPopup({
     customerName: string;
     customerPhone: string;
     serviceName: string;
+    date: string;
     startTime: string;
     notes: string;
   };
@@ -863,7 +892,7 @@ function WalkInConfirmPopup({
               Confirmar
             </p>
             <h3 className="mt-1 text-2xl font-black text-white">
-              Criar encaixe?
+              Criar encaixe manual?
             </h3>
             <p className="mt-1 text-sm leading-6 text-zinc-400">
               Confira os dados antes de reservar o horário.
@@ -881,6 +910,7 @@ function WalkInConfirmPopup({
 
         <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
           <SummaryRow label="Cliente" value={summary.customerName} />
+          <SummaryRow label="Data" value={formatDateValue(summary.date)} />
           <SummaryRow label="Telefone" value={formatBrazilianPhone(summary.customerPhone) || "Não informado"} />
           <SummaryRow label="Serviços" value={summary.serviceName} />
           <SummaryRow label="Horário" value={summary.startTime} />

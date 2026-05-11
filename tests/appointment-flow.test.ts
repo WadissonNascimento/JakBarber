@@ -6,6 +6,7 @@ import {
   AppointmentMutationError,
   cancelAppointmentByCustomer,
   createCustomerAppointment,
+  createManualFitInAppointment,
   rescheduleCustomerAppointment,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
@@ -223,6 +224,71 @@ test("customer can book and conclude an appointment", async () => {
     assert.equal(updated.status, "COMPLETED");
     assert.equal(updated.services.every((service) => toMoneyNumber(service.barberPayoutSnapshot) > 0), true);
     assert.equal(updated.services.every((service) => toMoneyNumber(service.shopRevenueSnapshot) >= 0), true);
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("manual fit-in bypasses availability without changing financial snapshots", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte } = await createFixture(db, runId);
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+
+    await assert.rejects(
+      () =>
+        createCustomerAppointment(
+          {
+            customerId: customer.id,
+            barberId: barber.id,
+            serviceIds: [corte.id],
+            date,
+            time: "08:00",
+          },
+          db
+        ),
+      (error: unknown) =>
+        error instanceof AppointmentMutationError &&
+        error.message === "O horario escolhido esta fora da disponibilidade do barbeiro."
+    );
+
+    const appointment = await createManualFitInAppointment(
+      {
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        time: "08:00",
+        notes: "Encaixe Manual",
+        conflictMode: "SAME_START_ONLY",
+      },
+      db
+    );
+
+    assert.equal(appointment.isManualFitIn, true);
+    assert.equal(appointment.status, "CONFIRMED");
+    assert.equal(toMoneyNumber(appointment.services[0].barberPayoutSnapshot) > 0, true);
+
+    await assert.rejects(
+      () =>
+        createManualFitInAppointment(
+          {
+            customerId: customer.id,
+            barberId: barber.id,
+            serviceIds: [corte.id],
+            date,
+            time: "08:00",
+            conflictMode: "SAME_START_ONLY",
+          },
+          db
+        ),
+      (error: unknown) =>
+        error instanceof AppointmentMutationError &&
+        error.message === "Esse horario acabou de ser reservado. Escolha outro horario."
+    );
   } finally {
     await cleanup();
     await db.$disconnect();

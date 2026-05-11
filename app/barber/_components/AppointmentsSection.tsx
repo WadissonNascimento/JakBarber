@@ -249,6 +249,7 @@ export function AppointmentsSection({
               publicId: appointment.publicId,
               date: appointment.date,
               status: appointment.status,
+              isManualFitIn: appointment.isManualFitIn,
               notes: appointment.notes,
               customer: {
                 id: appointment.customer.id,

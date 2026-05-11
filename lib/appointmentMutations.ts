@@ -71,6 +71,8 @@ export type RescheduleCustomerAppointmentInput = CreateCustomerAppointmentInput 
   appointmentId: string;
 };
 
+export type CreateManualFitInAppointmentInput = CreateCustomerAppointmentInput;
+
 export type AppointmentItemDeliveryDecision = {
   appointmentItemId: string;
   isDelivered: boolean;
@@ -167,10 +169,42 @@ export async function rescheduleCustomerAppointment(
   }
 }
 
+export async function createManualFitInAppointment(
+  input: CreateManualFitInAppointmentInput,
+  db: AppointmentPrismaClient = prisma
+) {
+  try {
+    return await db.$transaction(
+      (tx) =>
+        createCustomerAppointmentInTransaction(input, tx, {
+          manualFitIn: true,
+        }),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 20000,
+      }
+    );
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2034" || error.code === "P2028")
+    ) {
+      throw new AppointmentMutationError(
+        "Esse horario acabou de ser reservado. Escolha outro horario."
+      );
+    }
+
+    throw error;
+  }
+}
+
 async function createCustomerAppointmentInTransaction(
   input: CreateCustomerAppointmentInput,
-  db: AppointmentTransactionClient
+  db: AppointmentTransactionClient,
+  options: { manualFitIn?: boolean } = {}
 ) {
+  const manualFitIn = Boolean(options.manualFitIn);
   const customerId = input.customerId.trim();
   const barberId = input.barberId.trim();
   const serviceIds = input.serviceIds.map((serviceId) => serviceId.trim()).filter(Boolean);
@@ -323,7 +357,7 @@ async function createCustomerAppointmentInTransaction(
   }
 
   const now = input.now ?? new Date();
-  if (isScheduleDateTimePast(appointmentDate, now)) {
+  if (!manualFitIn && isScheduleDateTimePast(appointmentDate, now)) {
     throw new AppointmentMutationError("Nao e possivel agendar em um horario que ja passou.");
   }
 
@@ -338,77 +372,84 @@ async function createCustomerAppointmentInTransaction(
 
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${barberId}), hashtext(${date}))`;
 
-  const [availability, sameDayAppointments, blocks, recurringBlocks] = await Promise.all([
-    db.barberAvailability.findFirst({
-      where: {
-        shopId,
-        barberId,
-        weekDay: dayOfWeek,
-        isActive: true,
+  const sameDayAppointments = await db.appointment.findMany({
+    where: {
+      shopId,
+      barberId,
+      date: {
+        gte: dayStart,
+        lte: dayEnd,
       },
-    }),
-    db.appointment.findMany({
-      where: {
-        shopId,
-        barberId,
-        date: {
-          gte: dayStart,
-          lte: dayEnd,
-        },
-      },
-      include: {
-        services: true,
-      },
-    }),
-    db.barberBlock.findMany({
-      where: {
-        shopId,
-        barberId,
-        startDateTime: {
-          lte: dayEnd,
-        },
-        endDateTime: {
-          gte: dayStart,
-        },
-      },
-    }),
-    db.recurringBarberBlock.findMany({
-      where: {
-        shopId,
-        barberId,
-        weekDay: dayOfWeek,
-        isActive: true,
-      },
-    }),
-  ]);
+    },
+    include: {
+      services: true,
+    },
+  });
 
-  if (!availability) {
-    throw new AppointmentMutationError("Este barbeiro nao atende nesse dia.");
+  if (!manualFitIn) {
+    const [availability, blocks, recurringBlocks] = await Promise.all([
+      db.barberAvailability.findFirst({
+        where: {
+          shopId,
+          barberId,
+          weekDay: dayOfWeek,
+          isActive: true,
+        },
+      }),
+      db.barberBlock.findMany({
+        where: {
+          shopId,
+          barberId,
+          startDateTime: {
+            lte: dayEnd,
+          },
+          endDateTime: {
+            gte: dayStart,
+          },
+        },
+      }),
+      db.recurringBarberBlock.findMany({
+        where: {
+          shopId,
+          barberId,
+          weekDay: dayOfWeek,
+          isActive: true,
+        },
+      }),
+    ]);
+
+    if (!availability) {
+      throw new AppointmentMutationError("Este barbeiro nao atende nesse dia.");
+    }
+
+    const occupiedDuration = getAppointmentDurationFromServices(orderedServices);
+    const selectedStartMinutes = toMinutes(time);
+    const selectedEndMinutes = selectedStartMinutes + occupiedDuration;
+    const availabilityStart = toMinutes(availability.startTime);
+    const availabilityEnd = toMinutes(availability.endTime);
+
+    if (selectedStartMinutes < availabilityStart || selectedEndMinutes > availabilityEnd) {
+      throw new AppointmentMutationError(
+        "O horario escolhido esta fora da disponibilidade do barbeiro."
+      );
+    }
+
+    const endDate = new Date(appointmentDate.getTime() + occupiedDuration * 60000);
+
+    if (isBlockedPeriod(appointmentDate, endDate, blocks)) {
+      throw new AppointmentMutationError("O horario escolhido esta bloqueado pelo barbeiro.");
+    }
+
+    if (isBlockedByRecurringBlock(selectedStartMinutes, selectedEndMinutes, recurringBlocks)) {
+      throw new AppointmentMutationError(
+        "O horario escolhido entra em um bloqueio recorrente do barbeiro."
+      );
+    }
   }
 
   const occupiedDuration = getAppointmentDurationFromServices(orderedServices);
   const selectedStartMinutes = toMinutes(time);
   const selectedEndMinutes = selectedStartMinutes + occupiedDuration;
-  const availabilityStart = toMinutes(availability.startTime);
-  const availabilityEnd = toMinutes(availability.endTime);
-
-  if (selectedStartMinutes < availabilityStart || selectedEndMinutes > availabilityEnd) {
-    throw new AppointmentMutationError(
-      "O horario escolhido esta fora da disponibilidade do barbeiro."
-    );
-  }
-
-  const endDate = new Date(appointmentDate.getTime() + occupiedDuration * 60000);
-
-  if (isBlockedPeriod(appointmentDate, endDate, blocks)) {
-    throw new AppointmentMutationError("O horario escolhido esta bloqueado pelo barbeiro.");
-  }
-
-  if (isBlockedByRecurringBlock(selectedStartMinutes, selectedEndMinutes, recurringBlocks)) {
-    throw new AppointmentMutationError(
-      "O horario escolhido entra em um bloqueio recorrente do barbeiro."
-    );
-  }
 
   const conflict = sameDayAppointments.some((appointment) => {
     if (!isActiveAppointmentStatus(appointment.status)) {
@@ -444,6 +485,7 @@ async function createCustomerAppointmentInTransaction(
       customerId,
       date: appointmentDate,
       notes,
+      isManualFitIn: manualFitIn,
       status: "CONFIRMED",
       services: {
         create: orderedServices.map((service, index) => {
