@@ -9,6 +9,7 @@ import {
 import FormFeedback from "@/components/FormFeedback";
 import SubmitButton from "@/components/SubmitButton";
 import { initialFormFeedbackState } from "@/lib/formFeedbackState";
+import { NEW_PASSWORD_REQUIREMENT_MESSAGE } from "@/lib/passwordPolicy";
 
 const inputClassName =
   "w-full rounded-2xl border border-white/10 bg-[#243754] px-4 py-4 text-white outline-none transition focus:border-sky-400/50 focus:ring-2 focus:ring-sky-400/20 placeholder:text-zinc-400";
@@ -93,9 +94,16 @@ export default function ResetPasswordForm({
             name="password"
             type="password"
             required
+            minLength={8}
+            pattern="(?=.*[A-Za-zÀ-ÿ])(?=.*\d).{8,}"
+            title={NEW_PASSWORD_REQUIREMENT_MESSAGE}
+            aria-describedby="password-requirement"
             className={passwordInputClassName}
-            placeholder="Minimo 6 caracteres"
+            placeholder="Minimo 8 caracteres"
           />
+          <p id="password-requirement" className="mt-2 text-xs text-zinc-400">
+            {NEW_PASSWORD_REQUIREMENT_MESSAGE}
+          </p>
         </div>
 
         <div>

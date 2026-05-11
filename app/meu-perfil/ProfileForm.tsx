@@ -185,7 +185,7 @@ export default function ProfileForm({
               name="newPassword"
               type="password"
               required
-              minLength={7}
+              minLength={8}
               autoComplete="new-password"
               className="form-control text-sm"
             />
@@ -199,7 +199,7 @@ export default function ProfileForm({
               name="confirmPassword"
               type="password"
               required
-              minLength={7}
+              minLength={8}
               autoComplete="new-password"
               className="form-control text-sm"
             />

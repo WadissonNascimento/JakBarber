@@ -120,7 +120,7 @@ function PasswordField({
         name={name}
         type="password"
         required
-        minLength={7}
+        minLength={8}
         autoComplete={autoComplete}
         className="form-control text-sm"
       />
