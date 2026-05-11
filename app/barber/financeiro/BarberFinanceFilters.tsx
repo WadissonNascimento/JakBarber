@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PremiumDatePicker } from "@/components/ui/PremiumFilters";
 
 export default function BarberFinanceFilters({
@@ -11,6 +11,7 @@ export default function BarberFinanceFilters({
   start: string;
   end: string;
 }) {
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedStart, setSelectedStart] = useState(start);
@@ -26,13 +27,22 @@ export default function BarberFinanceFilters({
     params.set("start", selectedStart);
     params.set("end", selectedEnd);
 
-    router.replace(`/barber/financeiro?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   const canApply = Boolean(selectedStart && selectedEnd);
 
   return (
-    <div className="space-y-3">
+    <form
+      className="space-y-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+
+        if (canApply) {
+          applyManualRange();
+        }
+      }}
+    >
       <div className="grid grid-cols-2 gap-2">
         <PremiumDatePicker
           label="Inicio"
@@ -49,13 +59,12 @@ export default function BarberFinanceFilters({
       </div>
 
       <button
-        type="button"
-        onClick={applyManualRange}
+        type="submit"
         disabled={!canApply}
         className="min-h-11 w-full rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
       >
         Aplicar filtro
       </button>
-    </div>
+    </form>
   );
 }

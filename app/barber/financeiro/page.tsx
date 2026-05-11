@@ -25,17 +25,18 @@ import BarberFinanceFilters from "./BarberFinanceFilters";
 import FinanceAppointmentCard from "./FinanceAppointmentCard";
 
 type SearchParams = {
-  start?: string;
-  end?: string;
+  start?: string | string[];
+  end?: string | string[];
 };
 
 export default async function BarberFinancePage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams?: Promise<SearchParams>;
 }) {
+  const filters = (await searchParams) || {};
   const { barber } = await requireActiveBarber();
-  const data = await getBarberFinanceData(barber.id, searchParams);
+  const data = await getBarberFinanceData(barber.id, filters);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
@@ -275,8 +276,8 @@ function FinanceMetricCard({
 
 function resolveFinanceRange(searchParams: SearchParams) {
   const today = getCurrentScheduleDateValue();
-  const parsedStart = parseDateValue(searchParams.start) || today;
-  const parsedEnd = parseDateValue(searchParams.end) || parsedStart;
+  const parsedStart = parseDateValue(getFirstParam(searchParams.start)) || today;
+  const parsedEnd = parseDateValue(getFirstParam(searchParams.end)) || parsedStart;
   const start = parsedStart <= parsedEnd ? parsedStart : parsedEnd;
   const end = parsedStart <= parsedEnd ? parsedEnd : parsedStart;
   const startRange = getScheduleDayRange(start) || getScheduleDayRange(today)!;
@@ -288,6 +289,10 @@ function resolveFinanceRange(searchParams: SearchParams) {
     startDate: startRange.start,
     endDate: endRange.end,
   };
+}
+
+function getFirstParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function parseDateValue(value?: string) {
