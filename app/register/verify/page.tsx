@@ -5,6 +5,7 @@ type RegisterVerifySearchParams = Promise<{
   email?: string;
   sent?: string;
   devCode?: string;
+  redirectTo?: string;
 }>;
 
 export default async function RegisterVerifyPage({
@@ -25,6 +26,7 @@ export default async function RegisterVerifyPage({
         email={email}
         sent={params.sent === "1"}
         devCode={params.devCode}
+        redirectTo={params.redirectTo}
       />
     </main>
   );

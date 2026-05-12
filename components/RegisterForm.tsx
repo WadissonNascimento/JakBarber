@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useActionState, useState } from "react";
+import { googleSignInAction } from "@/app/login/actions";
 import { registerCustomerAction } from "@/app/register/actions";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import PhoneInput from "@/components/ui/PhoneInput";
@@ -22,8 +22,14 @@ const inputClassName =
 const passwordInputClassName =
   "w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-white outline-none transition focus:border-[var(--brand)]/50 focus:ring-2 focus:ring-[var(--brand)]/20 placeholder:text-zinc-400";
 
-export default function RegisterForm() {
-  const [state, formAction] = useFormState(
+export default function RegisterForm({
+  googleSignInEnabled = false,
+  redirectTo = "",
+}: {
+  googleSignInEnabled?: boolean;
+  redirectTo?: string;
+}) {
+  const [state, formAction] = useActionState(
     registerCustomerAction,
     initialFormFeedbackState
   );
@@ -65,6 +71,7 @@ export default function RegisterForm() {
           }
         }}
       >
+        <input type="hidden" name="redirectTo" value={redirectTo} />
         <FeedbackMessage message={formState.error} tone="error" />
 
         <div>
@@ -201,9 +208,28 @@ export default function RegisterForm() {
         <SubmitButton idleText="Criar conta" loadingText="Criando conta..." />
       </form>
 
+      {googleSignInEnabled && (
+        <form action={googleSignInAction} className="mt-4">
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          <button
+            type="submit"
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4 font-semibold text-white transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand)]/10"
+          >
+            Entrar com Google
+          </button>
+        </form>
+      )}
+
       <p className="mt-6 text-center text-sm text-zinc-300">
         Já tem conta?{" "}
-        <Link href="/login" className="font-semibold text-[var(--brand-strong)] hover:underline">
+        <Link
+          href={
+            redirectTo
+              ? `/login?redirectTo=${encodeURIComponent(redirectTo)}`
+              : "/login"
+          }
+          className="font-semibold text-[var(--brand-strong)] hover:underline"
+        >
           Entrar
         </Link>
       </p>

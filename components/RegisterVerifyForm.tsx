@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { initialFormFeedbackState } from "@/lib/formFeedbackState";
 import {
   resendRegistrationCodeAction,
@@ -17,16 +17,18 @@ export default function RegisterVerifyForm({
   email,
   sent,
   devCode,
+  redirectTo,
 }: {
   email: string;
   sent: boolean;
   devCode?: string;
+  redirectTo?: string;
 }) {
-  const [verifyState, verifyAction] = useFormState(
+  const [verifyState, verifyAction] = useActionState(
     verifyRegistrationCodeAction,
     initialFormFeedbackState
   );
-  const [resendState, resendAction] = useFormState(
+  const [resendState, resendAction] = useActionState(
     resendRegistrationCodeAction,
     initialFormFeedbackState
   );
@@ -58,6 +60,7 @@ export default function RegisterVerifyForm({
 
       <form action={verifyAction} className="mt-5 space-y-5">
         <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="redirectTo" value={redirectTo || ""} />
 
         <div>
           <label
@@ -86,6 +89,7 @@ export default function RegisterVerifyForm({
 
         <form action={resendAction} className="mt-4">
           <input type="hidden" name="email" value={email} />
+          <input type="hidden" name="redirectTo" value={redirectTo || ""} />
           <SubmitButton
             idleText="Reenviar código"
             loadingText="Reenviando..."
@@ -96,7 +100,14 @@ export default function RegisterVerifyForm({
 
       <p className="mt-6 text-center text-sm text-zinc-300">
         Digitou o e-mail errado?{" "}
-        <Link href="/register" className="font-semibold text-sky-300 hover:underline">
+        <Link
+          href={
+            redirectTo
+              ? `/register?redirectTo=${encodeURIComponent(redirectTo)}`
+              : "/register"
+          }
+          className="font-semibold text-sky-300 hover:underline"
+        >
           Voltar ao cadastro
         </Link>
       </p>

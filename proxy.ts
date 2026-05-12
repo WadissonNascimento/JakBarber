@@ -35,7 +35,13 @@ export default auth((req) => {
       pathname.startsWith("/barber") ||
       isCustomerProtectedPage)
   ) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set(
+      "redirectTo",
+      `${pathname}${req.nextUrl.search}`
+    );
+
+    return NextResponse.redirect(loginUrl);
   }
 
   if (isLoggedIn && isAuthPage) {

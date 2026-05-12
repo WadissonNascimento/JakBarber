@@ -4,8 +4,9 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { signIn } from "@/auth";
-import { getPostLoginRedirect } from "@/lib/authRedirect";
+import { getPostLoginRedirect, sanitizeInternalRedirect } from "@/lib/authRedirect";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
+import { isGoogleSignInConfigured } from "@/lib/googleAuth";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 
@@ -99,4 +100,23 @@ export async function loginSubmitAction(formData: FormData) {
   }
 
   redirect("/login");
+}
+
+export async function googleSignInAction(formData: FormData) {
+  if (!isGoogleSignInConfigured()) {
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "Login com Google ainda nao esta configurado."
+      )}`
+    );
+  }
+
+  const redirectTo = sanitizeInternalRedirect(
+    formData.get("redirectTo"),
+    "/redirecionar"
+  );
+
+  await signIn("google", {
+    redirectTo,
+  });
 }

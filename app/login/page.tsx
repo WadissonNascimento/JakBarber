@@ -1,25 +1,35 @@
 import LoginForm from "@/components/LoginForm";
+import { isGoogleSignInConfigured } from "@/lib/googleAuth";
 
-export default function LoginPage({
+type LoginPageSearchParams = Promise<{
+  registered?: string;
+  reset?: string;
+  error?: string;
+  redirectTo?: string;
+}>;
+
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: {
-    registered?: string;
-    reset?: string;
-    error?: string;
-  };
+  searchParams?: LoginPageSearchParams;
 }) {
+  const params = (await searchParams) || {};
   const successMessage =
-    searchParams?.registered === "1"
+    params.registered === "1"
       ? "Conta criada com sucesso. Entre para acessar seu painel."
-      : searchParams?.reset === "1"
+      : params.reset === "1"
       ? "Senha atualizada com sucesso. Entre com sua nova senha."
       : null;
-  const errorMessage = searchParams?.error || null;
+  const errorMessage = params.error || null;
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-8 text-white">
-      <LoginForm errorMessage={errorMessage} successMessage={successMessage} />
+      <LoginForm
+        errorMessage={errorMessage}
+        successMessage={successMessage}
+        googleSignInEnabled={isGoogleSignInConfigured()}
+        redirectTo={params.redirectTo || ""}
+      />
     </main>
   );
 }

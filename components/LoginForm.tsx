@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { googleSignInAction } from "@/app/login/actions";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import ReliableSubmitButton from "@/components/ReliableSubmitButton";
@@ -6,9 +7,13 @@ import ReliableSubmitButton from "@/components/ReliableSubmitButton";
 export default function LoginForm({
   errorMessage = null,
   successMessage = null,
+  googleSignInEnabled = false,
+  redirectTo = "",
 }: {
   errorMessage?: string | null;
   successMessage?: string | null;
+  googleSignInEnabled?: boolean;
+  redirectTo?: string;
 }) {
   return (
     <form
@@ -32,6 +37,19 @@ export default function LoginForm({
       </div>
 
       <div className="space-y-5">
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+
+        {googleSignInEnabled && (
+          <button
+            type="submit"
+            formAction={googleSignInAction}
+            formNoValidate
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4 font-semibold text-white transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand)]/10"
+          >
+            Entrar com Google
+          </button>
+        )}
+
         <div>
           <label
             htmlFor="email"
@@ -81,7 +99,11 @@ export default function LoginForm({
       <p className="mt-6 text-center text-sm text-zinc-300">
         Ainda não tem conta?{" "}
         <Link
-          href="/register"
+          href={
+            redirectTo
+              ? `/register?redirectTo=${encodeURIComponent(redirectTo)}`
+              : "/register"
+          }
           className="font-semibold text-[var(--brand-strong)] hover:underline"
         >
           Criar conta

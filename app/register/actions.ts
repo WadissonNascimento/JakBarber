@@ -1,8 +1,10 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { AuthError } from "next-auth";
 import { randomInt } from "crypto";
 import { redirect } from "next/navigation";
+import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   isUsingDevelopmentMailFallback,
@@ -11,7 +13,9 @@ import {
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getPostLoginRedirect, sanitizeInternalRedirect } from "@/lib/authRedirect";
 import { getCurrentShopId } from "@/lib/shop";
+import { createRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
 import {
   CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE,
   FULL_NAME_REQUIREMENT_MESSAGE,
@@ -30,17 +34,28 @@ function getExpirationDate() {
 
 const MAX_CODE_ATTEMPTS = 5;
 
-function buildPendingRegistrationRedirect(email: string, code?: string) {
+function buildPendingRegistrationRedirect(
+  email: string,
+  code?: string,
+  redirectTo?: string
+) {
   const devCodeQuery =
     code && isUsingDevelopmentMailFallback()
       ? `&devCode=${encodeURIComponent(code)}`
       : "";
+  const redirectQuery = redirectTo
+    ? `&redirectTo=${encodeURIComponent(redirectTo)}`
+    : "";
 
-  return `/register/verify?email=${encodeURIComponent(email)}&sent=1${devCodeQuery}`;
+  return `/register/verify?email=${encodeURIComponent(email)}&sent=1${devCodeQuery}${redirectQuery}`;
 }
 
-function buildVerificationUrl(email: string) {
-  return `${getConfiguredAppUrl()}/register/verify?email=${encodeURIComponent(email)}`;
+function buildVerificationUrl(email: string, redirectTo?: string) {
+  const redirectQuery = redirectTo
+    ? `&redirectTo=${encodeURIComponent(redirectTo)}`
+    : "";
+
+  return `${getConfiguredAppUrl()}/register/verify?email=${encodeURIComponent(email)}${redirectQuery}`;
 }
 
 export async function registerCustomerAction(
@@ -54,6 +69,10 @@ export async function registerCustomerAction(
     .toLowerCase();
   const password = String(formData.get("password") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
+  const redirectTo = sanitizeInternalRedirect(
+    formData.get("redirectTo"),
+    ""
+  );
 
   if (!name || !email || !phone || !password) {
     return {
@@ -112,7 +131,11 @@ export async function registerCustomerAction(
       });
     } else {
       redirect(
-        buildPendingRegistrationRedirect(email, existingPendingRegistration.code)
+        buildPendingRegistrationRedirect(
+          email,
+          existingPendingRegistration.code,
+          redirectTo
+        )
       );
     }
   }
@@ -141,7 +164,7 @@ export async function registerCustomerAction(
       to: email,
       name,
       code,
-      verifyUrl: buildVerificationUrl(email),
+      verifyUrl: buildVerificationUrl(email, redirectTo),
       accountLabel: "seu cadastro",
     });
   } catch (error) {
@@ -157,7 +180,7 @@ export async function registerCustomerAction(
     };
   }
 
-  redirect(buildPendingRegistrationRedirect(email, code));
+  redirect(buildPendingRegistrationRedirect(email, code, redirectTo));
 }
 
 export async function verifyRegistrationCodeAction(
@@ -168,6 +191,10 @@ export async function verifyRegistrationCodeAction(
     .trim()
     .toLowerCase();
   const code = String(formData.get("code") || "").trim();
+  const redirectTo = sanitizeInternalRedirect(
+    formData.get("redirectTo"),
+    getPostLoginRedirect("CUSTOMER")
+  );
 
   if (!email || !code) {
     return {
@@ -247,8 +274,8 @@ export async function verifyRegistrationCodeAction(
     };
   }
 
-  await prisma.$transaction([
-    prisma.user.create({
+  const user = await prisma.$transaction(async (tx) => {
+    const createdUser = await tx.user.create({
       data: {
         name: pending.name,
         shopId: pending.shopId,
@@ -259,13 +286,34 @@ export async function verifyRegistrationCodeAction(
         isActive: true,
         emailVerified: new Date(),
       },
-    }),
-    prisma.pendingRegistration.delete({
-      where: { email },
-    }),
-  ]);
+    });
 
-  redirect("/login?registered=1");
+    await tx.pendingRegistration.delete({
+      where: { email },
+    });
+
+    return createdUser;
+  });
+
+  try {
+    await signIn("registration-auto-login", {
+      userId: user.id,
+      token: createRegistrationAutoLoginToken(user.id),
+      redirect: false,
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect(
+        `/login?registered=1&error=${encodeURIComponent(
+          "Conta criada com sucesso, mas nao foi possivel entrar automaticamente. Entre com seu e-mail e senha."
+        )}`
+      );
+    }
+
+    throw error;
+  }
+
+  redirect(redirectTo);
 }
 
 export async function resendRegistrationCodeAction(
@@ -275,6 +323,7 @@ export async function resendRegistrationCodeAction(
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
+  const redirectTo = sanitizeInternalRedirect(formData.get("redirectTo"), "");
 
   if (!email) {
     return {
@@ -334,7 +383,7 @@ export async function resendRegistrationCodeAction(
       to: email,
       name: pending.name,
       code,
-      verifyUrl: buildVerificationUrl(email),
+      verifyUrl: buildVerificationUrl(email, redirectTo),
       accountLabel: "seu cadastro",
     });
   } catch (error) {
