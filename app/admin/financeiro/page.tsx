@@ -109,7 +109,7 @@ export default async function AdminFinanceiroPage({
             <FinanceStat
               label="A pagar"
               value={formatCurrency(data.summary.commissionTotal)}
-              helper="repasses"
+              helper="repasses + caixinhas"
               tone="warning"
             />
             <FinanceStat
@@ -347,13 +347,29 @@ export default async function AdminFinanceiroPage({
                     </summary>
 
                     <div className="border-t border-white/10 px-3.5 pb-3.5 pt-3">
-                      <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="grid gap-2 sm:grid-cols-4">
+                        <PayoutValueTile
+                          label="Servicos"
+                          value={formatCurrency(item.serviceRevenue)}
+                        />
+                        <PayoutValueTile
+                          label="Extras"
+                          value={formatCurrency(item.extrasRevenue)}
+                        />
+                        <PayoutValueTile
+                          label="Caixinhas"
+                          value={formatCurrency(item.tipsTotal)}
+                          tone="warning"
+                        />
                         <PayoutValueTile
                           label="Total vendido"
                           value={formatCurrency(item.grossRevenue)}
                         />
+                      </div>
+
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
                         <PayoutValueTile
-                          label="Repasse"
+                          label="Repasse final"
                           value={formatCurrency(item.commissionTotal)}
                           tone="warning"
                         />

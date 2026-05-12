@@ -10,6 +10,7 @@ import {
   appointmentForFinanceSelect,
   appointmentForTotalsSelect,
 } from "@/lib/appointmentSelects";
+import { getBarberTipsByBarber, getBarberTipsTotal } from "@/lib/barberTips";
 import { toMoneyNumber } from "@/lib/money";
 
 export type FinancePeriod = "week" | "month" | "custom";
@@ -96,7 +97,16 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     ? new Date(`${filters.historyEnd}T23:59:59.999`)
     : null;
 
-  const [appointments, previousAppointments, savedPayouts, paidHistory] = await Promise.all([
+  const [
+    appointments,
+    previousAppointments,
+    savedPayouts,
+    paidHistory,
+    tipsByBarber,
+    previousTipsByBarber,
+    currentTips,
+    barbers,
+  ] = await Promise.all([
     prisma.appointment.findMany({
       where: {
         date: {
@@ -147,6 +157,38 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       },
       take: 12,
     }),
+    getBarberTipsByBarber({
+      start: range.start,
+      end: range.end,
+    }),
+    getBarberTipsByBarber({
+      start: comparisonRange.start,
+      end: comparisonRange.end,
+    }),
+    prisma.barberTip.findMany({
+      where: {
+        createdAt: {
+          gte: range.start,
+          lte: range.end,
+        },
+      },
+      select: {
+        id: true,
+        barberId: true,
+        amount: true,
+        createdAt: true,
+      },
+    }),
+    prisma.user.findMany({
+      where: {
+        role: "BARBER",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
   ]);
 
   const completedAppointments = appointments.filter(
@@ -162,6 +204,10 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       barberId: string;
       barberName: string;
       grossRevenue: number;
+      serviceRevenue: number;
+      extrasRevenue: number;
+      tipsTotal: number;
+      tipsCount: number;
       commissionTotal: number;
       shopNetRevenue: number;
       appointmentsCount: number;
@@ -170,12 +216,22 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       savedPaidAt: Date | null;
     }
   >();
+  const barberNameById = new Map(
+    barbers.map((barber) => [barber.id, barber.name || "Barbeiro"] as const)
+  );
 
   for (const appointment of completedAppointments) {
+    const deliveredItems = getDeliveredItems(appointment.items);
+    const serviceRevenue = getAppointmentGrandTotal(appointment.services, []);
+    const extrasRevenue = getAppointmentGrandTotal([], deliveredItems);
     const current = barberMap.get(appointment.barberId) || {
       barberId: appointment.barberId,
       barberName: appointment.barber.name || "Barbeiro",
       grossRevenue: 0,
+      serviceRevenue: 0,
+      extrasRevenue: 0,
+      tipsTotal: 0,
+      tipsCount: 0,
       commissionTotal: 0,
       shopNetRevenue: 0,
       appointmentsCount: 0,
@@ -184,10 +240,9 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       savedPaidAt: null,
     };
 
-    current.grossRevenue += getAppointmentGrandTotal(
-      appointment.services,
-      getDeliveredItems(appointment.items)
-    );
+    current.serviceRevenue += serviceRevenue;
+    current.extrasRevenue += extrasRevenue;
+    current.grossRevenue += serviceRevenue + extrasRevenue;
     current.commissionTotal += getAppointmentTotalBarberPayout(
       appointment.services,
       appointment.items
@@ -201,11 +256,39 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     barberMap.set(appointment.barberId, current);
   }
 
+  for (const tipSummary of tipsByBarber.values()) {
+    const current = barberMap.get(tipSummary.barberId) || {
+      barberId: tipSummary.barberId,
+      barberName: barberNameById.get(tipSummary.barberId) || "Barbeiro",
+      grossRevenue: 0,
+      serviceRevenue: 0,
+      extrasRevenue: 0,
+      tipsTotal: 0,
+      tipsCount: 0,
+      commissionTotal: 0,
+      shopNetRevenue: 0,
+      appointmentsCount: 0,
+      savedPayoutId: null,
+      savedStatus: null,
+      savedPaidAt: null,
+    };
+
+    current.tipsTotal += tipSummary.tipsTotal;
+    current.tipsCount += tipSummary.tipsCount;
+    current.grossRevenue += tipSummary.tipsTotal;
+    current.commissionTotal += tipSummary.tipsTotal;
+    barberMap.set(tipSummary.barberId, current);
+  }
+
   for (const payout of savedPayouts) {
     const current = barberMap.get(payout.barberId) || {
       barberId: payout.barberId,
       barberName: payout.barber.name || "Barbeiro",
       grossRevenue: toMoneyNumber(payout.grossRevenue),
+      serviceRevenue: 0,
+      extrasRevenue: 0,
+      tipsTotal: 0,
+      tipsCount: 0,
       commissionTotal: toMoneyNumber(payout.commissionTotal),
       shopNetRevenue: toMoneyNumber(payout.shopNetRevenue),
       appointmentsCount: 0,
@@ -217,6 +300,12 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     current.savedPayoutId = payout.id;
     current.savedStatus = payout.status;
     current.savedPaidAt = payout.paidAt;
+
+    if (payout.status === "CLOSED" || payout.status === "PAID") {
+      current.grossRevenue = toMoneyNumber(payout.grossRevenue);
+      current.commissionTotal = toMoneyNumber(payout.commissionTotal);
+      current.shopNetRevenue = toMoneyNumber(payout.shopNetRevenue);
+    }
 
     barberMap.set(payout.barberId, current);
   }
@@ -239,6 +328,10 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
   );
   const averageTicket =
     totalAppointments > 0 ? Number((totalGrossRevenue / totalAppointments).toFixed(2)) : 0;
+  const previousTipsTotal = Array.from(previousTipsByBarber.values()).reduce(
+    (sum, item) => sum + item.tipsTotal,
+    0
+  );
   const previousGrossRevenue = previousCompletedAppointments.reduce(
     (sum, appointment) =>
       sum +
@@ -247,13 +340,13 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
         getDeliveredItems(appointment.items)
       ),
     0
-  );
+  ) + previousTipsTotal;
   const previousCommissionTotal = previousCompletedAppointments.reduce(
     (sum, appointment) =>
       sum +
       getAppointmentTotalBarberPayout(appointment.services, appointment.items),
     0
-  );
+  ) + previousTipsTotal;
   const previousShopNetRevenue = previousCompletedAppointments.reduce(
     (sum, appointment) =>
       sum +
@@ -397,6 +490,58 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     barbersAnalyticsMap.set(appointment.barberId, barberCurrent);
   }
 
+  for (const tip of currentTips) {
+    const tipAmount = toMoneyNumber(tip.amount);
+    const dateKey = formatDayKey(tip.createdAt);
+    const dayLabel = new Date(tip.createdAt).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+    const dayCurrent = dailyMap.get(dateKey) || {
+      date: dateKey,
+      label: dayLabel,
+      grossRevenue: 0,
+      commissionTotal: 0,
+      shopNetRevenue: 0,
+      appointmentsCount: 0,
+    };
+    dayCurrent.grossRevenue += tipAmount;
+    dayCurrent.commissionTotal += tipAmount;
+    dailyMap.set(dateKey, dayCurrent);
+
+    const weekdayLabel = formatWeekdayLabel(tip.createdAt);
+    const weekdayCurrent = weekdayMap.get(weekdayLabel) || {
+      label: weekdayLabel,
+      grossRevenue: 0,
+      appointmentsCount: 0,
+    };
+    weekdayCurrent.grossRevenue += tipAmount;
+    weekdayMap.set(weekdayLabel, weekdayCurrent);
+
+    const barberCurrent = barbersAnalyticsMap.get(tip.barberId) || {
+      barberId: tip.barberId,
+      barberName: barberNameById.get(tip.barberId) || "Barbeiro",
+      grossRevenue: 0,
+      commissionTotal: 0,
+      shopNetRevenue: 0,
+      appointmentsCount: 0,
+      bestDay: null,
+      days: new Map(),
+    };
+    barberCurrent.grossRevenue += tipAmount;
+    barberCurrent.commissionTotal += tipAmount;
+
+    const barberDayCurrent = barberCurrent.days.get(dateKey) || {
+      date: dateKey,
+      label: dayLabel,
+      grossRevenue: 0,
+      appointmentsCount: 0,
+    };
+    barberDayCurrent.grossRevenue += tipAmount;
+    barberCurrent.days.set(dateKey, barberDayCurrent);
+    barbersAnalyticsMap.set(tip.barberId, barberCurrent);
+  }
+
   const dailySeries = Array.from(dailyMap.values()).sort((a, b) =>
     a.date.localeCompare(b.date)
   );
@@ -505,16 +650,25 @@ export async function getBarberPayoutSnapshot(input: {
   periodStart: Date;
   periodEnd: Date;
 }) {
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      barberId: input.barberId,
-      date: {
-        gte: input.periodStart,
-        lte: input.periodEnd,
+  const [appointments, tips] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        barberId: input.barberId,
+        date: {
+          gte: input.periodStart,
+          lte: input.periodEnd,
+        },
       },
-    },
-    select: appointmentForTotalsSelect,
-  });
+      select: appointmentForTotalsSelect,
+    }),
+    getBarberTipsTotal({
+      barberId: input.barberId,
+      range: {
+        start: input.periodStart,
+        end: input.periodEnd,
+      },
+    }),
+  ]);
 
   const completedAppointments = appointments.filter(
     (appointment) => normalizeAppointmentStatus(appointment.status) === "COMPLETED"
@@ -529,12 +683,12 @@ export async function getBarberPayoutSnapshot(input: {
           getDeliveredItems(appointment.items)
         ),
       0
-    ),
+    ) + tips.tipsTotal,
     commissionTotal: completedAppointments.reduce(
       (sum, appointment) =>
         sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
       0
-    ),
+    ) + tips.tipsTotal,
     shopNetRevenue: completedAppointments.reduce(
       (sum, appointment) =>
         sum + getAppointmentTotalShopRevenue(appointment.services, appointment.items),

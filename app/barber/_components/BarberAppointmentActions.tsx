@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   editOpenBarberAppointmentAction,
   updateAppointmentStatusAction,
@@ -167,8 +174,39 @@ function BarberEditAppointmentModal({
   onFeedback: (feedback: Feedback) => void;
 }) {
   const [isPending, startTransition] = useTransition();
-  const selectedServiceIds = new Set(currentServiceIds);
-  const selectedExtraIds = new Set(currentExtraProductIds);
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedServiceIds, setSelectedServiceIds] = useState(currentServiceIds);
+  const [selectedExtraIds, setSelectedExtraIds] = useState(currentExtraProductIds);
+  const total = useMemo(() => {
+    const serviceTotal = services
+      .filter((service) => selectedServiceIds.includes(service.id))
+      .reduce((sum, service) => sum + service.price, 0);
+    const extrasTotal = extras
+      .filter((extra) => selectedExtraIds.includes(extra.id))
+      .reduce((sum, extra) => sum + extra.price, 0);
+
+    return serviceTotal + extrasTotal;
+  }, [extras, selectedExtraIds, selectedServiceIds, services]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  function toggleService(serviceId: string) {
+    setSelectedServiceIds((current) =>
+      current.includes(serviceId)
+        ? current.filter((id) => id !== serviceId)
+        : [...current, serviceId]
+    );
+  }
+
+  function toggleExtra(extraId: string) {
+    setSelectedExtraIds((current) =>
+      current.includes(extraId)
+        ? current.filter((id) => id !== extraId)
+        : [...current, extraId]
+    );
+  }
 
   function submitEdit(formData: FormData) {
     startTransition(async () => {
@@ -181,107 +219,166 @@ function BarberEditAppointmentModal({
     });
   }
 
-  return (
-    <div className="fixed inset-0 z-[280] overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-md">
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[280] flex items-center justify-center overflow-hidden overscroll-none bg-black/75 px-3 py-4 backdrop-blur-md sm:px-4 sm:py-6">
       <form
         action={submitEdit}
-        className="mx-auto w-full max-w-xl rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] text-white shadow-[0_28px_90px_rgba(0,0,0,0.55)]"
       >
         <input type="hidden" name="appointmentId" value={appointmentId} />
-        <div className="flex items-start justify-between gap-4">
+        <div className="border-b border-white/10 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+                Atendimento aberto
+              </p>
+              <h3 className="mt-2 text-xl font-bold">Editar itens</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                Ajuste servicos, extras e observacoes antes de salvar.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-10 rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.06]"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-              Atendimento aberto
+              Total atualizado
             </p>
-            <h3 className="mt-2 text-xl font-bold">Editar itens</h3>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-white">
+              {formatCurrency(total)}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-zinc-200"
-          >
-            Fechar
-          </button>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+              Servicos
+            </p>
+            <div className="mt-2 grid gap-2">
+              {services.map((service) => {
+                const checked = selectedServiceIds.includes(service.id);
+
+                return (
+                  <label
+                    key={service.id}
+                    className={`flex min-h-16 items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition ${
+                      checked
+                        ? "border-[var(--brand)]/70 bg-[var(--brand-muted)]"
+                        : "border-white/10 bg-white/[0.035]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="serviceIds"
+                      value={service.id}
+                      checked={checked}
+                      onChange={() => toggleService(service.id)}
+                      className="h-5 w-5 shrink-0 accent-[var(--brand)]"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-white">
+                        {service.name}
+                      </span>
+                      <span className="text-xs text-zinc-400">
+                        {service.duration} min - {formatCurrency(service.price)}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+              Extras
+            </p>
+            <div className="mt-2 grid gap-2">
+              {extras.map((extra) => {
+                const checked = selectedExtraIds.includes(extra.id);
+
+                return (
+                  <label
+                    key={extra.id}
+                    className={`flex min-h-16 items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition ${
+                      checked
+                        ? "border-[var(--brand)]/70 bg-[var(--brand-muted)]"
+                        : "border-white/10 bg-white/[0.035]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="extraProductIds"
+                      value={extra.id}
+                      checked={checked}
+                      onChange={() => toggleExtra(extra.id)}
+                      className="h-5 w-5 shrink-0 accent-[var(--brand)]"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-white">
+                        {extra.name}
+                      </span>
+                      <span className="text-xs text-zinc-400">
+                        {formatCurrency(extra.price)} - estoque {extra.stock}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="block text-sm font-semibold text-zinc-200">
+            Observacoes
+            <textarea
+              name="notes"
+              rows={4}
+              maxLength={400}
+              defaultValue={notes || ""}
+              className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/25 px-3 py-3 text-white outline-none transition focus:border-[var(--brand)]/70"
+            />
+          </label>
         </div>
 
-        <div className="mt-5">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-            Serviços
-          </p>
-          <div className="mt-2 grid gap-2">
-            {services.map((service) => (
-              <label
-                key={service.id}
-                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  name="serviceIds"
-                  value={service.id}
-                  defaultChecked={selectedServiceIds.has(service.id)}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-white">
-                    {service.name}
-                  </span>
-                  <span className="text-xs text-zinc-400">
-                    {service.duration} min - {formatCurrency(service.price)}
-                  </span>
-                </span>
-              </label>
-            ))}
+        <div className="border-t border-white/10 bg-black/20 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+            <span className="text-zinc-400">Total</span>
+            <strong className="text-lg tabular-nums text-white">
+              {formatCurrency(total)}
+            </strong>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="min-h-12 rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.06] disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="min-h-12 rounded-2xl bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? "Salvando..." : "Salvar"}
+            </button>
           </div>
         </div>
-
-        <div className="mt-5">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-            Extras
-          </p>
-          <div className="mt-2 grid gap-2">
-            {extras.map((extra) => (
-              <label
-                key={extra.id}
-                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  name="extraProductIds"
-                  value={extra.id}
-                  defaultChecked={selectedExtraIds.has(extra.id)}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-white">
-                    {extra.name}
-                  </span>
-                  <span className="text-xs text-zinc-400">
-                    {formatCurrency(extra.price)} - estoque {extra.stock}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <label className="mt-5 block text-sm font-semibold text-zinc-200">
-          Observações
-          <textarea
-            name="notes"
-            rows={3}
-            maxLength={400}
-            defaultValue={notes || ""}
-            className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-white outline-none"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={isPending}
-          className="mt-5 min-h-11 w-full rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-60"
-        >
-          {isPending ? "Salvando..." : "Salvar alterações"}
-        </button>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }
 

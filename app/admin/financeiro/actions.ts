@@ -44,8 +44,12 @@ export async function generateBarberPayoutsAction(
     compareEnd: String(formData.get("compareEnd") || ""),
   });
 
+  const writablePayouts = dashboard.barberPayouts.filter(
+    (item) => item.savedStatus !== "CLOSED" && item.savedStatus !== "PAID"
+  );
+
   await prisma.$transaction(
-    dashboard.barberPayouts.map((item) =>
+    writablePayouts.map((item) =>
       prisma.barberPayout.upsert({
         where: {
           barberId_periodStart_periodEnd: {
@@ -144,6 +148,10 @@ export async function closeBarberPayoutAction(
 
   if (!payout) {
     return mutationError("Repasse nao encontrado.");
+  }
+
+  if (payout.status !== "OPEN") {
+    return mutationError("Reabra o repasse antes de recalcular valores.");
   }
 
   const snapshot = await getBarberPayoutSnapshot({

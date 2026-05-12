@@ -10,6 +10,7 @@ import {
 import { notifyCustomerAppointmentConfirmed } from "@/lib/appointmentEmails";
 import { notifyBarberNewAppointment } from "@/lib/barberEmails";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
+import { prisma } from "@/lib/prisma";
 import { enforceRateLimit } from "@/lib/security";
 
 export async function createAppointmentAction(
@@ -24,6 +25,22 @@ export async function createAppointmentAction(
 
   if (session.user.role !== "CUSTOMER") {
     redirect("/painel");
+  }
+
+  const customer = await prisma.user.findUnique({
+    where: {
+      id: session.user.id,
+    },
+    select: {
+      phone: true,
+    },
+  });
+
+  if (!customer?.phone) {
+    return {
+      error: "Informe seu telefone para continuar o agendamento.",
+      success: null,
+    };
   }
 
   const rateLimit = await enforceRateLimit({

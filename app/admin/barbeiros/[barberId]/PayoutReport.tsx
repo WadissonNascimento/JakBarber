@@ -4,6 +4,7 @@ import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
+import { getBarberTipRows } from "@/lib/barberTips";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -79,26 +80,32 @@ export default async function PayoutReport({
 
   if (!barber) redirect("/admin/barbeiros");
 
-  const appointments = await prisma.appointment.findMany({
-    where: {
+  const [appointments, tips] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        barberId: barber.id,
+        date: {
+          gte: range.start,
+          lte: range.end,
+        },
+        status: {
+          in: ["COMPLETED", "DONE"],
+        },
+      },
+      include: {
+        customer: true,
+        items: true,
+        services: true,
+      },
+      orderBy: {
+        date: "asc",
+      },
+    }),
+    getBarberTipRows({
       barberId: barber.id,
-      date: {
-        gte: range.start,
-        lte: range.end,
-      },
-      status: {
-        in: ["COMPLETED", "DONE"],
-      },
-    },
-    include: {
-      customer: true,
-      items: true,
-      services: true,
-    },
-    orderBy: {
-      date: "asc",
-    },
-  });
+      range,
+    }),
+  ]);
 
   const serviceRows = appointments.flatMap((appointment) =>
     [...appointment.services]
@@ -135,9 +142,24 @@ export default async function PayoutReport({
       }))
   );
 
-  const rows = [...serviceRows, ...productRows];
+  const tipRows = tips.map((tip) => ({
+    id: tip.id,
+    appointmentId: tip.id,
+    time: formatScheduleTime(tip.createdAt),
+    customerName: tip.clientName,
+    name: tip.note ? `Caixinha - ${tip.note}` : "Caixinha",
+    gross: tip.amount,
+    commission: "100%",
+    payout: tip.amount,
+    type: "Caixinha",
+  }));
+
+  const rows = [...serviceRows, ...productRows, ...tipRows];
   const totalGross = rows.reduce((sum, row) => sum + row.gross, 0);
   const totalPayout = rows.reduce((sum, row) => sum + row.payout, 0);
+  const totalServices = serviceRows.reduce((sum, row) => sum + row.gross, 0);
+  const totalExtras = productRows.reduce((sum, row) => sum + row.gross, 0);
+  const totalTips = tipRows.reduce((sum, row) => sum + row.gross, 0);
   const startValue = formatDateInputValue(range.start);
   const endValue = formatDateInputValue(range.end);
 
@@ -152,12 +174,7 @@ export default async function PayoutReport({
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SummaryCard label="Total vendido" value={formatCurrency(totalGross)} />
-        <SummaryCard label="Repasse do barbeiro" value={formatCurrency(totalPayout)} />
-      </div>
-
-      <form className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+      <form className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300">
           Filtrar periodo
         </p>
@@ -189,6 +206,24 @@ export default async function PayoutReport({
           </button>
         </div>
       </form>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <SummaryCard
+          label="Total vendido"
+          value={formatCurrency(totalGross)}
+          helper="Valor bruto do periodo"
+        />
+        <SummaryCard
+          label="Repasse do barbeiro"
+          value={formatCurrency(totalPayout)}
+          details={[
+            { label: "Servicos", value: formatCurrency(totalServices) },
+            { label: "Extras", value: formatCurrency(totalExtras) },
+            { label: "Caixinhas", value: formatCurrency(totalTips) },
+          ]}
+          featured
+        />
+      </div>
 
       <div className="mt-5 space-y-3">
         {rows.length === 0 ? (
@@ -226,11 +261,40 @@ export default async function PayoutReport({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({
+  label,
+  value,
+  helper,
+  details,
+  featured = false,
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+  details?: Array<{ label: string; value: string }>;
+  featured?: boolean;
+}) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))] p-4 shadow-[0_18px_44px_rgba(0,0,0,0.18)]">
+    <div
+      className={`rounded-[24px] border p-4 shadow-[0_18px_44px_rgba(0,0,0,0.18)] ${
+        featured
+          ? "border-sky-400/40 bg-[linear-gradient(180deg,rgba(14,165,233,0.22),rgba(13,18,30,0.98))]"
+          : "border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))]"
+      }`}
+    >
       <p className="text-[11px] uppercase tracking-[0.18em] text-sky-300">{label}</p>
       <p className="mt-3 text-2xl font-bold text-white">{value}</p>
+      {helper ? <p className="mt-2 text-xs leading-5 text-zinc-400">{helper}</p> : null}
+      {details?.length ? (
+        <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-xs text-zinc-300">
+          {details.map((detail) => (
+            <div key={detail.label} className="flex items-center justify-between gap-3">
+              <span>{detail.label}</span>
+              <strong className="font-semibold text-white">{detail.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

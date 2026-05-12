@@ -13,6 +13,7 @@ import {
   appointmentForBarberSelect,
   appointmentForTotalsSelect,
 } from "@/lib/appointmentSelects";
+import { getBarberTipsTotal } from "@/lib/barberTips";
 import {
   createScheduleDayStart,
   getCurrentScheduleDate,
@@ -209,6 +210,7 @@ export async function getBarberDashboardData(
     allBarberAppointments,
     walkInServices,
     walkInExtras,
+    todayTips,
   ] =
     await Promise.all([
       prisma.appointment.findMany({
@@ -327,6 +329,13 @@ export async function getBarberDashboardData(
           stock: true,
         },
       }),
+      getBarberTipsTotal({
+        barberId,
+        range: {
+          start: todayStart,
+          end: todayEnd,
+        },
+      }),
     ]);
 
   const normalizedTodayAppointments = todayAppointments.map((appointment) => ({
@@ -380,7 +389,7 @@ export async function getBarberDashboardData(
         (sum, appointment) =>
           sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
         0
-      ),
+      ) + todayTips.tipsTotal,
       todayServices,
       todayAppointments: normalizedTodayAppointments.map((appointment) => ({
         id: appointment.id,
@@ -561,6 +570,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
     walkInExtras,
     clientNotes,
     allBarberAppointments,
+    todayTips,
   ] = await Promise.all([
     prisma.appointment.findMany({
       where: {
@@ -624,6 +634,13 @@ export async function getBarberTodayDashboardData(barberId: string) {
       },
       take: DASHBOARD_CLIENT_HISTORY_LIMIT,
     }),
+    getBarberTipsTotal({
+      barberId,
+      range: {
+        start: todayStart,
+        end: todayEnd,
+      },
+    }),
   ]);
 
   const normalizedTodayAppointments = todayAppointments.map((appointment) => ({
@@ -672,7 +689,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
         (sum, appointment) =>
           sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
         0
-      ),
+      ) + todayTips.tipsTotal,
       todayServices,
       todayAppointments: normalizedTodayAppointments.map((appointment) => ({
         id: appointment.id,

@@ -15,6 +15,7 @@ import {
   notifyBarberNewAppointment,
 } from "@/lib/barberEmails";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
+import { prisma } from "@/lib/prisma";
 import {
   enforceRateLimit,
   logSecurityEvent,
@@ -78,6 +79,22 @@ export async function POST(request: Request) {
       role: session?.user?.role || "anonymous",
     });
     return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  }
+
+  const customer = await prisma.user.findUnique({
+    where: {
+      id: session.user.id,
+    },
+    select: {
+      phone: true,
+    },
+  });
+
+  if (!customer?.phone) {
+    return NextResponse.json(
+      { message: "Informe seu telefone para continuar o agendamento." },
+      { status: 400 }
+    );
   }
 
   const rateLimit = await enforceRateLimit({

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
+import { getBarberTipsTotal } from "@/lib/barberTips";
 import { getWeekRange } from "@/lib/financials";
 import { prisma } from "@/lib/prisma";
 import BarberProfileClient from "./BarberProfileClient";
@@ -51,7 +52,7 @@ export default async function AdminBarberProfilePage({ params }: AdminBarberRout
   const { start: todayStart, end: todayEnd } = getDayRange();
   const { start: weekStart, end: weekEnd } = getWeekRange();
 
-  const [servicesCount, todayAppointments, weekAppointments] = await Promise.all([
+  const [servicesCount, todayAppointments, weekAppointments, weekTips] = await Promise.all([
     prisma.service.count({
       where: {
         OR: [{ barberId: barber.id }, { barberId: null }],
@@ -83,6 +84,13 @@ export default async function AdminBarberProfilePage({ params }: AdminBarberRout
         services: true,
       },
     }),
+    getBarberTipsTotal({
+      barberId: barber.id,
+      range: {
+        start: weekStart,
+        end: weekEnd,
+      },
+    }),
   ]);
 
   const activeTodayAppointments = todayAppointments.filter(
@@ -92,11 +100,12 @@ export default async function AdminBarberProfilePage({ params }: AdminBarberRout
     (appointment) => normalizeAppointmentStatus(appointment.status) === "COMPLETED"
   );
 
-  const weekPayout = completedWeekAppointments.reduce(
-    (sum, appointment) =>
-      sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
-    0
-  );
+  const weekPayout =
+    completedWeekAppointments.reduce(
+      (sum, appointment) =>
+        sum + getAppointmentTotalBarberPayout(appointment.services, appointment.items),
+      0
+    ) + weekTips.tipsTotal;
 
   return (
     <DashboardShell>

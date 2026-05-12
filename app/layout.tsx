@@ -1,10 +1,12 @@
 import "./globals.css";
 import AppChrome from "@/components/AppChrome";
 import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
+import RequiredCustomerPhoneModal from "@/components/RequiredCustomerPhoneModal";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { prisma } from "@/lib/prisma";
 import { getCurrentShop } from "@/lib/shop";
 
 const bodyFont = Manrope({
@@ -88,6 +90,16 @@ export default async function RootLayout({
       : null;
   const brandName = shop.name || "Jak Barber";
   const logoPath = shop.logoPath || "/logo.png";
+  const customerPhone =
+    role === "CUSTOMER" && session?.user?.id
+      ? (
+          await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { phone: true },
+          })
+        )?.phone || null
+      : null;
+  const shouldCompleteCustomerPhone = role === "CUSTOMER" && !customerPhone;
 
   return (
     <html lang="pt-BR">
@@ -108,6 +120,7 @@ export default async function RootLayout({
         >
           {children}
         </AppChrome>
+        {shouldCompleteCustomerPhone ? <RequiredCustomerPhoneModal /> : null}
       </body>
     </html>
   );
