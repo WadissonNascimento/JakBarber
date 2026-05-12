@@ -2,6 +2,7 @@ import Link from "next/link";
 import { googleSignInAction } from "@/app/login/actions";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import ReliableSubmitButton from "@/components/ReliableSubmitButton";
 
 export default function LoginForm({
@@ -39,17 +40,6 @@ export default function LoginForm({
       <div className="space-y-5">
         <input type="hidden" name="redirectTo" value={redirectTo} />
 
-        {googleSignInEnabled && (
-          <button
-            type="submit"
-            formAction={googleSignInAction}
-            formNoValidate
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4 font-semibold text-white transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand)]/10"
-          >
-            Entrar com Google
-          </button>
-        )}
-
         <div>
           <label
             htmlFor="email"
@@ -83,6 +73,14 @@ export default function LoginForm({
             placeholder="Digite sua senha"
           />
         </div>
+
+        {googleSignInEnabled && (
+          <GoogleSignInButton
+            type="submit"
+            formAction={googleSignInAction}
+            formNoValidate
+          />
+        )}
 
         <div className="text-right text-sm">
           <Link

@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { googleSignInAction } from "@/app/login/actions";
 import { registerCustomerAction } from "@/app/register/actions";
 import FeedbackMessage from "@/components/FeedbackMessage";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import PhoneInput from "@/components/ui/PhoneInput";
 import SubmitButton from "@/components/SubmitButton";
 import {
@@ -211,12 +212,7 @@ export default function RegisterForm({
       {googleSignInEnabled && (
         <form action={googleSignInAction} className="mt-4">
           <input type="hidden" name="redirectTo" value={redirectTo} />
-          <button
-            type="submit"
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4 font-semibold text-white transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand)]/10"
-          >
-            Entrar com Google
-          </button>
+          <GoogleSignInButton type="submit" />
         </form>
       )}
 
