@@ -2,6 +2,7 @@ import {
   CalendarRange,
   Coins,
   DollarSign,
+  Images,
   MessageSquareText,
   PackagePlus,
   PackageSearch,
@@ -49,6 +50,7 @@ export default async function AdminPage() {
     openPayouts,
     pendingInvites,
     visibleReviews,
+    homeImages,
     todayAppointmentsCount,
     canceledTodayAppointments,
     completedTodayAppointments,
@@ -82,6 +84,11 @@ export default async function AdminPage() {
     prisma.review.count({
       where: {
         isVisible: true,
+      },
+    }),
+    prisma.homeImage.count({
+      where: {
+        isActive: true,
       },
     }),
     prisma.appointment.count({
@@ -176,6 +183,13 @@ export default async function AdminPage() {
       title: "Avaliações",
       description: "Moderacao dos comentários do site.",
       badge: visibleReviews ? `${visibleReviews}` : undefined,
+    },
+    {
+      href: "/admin/home",
+      icon: Images,
+      title: "Fotos da home",
+      description: "Troque as imagens principais do site.",
+      badge: `${homeImages}/5`,
     },
     {
       href: "/admin/financeiro",

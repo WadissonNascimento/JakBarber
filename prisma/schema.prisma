@@ -62,6 +62,7 @@ model Shop {
   extraStockMovements      ExtraStockMovement[]
   barberPayouts            BarberPayout[]
   barberTips               BarberTip[]
+  homeImages               HomeImage[]
   emailDeliveryLogs        EmailDeliveryLog[]
 
   @@index([isActive, isDefault])
@@ -606,4 +607,20 @@ model BarberTip {
   @@index([shopId, barberId])
   @@index([shopId, createdAt])
   @@index([shopId, barberId, createdAt])
+}
+
+model HomeImage {
+  id        String   @id @default(cuid())
+  shopId    String   @default("shop_jak_barber")
+  imageUrl  String
+  imagePath String
+  position  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, isActive, position])
 }

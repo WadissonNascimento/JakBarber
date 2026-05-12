@@ -27,23 +27,33 @@ function formatReviewName(name: string) {
 export default function HomeClient({
   reviews,
   hasMoreReviews,
+  homeImages = [],
 }: {
   reviews: HomeReview[];
   hasMoreReviews: boolean;
+  homeImages?: string[];
 }) {
+  const galleryImages = homeImages.length > 0 ? homeImages.slice(0, 5) : corteImages;
   const [current, setCurrent] = useState(0);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
   const [isTouching, setIsTouching] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   function nextSlide() {
-    setCurrent((prev) => (prev + 1) % corteImages.length);
+    setCurrent((prev) => (prev + 1) % galleryImages.length);
   }
 
   function prevSlide() {
-    setCurrent((prev) => (prev - 1 + corteImages.length) % corteImages.length);
+    setCurrent((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
   }
+
+  useEffect(() => {
+    if (current >= galleryImages.length) {
+      setCurrent(0);
+    }
+  }, [current, galleryImages.length]);
 
   useEffect(() => {
     if (isTouching) {
@@ -51,7 +61,7 @@ export default function HomeClient({
     }
 
     intervalRef.current = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % corteImages.length);
+      setCurrent((prev) => (prev + 1) % galleryImages.length);
     }, 4500);
 
     return () => {
@@ -59,7 +69,7 @@ export default function HomeClient({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isTouching]);
+  }, [galleryImages.length, isTouching]);
 
   function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     setIsTouching(true);
@@ -90,6 +100,11 @@ export default function HomeClient({
     setTouchEndX(null);
     setIsTouching(false);
   }
+
+  const defaultHeroImage = corteImages[0] || "/cortes/corte1.webp";
+  const activeImage = galleryImages[current] || defaultHeroImage;
+  const fallbackImage = corteImages[current % corteImages.length] || defaultHeroImage;
+  const visibleImage = failedImages[activeImage] ? fallbackImage : activeImage;
 
   return (
     <main className="relative min-h-screen text-white">
@@ -152,13 +167,19 @@ export default function HomeClient({
                 >
                   <div className="relative h-[290px] w-full sm:h-[360px] md:h-[420px] lg:h-[560px] xl:h-[620px]">
                     <Image
-                      key={corteImages[current]}
-                      src={corteImages[current]}
+                      key={visibleImage}
+                      src={visibleImage}
                       alt={`Corte ${current + 1}`}
                       fill
                       sizes="(max-width: 1024px) 100vw, 560px"
                       priority={current === 0}
                       className="object-cover transition-all duration-700 ease-out"
+                      onError={() => {
+                        setFailedImages((currentFailures) => ({
+                          ...currentFailures,
+                          [activeImage]: true,
+                        }));
+                      }}
                     />
                   </div>
 
@@ -183,7 +204,7 @@ export default function HomeClient({
                   </button>
 
                   <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-                    {corteImages.map((_, index) => (
+                    {galleryImages.map((_, index) => (
                       <button
                         key={index}
                         type="button"
