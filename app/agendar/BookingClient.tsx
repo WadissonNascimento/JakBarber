@@ -159,6 +159,7 @@ export default function BookingClient({
   const [bookingSlot, setBookingSlot] = useState<string | null>(null);
   const [extrasSlot, setExtrasSlot] = useState<string | null>(null);
   const [confirmationSlot, setConfirmationSlot] = useState<string | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const availabilityCacheRef = useRef<Map<string, AvailabilityCacheEntry>>(new Map());
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>(() =>
@@ -211,6 +212,18 @@ export default function BookingClient({
     0
   );
   const selectedTotalPrice = selectedPrice + selectedExtrasPrice;
+  const selectedItemsLabel =
+    selectedServiceIds.length === 1
+      ? "1 item selecionado"
+      : `${selectedServiceIds.length} itens selecionados`;
+  const showMobileContinueBar =
+    selectedServiceIds.length > 0 &&
+    !isScheduleModalOpen &&
+    !extrasSlot &&
+    !confirmationSlot &&
+    !bookingSlot &&
+    !bookingSuccess &&
+    !bookingError;
   const totalSlots =
     periodSlots.morning.length + periodSlots.afternoon.length + periodSlots.night.length;
   const hasBookingConflict = bookingError?.toLowerCase().includes("reservado") ?? false;
@@ -337,6 +350,7 @@ export default function BookingClient({
       setPeriodSlots(emptyPeriodSlots());
       setIsDayAvailable(false);
       setAvailabilityError(null);
+      setIsScheduleModalOpen(false);
       return;
     }
 
@@ -366,6 +380,16 @@ export default function BookingClient({
     setBookingError(null);
     setBookingSuccess(null);
     setExtrasSlot(time);
+  }
+
+  function openMobileScheduleModal() {
+    setBookingError(null);
+    setIsScheduleModalOpen(true);
+  }
+
+  function selectMobileScheduleSlot(time: string) {
+    setIsScheduleModalOpen(false);
+    openBookingConfirmation(time);
   }
 
   function proceedFromExtrasToSummary() {
@@ -485,7 +509,11 @@ export default function BookingClient({
   }
 
   return (
-    <div className="page-shell max-w-5xl overflow-x-hidden text-white">
+    <div
+      className={`page-shell max-w-5xl overflow-x-hidden text-white ${
+        showMobileContinueBar ? "pb-28 md:pb-0" : ""
+      }`}
+    >
       <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">
@@ -512,7 +540,7 @@ export default function BookingClient({
               <label className="mb-2 block text-sm font-semibold text-zinc-200">
                 Barbeiro
               </label>
-              <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
+              <div className="grid max-h-[128px] max-w-full grid-cols-2 gap-2 overflow-y-auto pr-1 sm:max-h-none sm:grid-cols-3 sm:overflow-visible sm:pr-0">
                 {barbers.map((barber) => {
                   const checked = selectedBarberId === barber.id;
                   const imageSrc = getLocalBarberImage(barber.image);
@@ -527,7 +555,7 @@ export default function BookingClient({
                         setBookingSuccess(null);
                         setBookingDetails(null);
                       }}
-                      className={`min-w-[168px] rounded-xl border px-2.5 py-2 text-left transition sm:min-w-0 sm:w-full sm:px-3 ${
+                      className={`min-w-0 rounded-xl border px-2.5 py-2 text-left transition sm:w-full sm:px-3 ${
                         checked
                           ? "border-[var(--brand)] bg-[var(--brand-muted)] text-white shadow-[0_18px_36px_rgba(14,165,233,0.18)]"
                           : "border-white/10 bg-black/20 hover:border-white/20"
@@ -549,10 +577,15 @@ export default function BookingClient({
                             (barber.name || "B").slice(0, 1)
                           )}
                         </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-semibold sm:text-sm">
                             {barber.name}
                           </span>
+                          {checked ? (
+                            <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">
+                              Selecionado
+                            </span>
+                          ) : null}
                         </span>
                       </div>
                     </button>
@@ -560,10 +593,12 @@ export default function BookingClient({
                 })}
               </div>
               {selectedBarber ? (
-                <BarberProfileStrip
-                  barber={selectedBarber}
-                  servicesCount={visibleServices.length}
-                />
+                <div className="hidden sm:block">
+                  <BarberProfileStrip
+                    barber={selectedBarber}
+                    servicesCount={visibleServices.length}
+                  />
+                </div>
               ) : null}
             </div>
 
@@ -583,7 +618,7 @@ export default function BookingClient({
                     return (
                       <label
                         key={service.id}
-                        className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 transition sm:px-4 ${
+                        className={`flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border px-3 py-2.5 transition sm:px-4 sm:py-3 ${
                           checked
                             ? "border-[var(--brand)] bg-[var(--brand-muted)] text-white"
                             : "border-white/10 bg-black/20 hover:border-white/20"
@@ -608,7 +643,7 @@ export default function BookingClient({
               </div>
             </div>
 
-            <div>
+            <div className="hidden md:block">
               <label className="mb-2 block text-sm font-semibold text-zinc-200">
                 Data
               </label>
@@ -649,7 +684,7 @@ export default function BookingClient({
         </div>
       </section>
 
-      <section className="mt-3 surface-card max-w-full overflow-hidden rounded-[20px] p-3 sm:mt-4 sm:rounded-[24px] sm:p-5">
+      <section className="surface-card mt-3 hidden max-w-full overflow-hidden rounded-[20px] p-3 sm:mt-4 sm:rounded-[24px] sm:p-5 md:block">
           <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="text-xl font-semibold">Horários disponíveis</h2>
@@ -712,6 +747,33 @@ export default function BookingClient({
             </div>
           )}
       </section>
+
+      {isScheduleModalOpen ? (
+        <BookingScheduleModal
+          nextDays={nextDays}
+          selectedDate={selectedDate}
+          selectedBarberId={selectedBarberId}
+          selectedServiceIds={selectedServiceIds}
+          selectedTotalPrice={selectedTotalPrice}
+          availabilityError={availabilityError}
+          bookingError={hasBookingConflict ? null : bookingError}
+          availabilityLoading={availabilityLoading}
+          isDayAvailable={isDayAvailable}
+          periodSlots={periodSlots}
+          bookingSlot={bookingSlot}
+          onSelectDate={setSelectedDate}
+          onBook={selectMobileScheduleSlot}
+          onClose={() => setIsScheduleModalOpen(false)}
+        />
+      ) : null}
+
+      {showMobileContinueBar ? (
+        <MobileBookingContinueBar
+          selectedItemsLabel={selectedItemsLabel}
+          totalPrice={selectedTotalPrice}
+          onContinue={openMobileScheduleModal}
+        />
+      ) : null}
 
       {extrasSlot ? (
         <BookingExtrasDialog
@@ -822,6 +884,199 @@ function SummaryCard({
       <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">{label}</p>
       <p className="mt-2 text-sm leading-6 text-white">{value}</p>
     </div>
+  );
+}
+
+function MobileBookingContinueBar({
+  selectedItemsLabel,
+  totalPrice,
+  onContinue,
+}: {
+  selectedItemsLabel: string;
+  totalPrice: number;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-[9000] border-t border-white/10 bg-[#050b16]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 text-white shadow-[0_-16px_50px_rgba(0,0,0,0.45)] backdrop-blur-md md:hidden">
+      <div className="mx-auto flex max-w-5xl items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+            {selectedItemsLabel}
+          </p>
+          <p className="mt-1 text-lg font-bold">{formatCurrency(totalPrice)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="shrink-0 rounded-2xl bg-[var(--brand)] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(14,165,233,0.28)] transition hover:brightness-110"
+        >
+          Continuar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BookingScheduleModal({
+  nextDays,
+  selectedDate,
+  selectedBarberId,
+  selectedServiceIds,
+  selectedTotalPrice,
+  availabilityError,
+  bookingError,
+  availabilityLoading,
+  isDayAvailable,
+  periodSlots,
+  bookingSlot,
+  onSelectDate,
+  onBook,
+  onClose,
+}: {
+  nextDays: string[];
+  selectedDate: string;
+  selectedBarberId: string;
+  selectedServiceIds: string[];
+  selectedTotalPrice: number;
+  availabilityError: string | null;
+  bookingError: string | null;
+  availabilityLoading: boolean;
+  isDayAvailable: boolean;
+  periodSlots: PeriodSlots;
+  bookingSlot: string | null;
+  onSelectDate: (date: string) => void;
+  onBook: (slot: string) => void;
+  onClose: () => void;
+}) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end bg-black/75 px-3 pb-3 pt-10 backdrop-blur-md sm:items-center sm:px-4 sm:py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="booking-schedule-title"
+    >
+      <div className="max-h-[calc(100svh-24px)] w-full overflow-hidden rounded-[26px] border border-white/10 bg-[#050b16] text-white shadow-[0_24px_80px_rgba(0,0,0,0.62)] sm:mx-auto sm:max-w-3xl">
+        <div className="flex items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+              Proximo passo
+            </p>
+            <h2 id="booking-schedule-title" className="mt-1 text-xl font-bold sm:text-2xl">
+              Escolha data e horario
+            </h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Total atual - {formatCurrency(selectedTotalPrice)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xl text-zinc-200 transition hover:bg-white/10"
+            aria-label="Fechar escolha de horario"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="max-h-[calc(100svh-150px)] overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <label className="mb-2 block text-sm font-semibold text-zinc-200">
+            Data
+          </label>
+          <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1">
+            {nextDays.map((day) => {
+              const isSelected = day === selectedDate;
+              const { weekday, day: dayLabel } = formatShortDate(day);
+              const disabled = !selectedBarberId || selectedServiceIds.length === 0;
+
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onSelectDate(day)}
+                  className={`min-w-[82px] rounded-2xl border px-3 py-3 text-left transition ${
+                    isSelected
+                      ? "border-[var(--brand)] bg-[var(--brand-muted)]"
+                      : "border-white/10 bg-black/20 hover:border-white/20"
+                  } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+                >
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                    {weekday}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">{dayLabel}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-5">
+            <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="text-xl font-semibold">Horarios disponiveis</h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {selectedDate
+                    ? `Escolha um horario para ${new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR")}.`
+                    : "Escolha um dia para continuar."}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <FeedbackMessage message={availabilityError} tone="error" />
+              <FeedbackMessage message={bookingError} tone="error" />
+            </div>
+
+            {!selectedBarberId || selectedServiceIds.length === 0 || !selectedDate ? (
+              <div className="mt-5 rounded-[22px] border border-dashed border-white/10 px-4 py-5 text-sm text-zinc-400">
+                Escolha barbeiro, servico e data para ver os horarios livres.
+              </div>
+            ) : availabilityLoading ? (
+              <div className="mt-5 rounded-[22px] border border-white/10 bg-black/20 px-4 py-5 text-sm text-zinc-300">
+                Buscando os melhores horarios para esse atendimento...
+              </div>
+            ) : !isDayAvailable ? (
+              <div className="mt-5 rounded-[22px] border border-dashed border-white/10 px-4 py-5 text-sm text-zinc-400">
+                Esse barbeiro nao possui horario ativo nesse dia. Tente outra data.
+              </div>
+            ) : (
+              <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-3">
+                <TimeSection
+                  title="Manha"
+                  slots={periodSlots.morning}
+                  bookingSlot={bookingSlot}
+                  onBook={onBook}
+                />
+
+                <TimeSection
+                  title="Tarde"
+                  slots={periodSlots.afternoon}
+                  bookingSlot={bookingSlot}
+                  onBook={onBook}
+                />
+
+                <TimeSection
+                  title="Noite"
+                  slots={periodSlots.night}
+                  bookingSlot={bookingSlot}
+                  onBook={onBook}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1185,30 +1440,30 @@ function BookingExtrasDialog({
       aria-modal="true"
       aria-labelledby="booking-extras-title"
     >
-      <div className="max-h-[calc(100svh-32px)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#050b16] p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="max-h-[calc(100svh-24px)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#050b16] p-4 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:p-5">
         <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
           Adicionar extras
         </p>
-        <h2 id="booking-extras-title" className="mt-2 text-2xl font-bold">
+        <h2 id="booking-extras-title" className="mt-1 text-xl font-bold sm:mt-2 sm:text-2xl">
           Deseja retirar algo no local?
         </h2>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
+        <p className="mt-1 text-sm leading-5 text-zinc-400 sm:mt-2 sm:leading-6">
           Escolha uma bebida ou algum produto para retirar durante seu atendimento.
         </p>
 
-        <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-4">
+        <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-3 sm:mt-5 sm:p-4">
           {groupedExtras.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-white/10 px-4 py-4 text-sm text-zinc-500">
               Nenhum extra disponível no momento.
             </p>
           ) : (
-            <div className="max-h-[420px] space-y-5 overflow-y-auto overflow-x-hidden pr-1">
+            <div className="max-h-[38svh] space-y-4 overflow-y-auto overflow-x-hidden pr-1 sm:max-h-[420px] sm:space-y-5">
               {groupedExtras.map((group) => (
                 <div
                   key={group.category}
-                  className="space-y-3"
+                  className="space-y-2 sm:space-y-3"
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <p
                         className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${
@@ -1237,7 +1492,7 @@ function BookingExtrasDialog({
                         {group.items.length} item(ns)
                       </div>
                     </div>
-                    <p className="text-xs leading-5 text-zinc-400">
+                    <p className="text-xs leading-4 text-zinc-400 sm:leading-5">
                       {group.category === "BEVERAGE"
                         ? "Geladas para retirada no atendimento."
                         : group.category === "SHELF"
@@ -1254,10 +1509,10 @@ function BookingExtrasDialog({
                       return (
                         <div
                           key={product.id}
-                          className="rounded-[22px] border border-white/10 bg-[#0f1724]/90 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+                          className="rounded-[20px] border border-white/10 bg-[#0f1724]/90 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-3"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="relative h-[62px] w-[62px] shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-[#edf1f7] shadow-[0_12px_24px_rgba(0,0,0,0.18)]">
+                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-[#edf1f7] shadow-[0_12px_24px_rgba(0,0,0,0.18)] sm:h-[62px] sm:w-[62px] sm:rounded-[18px]">
                               {productImageUrl ? (
                                 <Image
                                   src={productImageUrl}
@@ -1275,14 +1530,14 @@ function BookingExtrasDialog({
 
                             <div className="min-w-0 flex-1">
                               <div className="space-y-1">
-                                <p className="text-[15px] font-semibold leading-5 text-white break-words">
+                                <p className="text-sm font-semibold leading-5 text-white break-words sm:text-[15px]">
                                   {product.name}
                                 </p>
                                 <p className="text-sm font-semibold text-white">
                                   {formatCurrency(product.price)}
                                 </p>
                                 {product.description ? (
-                                  <p className="line-clamp-2 text-xs leading-5 text-zinc-400">
+                                  <p className="line-clamp-1 text-xs leading-4 text-zinc-400 sm:line-clamp-2 sm:leading-5">
                                     {product.description}
                                   </p>
                                 ) : null}
@@ -1290,7 +1545,7 @@ function BookingExtrasDialog({
                             </div>
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between gap-2 rounded-[18px] border border-white/10 bg-black/20 px-3 py-2">
+                          <div className="mt-2 flex items-center justify-between gap-2 rounded-[18px] border border-white/10 bg-black/20 px-2.5 py-2 sm:mt-3 sm:px-3">
                             <button
                               type="button"
                               onClick={() =>
@@ -1301,7 +1556,7 @@ function BookingExtrasDialog({
                                 )
                               }
                               disabled={quantity === 0}
-                              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10"
                             >
                               -
                             </button>
@@ -1309,7 +1564,7 @@ function BookingExtrasDialog({
                               <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                                 Quantidade
                               </p>
-                              <p className="mt-1 text-lg font-bold text-white">{quantity}</p>
+                              <p className="mt-0.5 text-base font-bold text-white sm:mt-1 sm:text-lg">{quantity}</p>
                             </div>
                             <button
                               type="button"
@@ -1321,7 +1576,7 @@ function BookingExtrasDialog({
                                 )
                               }
                               disabled={quantity >= product.stock}
-                              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand)] text-lg font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand)] text-lg font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10"
                             >
                               +
                             </button>
@@ -1336,13 +1591,13 @@ function BookingExtrasDialog({
           )}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-zinc-300 sm:mt-4 sm:py-3">
           {selectedExtras.length > 0
             ? `Selecionado: ${selectedExtras.map((item) => `${item.name} x${item.quantity}`).join(", ")}`
             : "Nenhum extra selecionado."}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2">
           <button
             type="button"
             onClick={onCancel}
