@@ -61,7 +61,9 @@ function escapeCsvValue(value: string | number | null | undefined) {
 export function buildAgendaReportQuery(filters: AdminAgendaFilters) {
   const startDate = parseScheduleStartDate(filters.dateFrom);
   const endDate = parseScheduleEndDate(filters.dateTo);
-  const normalizedStatus = filters.status?.trim().toUpperCase();
+  const normalizedStatus = filters.status
+    ? normalizeAppointmentStatus(filters.status.trim().toUpperCase())
+    : "";
 
   const where: Prisma.AppointmentWhereInput = {
     ...(filters.barberId ? { barberId: filters.barberId } : {}),

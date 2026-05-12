@@ -49,7 +49,7 @@ export default function BarberProfileSettings({
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white">Contato do barbeiro</p>
             <p className="mt-1 text-xs text-zinc-400">
-              Atualize e-mail e telefone do seu perfil.
+              Atualize nome, e-mail e telefone do seu perfil.
             </p>
           </div>
         </div>
@@ -73,6 +73,21 @@ export default function BarberProfileSettings({
             }}
           >
             <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+            <label className="block">
+              <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+                Nome
+              </span>
+              <input
+                name="name"
+                type="text"
+                required
+                minLength={2}
+                maxLength={80}
+                defaultValue={name}
+                className="form-control text-sm"
+              />
+            </label>
 
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
@@ -122,6 +137,7 @@ export default function BarberProfileSettings({
         ) : (
           <>
             <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              <ProfileValue label="Nome" value={name || "Nao informado"} />
               <ProfileValue label="E-mail" value={email || "Nao informado"} />
               <ProfileValue
                 label="Telefone"

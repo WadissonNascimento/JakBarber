@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getAdminAgendaReport } from "@/lib/adminReports";
 import { toMoneyNumber } from "@/lib/money";
+import { prisma } from "@/lib/prisma";
 import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
 import AdminAgendaClient from "./AdminAgendaClient";
 
@@ -32,10 +33,55 @@ export default async function AdminAgendaPage({
     dateTo: searchParams.dateTo || getCurrentScheduleDateValue(),
   };
 
-  const report = await getAdminAgendaReport({
-    dateFrom: initialFilters.dateFrom,
-    dateTo: initialFilters.dateTo,
-  }, { limit: ADMIN_AGENDA_PAGE_LIMIT });
+  const [report, barbers, services, extras] = await Promise.all([
+    getAdminAgendaReport({
+      dateFrom: initialFilters.dateFrom,
+      dateTo: initialFilters.dateTo,
+    }, { limit: ADMIN_AGENDA_PAGE_LIMIT }),
+    prisma.user.findMany({
+      where: {
+        role: "BARBER",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+    prisma.service.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        duration: true,
+        barberId: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+    prisma.extraProduct.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+  ]);
 
   return (
     <AdminAgendaClient
@@ -49,6 +95,15 @@ export default async function AdminAgendaPage({
           ...item,
           subtotal: toMoneyNumber(item.subtotal),
         })),
+      }))}
+      barbers={barbers}
+      services={services.map((service) => ({
+        ...service,
+        price: toMoneyNumber(service.price),
+      }))}
+      extras={extras.map((extra) => ({
+        ...extra,
+        price: toMoneyNumber(extra.price),
       }))}
       initialFilters={initialFilters}
       isTruncated={report.isTruncated}

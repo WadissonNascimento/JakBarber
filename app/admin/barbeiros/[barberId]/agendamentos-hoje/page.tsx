@@ -15,24 +15,24 @@ import {
   getAppointmentGrandTotal,
   getAppointmentTotalBarberPayout,
 } from "@/lib/appointmentServices";
+import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import {
+  formatScheduleTime,
+  getCurrentScheduleDateValue,
+  getScheduleDayRange,
+} from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
+import {
+  AdminAppointmentActions,
+  type AdminAgendaAppointment,
+} from "@/app/admin/agenda/AdminAgendaClient";
 
 export const dynamic = "force-dynamic";
 
 type AdminBarberRouteParams = {
   params: Promise<{ barberId: string }>;
 };
-
-function getDayRange(baseDate = new Date()) {
-  const start = new Date(baseDate);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(baseDate);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-}
 
 export default async function BarberTodayAppointmentsPage({ params }: AdminBarberRouteParams) {
   const session = await auth();
@@ -50,27 +50,80 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
 
   if (!barber) redirect("/admin/barbeiros");
 
-  const { start, end } = getDayRange();
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      barberId: barber.id,
-      date: {
-        gte: start,
-        lte: end,
+  const { start, end } = getScheduleDayRange(getCurrentScheduleDateValue())!;
+  const [appointments, barbers, services, extras] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        barberId: barber.id,
+        date: {
+          gte: start,
+          lte: end,
+        },
+        status: {
+          not: "CANCELLED",
+        },
       },
-      status: {
-        not: "CANCELLED",
+      include: {
+        customer: true,
+        items: true,
+        services: true,
       },
-    },
-    include: {
-      customer: true,
-      items: true,
-      services: true,
-    },
-    orderBy: {
-      date: "asc",
-    },
-  });
+      orderBy: {
+        date: "asc",
+      },
+    }),
+    prisma.user.findMany({
+      where: {
+        role: "BARBER",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+    prisma.service.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        duration: true,
+        barberId: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+    prisma.extraProduct.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+  ]);
+  const adminServices = services.map((service) => ({
+    ...service,
+    price: toMoneyNumber(service.price),
+  }));
+  const adminExtras = extras.map((extra) => ({
+    ...extra,
+    price: toMoneyNumber(extra.price),
+  }));
 
   return (
     <DashboardShell>
@@ -89,6 +142,37 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
         <div className="space-y-3">
           {appointments.map((appointment) => {
             const status = normalizeAppointmentStatus(appointment.status);
+            const payoutPreviewItems = appointment.items.map((item) => ({
+              ...item,
+              isDelivered: true,
+            }));
+            const actionAppointment: AdminAgendaAppointment = {
+              id: appointment.id,
+              publicId: appointment.publicId,
+              date: appointment.date,
+              status: appointment.status,
+              notes: appointment.notes,
+              barber: {
+                id: barber.id,
+                name: barber.name,
+              },
+              customer: {
+                name: appointment.customer.name,
+                email: appointment.customer.email,
+              },
+              services: appointment.services.map((service) => ({
+                serviceId: service.serviceId,
+                nameSnapshot: service.nameSnapshot,
+                orderIndex: service.orderIndex,
+                priceSnapshot: toMoneyNumber(service.priceSnapshot),
+              })),
+              items: appointment.items.map((item) => ({
+                extraProductId: item.extraProductId,
+                productNameSnapshot: item.productNameSnapshot,
+                quantity: item.quantity,
+                subtotal: toMoneyNumber(item.subtotal),
+              })),
+            };
 
             return (
               <article
@@ -98,10 +182,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-2xl font-bold text-white">
-                      {appointment.date.toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatScheduleTime(appointment.date)}
                     </p>
                     <p className="mt-2 truncate font-semibold text-white">
                       {appointment.customer.name || "Cliente"}
@@ -125,7 +206,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
                   <InfoBox
                     label="Repasse"
                     value={formatCurrency(
-                      getAppointmentTotalBarberPayout(appointment.services, appointment.items)
+                      getAppointmentTotalBarberPayout(appointment.services, payoutPreviewItems)
                     )}
                   />
                 </div>
@@ -133,6 +214,14 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
                 <p className="mt-3 text-xs text-sky-200">
                   Extras: {getAppointmentItemsLabel(appointment.items)}
                 </p>
+                <div className="mt-3">
+                  <AdminAppointmentActions
+                    appointment={actionAppointment}
+                    barbers={barbers}
+                    services={adminServices}
+                    extras={adminExtras}
+                  />
+                </div>
               </article>
             );
           })}

@@ -40,6 +40,8 @@ export default async function BarberAgendaPage({
       <div className="mt-6">
         <AppointmentsSection
           appointments={agenda.appointments}
+          services={agenda.services}
+          extras={agenda.extras}
           filters={agenda.filters}
           barberName={barberName}
         />

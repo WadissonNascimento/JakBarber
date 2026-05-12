@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   BadgeDollarSign,
@@ -27,6 +27,10 @@ import {
   appointmentStatusVariant,
   normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
+import {
+  editAdminAppointmentAction,
+  updateAdminAppointmentStatusAction,
+} from "./actions";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   formatScheduleDate,
@@ -34,7 +38,7 @@ import {
   getScheduleDateValue,
 } from "@/lib/scheduleTime";
 
-type AdminAgendaAppointment = {
+export type AdminAgendaAppointment = {
   id: string;
   publicId: number;
   date: Date;
@@ -49,15 +53,38 @@ type AdminAgendaAppointment = {
     email: string | null;
   };
   services: Array<{
+    serviceId: string;
     nameSnapshot: string;
     orderIndex: number;
     priceSnapshot: number;
   }>;
   items: Array<{
+    extraProductId: string;
     productNameSnapshot: string;
     quantity: number;
     subtotal: number;
   }>;
+};
+
+export type AdminAgendaBarber = {
+  id: string;
+  name: string | null;
+  email: string | null;
+};
+
+export type AdminAgendaService = {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  barberId: string | null;
+};
+
+export type AdminAgendaExtra = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
 };
 
 type AdminAgendaFilters = {
@@ -68,11 +95,17 @@ type AdminAgendaFilters = {
 
 export default function AdminAgendaClient({
   appointments,
+  barbers,
+  services,
+  extras,
   initialFilters,
   isTruncated = false,
   limit = null,
 }: {
   appointments: AdminAgendaAppointment[];
+  barbers: AdminAgendaBarber[];
+  services: AdminAgendaService[];
+  extras: AdminAgendaExtra[];
   initialFilters: AdminAgendaFilters;
   isTruncated?: boolean;
   limit?: number | null;
@@ -230,12 +263,15 @@ export default function AdminAgendaClient({
                 <AppointmentMobileCard
                   key={appointment.id}
                   appointment={appointment}
+                  barbers={barbers}
+                  services={services}
+                  extras={extras}
                 />
               ))}
             </div>
 
             <div className="mt-5 hidden overflow-x-auto rounded-2xl border border-white/10 bg-black/20 md:block">
-              <table className="table-premium min-w-[1100px]">
+              <table className="table-premium min-w-[1200px]">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -248,6 +284,7 @@ export default function AdminAgendaClient({
                     <th>Valor</th>
                     <th>Status</th>
                     <th>Observações</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
 
@@ -285,6 +322,14 @@ export default function AdminAgendaClient({
                         </td>
                         <td className="max-w-xs truncate text-zinc-400">
                           {appointment.notes || "-"}
+                        </td>
+                        <td>
+                          <AdminAppointmentActions
+                            appointment={appointment}
+                            barbers={barbers}
+                            services={services}
+                            extras={extras}
+                          />
                         </td>
                       </tr>
                     );
@@ -400,12 +445,18 @@ function getVisibleAgendaSummary(appointments: AdminAgendaAppointment[]) {
 
 function AppointmentMobileCard({
   appointment,
+  barbers,
+  services,
+  extras,
 }: {
   appointment: AdminAgendaAppointment;
+  barbers: AdminAgendaBarber[];
+  services: AdminAgendaService[];
+  extras: AdminAgendaExtra[];
 }) {
   const date = new Date(appointment.date);
   const total = getAppointmentGrandTotal(appointment.services, appointment.items);
-  const extras = getAppointmentItemsLabel(appointment.items);
+  const extrasLabel = getAppointmentItemsLabel(appointment.items);
   const notes = appointment.notes?.trim();
 
   return (
@@ -455,7 +506,7 @@ function AppointmentMobileCard({
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
             Extras
           </p>
-          <p className="mt-1 break-words text-sm text-zinc-300">{extras}</p>
+          <p className="mt-1 break-words text-sm text-zinc-300">{extrasLabel}</p>
         </div>
 
         {notes ? (
@@ -467,7 +518,292 @@ function AppointmentMobileCard({
           </div>
         ) : null}
       </div>
+      <div className="mt-3">
+        <AdminAppointmentActions
+          appointment={appointment}
+          barbers={barbers}
+          services={services}
+          extras={extras}
+        />
+      </div>
     </article>
+  );
+}
+
+export function AdminAppointmentActions({
+  appointment,
+  barbers,
+  services,
+  extras,
+}: {
+  appointment: AdminAgendaAppointment;
+  barbers: AdminAgendaBarber[];
+  services: AdminAgendaService[];
+  extras: AdminAgendaExtra[];
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isEditing, setIsEditing] = useState(false);
+  const status = normalizeAppointmentStatus(appointment.status);
+  const isFinal = ["CANCELLED", "COMPLETED", "NO_SHOW"].includes(status);
+
+  function runStatus(nextStatus: string) {
+    const reason =
+      nextStatus === "CANCELLED"
+        ? window.prompt("Motivo do cancelamento:")?.trim()
+        : "";
+
+    if (nextStatus === "CANCELLED" && !reason) {
+      return;
+    }
+
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("appointmentId", appointment.id);
+      formData.set("status", nextStatus);
+
+      if (reason) {
+        formData.set("cancellationReason", reason);
+      }
+
+      const result = await updateAdminAppointmentStatusAction(formData);
+      window.alert(result.message);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="grid min-w-[220px] grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      {!isFinal ? (
+        <>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setIsEditing(true)}
+            className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-100 transition hover:bg-white/[0.06] disabled:opacity-60"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => runStatus("COMPLETED")}
+            className="rounded-xl border border-emerald-300/35 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/10 disabled:opacity-60"
+          >
+            Concluir
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => runStatus("NO_SHOW")}
+            className="rounded-xl border border-orange-300/35 px-3 py-2 text-xs font-bold text-orange-100 transition hover:bg-orange-400/10 disabled:opacity-60"
+          >
+            Falta
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => runStatus("CANCELLED")}
+            className="rounded-xl border border-red-400/40 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-500/10 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+        </>
+      ) : (
+        <span className="text-xs font-semibold text-zinc-500">
+          Atendimento finalizado
+        </span>
+      )}
+
+      {isEditing ? (
+        <AdminAppointmentEditModal
+          appointment={appointment}
+          barbers={barbers}
+          services={services}
+          extras={extras}
+          onClose={() => setIsEditing(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function AdminAppointmentEditModal({
+  appointment,
+  barbers,
+  services,
+  extras,
+  onClose,
+}: {
+  appointment: AdminAgendaAppointment;
+  barbers: AdminAgendaBarber[];
+  services: AdminAgendaService[];
+  extras: AdminAgendaExtra[];
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [selectedBarberId, setSelectedBarberId] = useState(appointment.barber.id);
+  const date = new Date(appointment.date);
+  const selectedServiceIds = new Set(
+    appointment.services.map((service) => service.serviceId)
+  );
+  const selectedExtraIds = new Set(
+    appointment.items.map((item) => item.extraProductId)
+  );
+  const availableServices = services.filter(
+    (service) => !service.barberId || service.barberId === selectedBarberId
+  );
+
+  function submitEdit(formData: FormData) {
+    startTransition(async () => {
+      const result = await editAdminAppointmentAction(formData);
+      window.alert(result.message);
+
+      if (result.ok) {
+        onClose();
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[280] overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-md">
+      <form
+        action={submitEdit}
+        className="mx-auto w-full max-w-2xl rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
+      >
+        <input type="hidden" name="appointmentId" value={appointment.id} />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+              Admin
+            </p>
+            <h3 className="mt-2 text-xl font-bold">Editar agendamento</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-zinc-200"
+          >
+            Fechar
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <label className="block text-sm font-semibold text-zinc-200">
+            Barbeiro
+            <select
+              name="barberId"
+              value={selectedBarberId}
+              onChange={(event) => setSelectedBarberId(event.target.value)}
+              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
+            >
+              {barbers.map((barber) => (
+                <option key={barber.id} value={barber.id}>
+                  {barber.name || barber.email || "Barbeiro"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-zinc-200">
+            Data
+            <input
+              type="date"
+              name="date"
+              defaultValue={getScheduleDateValue(date)}
+              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-zinc-200">
+            Hora
+            <input
+              type="time"
+              name="time"
+              defaultValue={formatScheduleTime(date)}
+              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
+            />
+          </label>
+        </div>
+
+        <div className="mt-5">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+            Serviços
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {availableServices.map((service) => (
+              <label
+                key={service.id}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  name="serviceIds"
+                  value={service.id}
+                  defaultChecked={selectedServiceIds.has(service.id)}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-white">
+                    {service.name}
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    {service.duration} min - {formatCurrency(service.price)}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+            Extras
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {extras.map((extra) => (
+              <label
+                key={extra.id}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  name="extraProductIds"
+                  value={extra.id}
+                  defaultChecked={selectedExtraIds.has(extra.id)}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-white">
+                    {extra.name}
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    {formatCurrency(extra.price)} - estoque {extra.stock}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <label className="mt-5 block text-sm font-semibold text-zinc-200">
+          Observações
+          <textarea
+            name="notes"
+            rows={3}
+            maxLength={400}
+            defaultValue={appointment.notes || ""}
+            className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-white outline-none"
+          />
+        </label>
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="mt-5 min-h-11 w-full rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-60"
+        >
+          {isPending ? "Salvando..." : "Salvar alterações"}
+        </button>
+      </form>
+    </div>
   );
 }
 

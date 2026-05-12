@@ -21,7 +21,9 @@ import { roundMoney, toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
   createScheduleDate,
+  formatScheduleTime,
   getScheduleDayOfWeek,
+  getScheduleDateValue,
   getScheduleDayRange,
   getScheduleMinutes,
   isScheduleDateTimePast,
@@ -36,6 +38,7 @@ type AppointmentPrismaClient = Pick<
   | "appointmentService"
   | "barberAvailability"
   | "barberBlock"
+  | "barberPayout"
   | "barberServiceCommission"
   | "extraProduct"
   | "extraStockMovement"
@@ -73,12 +76,77 @@ export type RescheduleCustomerAppointmentInput = CreateCustomerAppointmentInput 
 
 export type CreateManualFitInAppointmentInput = CreateCustomerAppointmentInput;
 
+export type AdminEditAppointmentInput = {
+  appointmentId: string;
+  barberId: string;
+  serviceIds: string[];
+  extras?: Array<{
+    extraProductId: string;
+    quantity: number;
+  }>;
+  date: string;
+  time: string;
+  notes?: string | null;
+  now?: Date;
+};
+
+export type BarberEditOpenAppointmentInput = {
+  appointmentId: string;
+  barberId: string;
+  serviceIds: string[];
+  extras?: Array<{
+    extraProductId: string;
+    quantity: number;
+  }>;
+  notes?: string | null;
+  now?: Date;
+};
+
 export type AppointmentItemDeliveryDecision = {
   appointmentItemId: string;
   isDelivered: boolean;
 };
 
 const FINAL_APPOINTMENT_STATUSES = ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"];
+
+async function assertNoLockedPayoutForAppointmentPeriod(
+  db: AppointmentTransactionClient,
+  {
+    shopId,
+    barberId,
+    date,
+  }: {
+    shopId: string;
+    barberId: string;
+    date: Date;
+  }
+) {
+  const lockedPayout = await db.barberPayout.findFirst({
+    where: {
+      shopId,
+      barberId,
+      status: {
+        in: ["CLOSED", "PAID"],
+      },
+      periodStart: {
+        lte: date,
+      },
+      periodEnd: {
+        gte: date,
+      },
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (lockedPayout) {
+    throw new AppointmentMutationError(
+      "Esse periodo ja possui repasse fechado ou pago. Reabra o repasse antes de alterar o atendimento."
+    );
+  }
+}
 
 function getAppointmentDurationFromServices(
   services: Array<{
@@ -149,6 +217,120 @@ export async function rescheduleCustomerAppointment(
   try {
     return await db.$transaction(
       (tx) => rescheduleCustomerAppointmentInTransaction(input, tx),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 20000,
+      }
+    );
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2034" || error.code === "P2028")
+    ) {
+      throw new AppointmentMutationError(
+        "Esse horario acabou de ser reservado. Escolha outro horario."
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function editAppointmentForAdmin(
+  input: AdminEditAppointmentInput,
+  db: AppointmentPrismaClient = prisma
+) {
+  const currentAppointment = await db.appointment.findUnique({
+    where: {
+      id: input.appointmentId.trim(),
+    },
+    select: {
+      customerId: true,
+    },
+  });
+
+  if (!currentAppointment) {
+    throw new AppointmentMutationError("Agendamento nao encontrado.");
+  }
+
+  try {
+    return await db.$transaction(
+      (tx) =>
+        rescheduleCustomerAppointmentInTransaction(
+          {
+            appointmentId: input.appointmentId,
+            customerId: currentAppointment.customerId,
+            barberId: input.barberId,
+            serviceIds: input.serviceIds,
+            extras: input.extras,
+            date: input.date,
+            time: input.time,
+            notes: input.notes,
+            now: input.now,
+          },
+          tx,
+          { actor: "ADMIN" }
+        ),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10000,
+        timeout: 20000,
+      }
+    );
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2034" || error.code === "P2028")
+    ) {
+      throw new AppointmentMutationError(
+        "Esse horario acabou de ser reservado. Escolha outro horario."
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function editOpenAppointmentForBarber(
+  input: BarberEditOpenAppointmentInput,
+  db: AppointmentPrismaClient = prisma
+) {
+  const currentAppointment = await db.appointment.findUnique({
+    where: {
+      id: input.appointmentId.trim(),
+    },
+    select: {
+      customerId: true,
+      barberId: true,
+      date: true,
+    },
+  });
+
+  if (!currentAppointment || currentAppointment.barberId !== input.barberId) {
+    throw new AppointmentMutationError(
+      "Agendamento nao encontrado para este barbeiro."
+    );
+  }
+
+  try {
+    return await db.$transaction(
+      (tx) =>
+        rescheduleCustomerAppointmentInTransaction(
+          {
+            appointmentId: input.appointmentId,
+            customerId: currentAppointment.customerId,
+            barberId: currentAppointment.barberId,
+            serviceIds: input.serviceIds,
+            extras: input.extras,
+            date: getScheduleDateValue(currentAppointment.date),
+            time: formatScheduleTime(currentAppointment.date),
+            notes: input.notes,
+            now: input.now,
+          },
+          tx,
+          { actor: "BARBER" }
+        ),
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         maxWait: 10000,
@@ -603,8 +785,10 @@ async function createCustomerAppointmentInTransaction(
 
 async function rescheduleCustomerAppointmentInTransaction(
   input: RescheduleCustomerAppointmentInput,
-  db: AppointmentTransactionClient
+  db: AppointmentTransactionClient,
+  options: { actor?: "CUSTOMER" | "ADMIN" | "BARBER" } = {}
 ) {
+  const actor = options.actor || "CUSTOMER";
   const appointmentId = input.appointmentId.trim();
   const customerId = input.customerId.trim();
   const barberId = input.barberId.trim();
@@ -640,23 +824,26 @@ async function rescheduleCustomerAppointmentInTransaction(
     },
   });
 
-  if (!currentAppointment || currentAppointment.customerId !== customerId) {
+  if (
+    !currentAppointment ||
+    (actor === "CUSTOMER" && currentAppointment.customerId !== customerId)
+  ) {
     throw new AppointmentMutationError("Agendamento nao encontrado para sua conta.");
   }
 
   const currentStatus = normalizeAppointmentStatus(currentAppointment.status);
 
   if (FINAL_APPOINTMENT_STATUSES.includes(currentStatus)) {
-    throw new AppointmentMutationError("Esse agendamento nao pode mais ser remarcado.");
+    throw new AppointmentMutationError(
+      actor === "ADMIN"
+        ? "Esse atendimento ja foi finalizado e nao permite edicao operacional."
+        : actor === "BARBER"
+        ? "Esse atendimento ja foi finalizado e nao permite edicao pelo barbeiro."
+        : "Esse agendamento nao pode mais ser remarcado."
+    );
   }
 
   const now = input.now ?? new Date();
-
-  if (isScheduleDateTimePast(currentAppointment.date, now)) {
-    throw new AppointmentMutationError(
-      "Esse horario ja passou. Fale com a barbearia para remarcar."
-    );
-  }
 
   const extrasByProductId = new Map<string, number>();
   for (const extra of extras) {
@@ -707,6 +894,12 @@ async function rescheduleCustomerAppointmentInTransaction(
   if (!customer) {
     throw new AppointmentMutationError("Cliente nao autorizado para esta barbearia.");
   }
+
+  await assertNoLockedPayoutForAppointmentPeriod(db, {
+    shopId: currentAppointment.shopId,
+    barberId: currentAppointment.barberId,
+    date: currentAppointment.date,
+  });
 
   const availableServices = await db.service.findMany({
     where: {
@@ -797,8 +990,23 @@ async function rescheduleCustomerAppointmentInTransaction(
     throw new AppointmentMutationError("Data ou horario invalido.");
   }
 
-  if (isScheduleDateTimePast(appointmentDate, now)) {
+  const isChangingSchedule =
+    currentAppointment.barberId !== barberId ||
+    currentAppointment.date.getTime() !== appointmentDate.getTime();
+
+  if (
+    isScheduleDateTimePast(appointmentDate, now) &&
+    (actor === "CUSTOMER" || isChangingSchedule)
+  ) {
     throw new AppointmentMutationError("Nao e possivel remarcar para um horario que ja passou.");
+  }
+
+  if (isChangingSchedule) {
+    await assertNoLockedPayoutForAppointmentPeriod(db, {
+      shopId,
+      barberId,
+      date: appointmentDate,
+    });
   }
 
   const dayOfWeek = getScheduleDayOfWeek(date);
@@ -1089,6 +1297,12 @@ export async function updateAppointmentStatusForBarber(
     throw new AppointmentMutationError("Status de agendamento invalido.");
   }
 
+  if (normalizedStatus === "CANCELLED") {
+    throw new AppointmentMutationError(
+      "Somente o admin pode cancelar agendamentos."
+    );
+  }
+
   const appointment = await db.appointment.findUnique({
     where: { id: appointmentId },
   });
@@ -1105,9 +1319,57 @@ export async function updateAppointmentStatusForBarber(
         {
           appointmentId,
           nextStatus: normalizedStatus,
+          cancellationReason: undefined,
+          itemDeliveryDecisions:
+            normalizedStatus === "COMPLETED"
+              ? itemDeliveryDecisions
+              : undefined,
+        },
+        tx
+      ),
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 10000,
+      timeout: 20000,
+    }
+  );
+
+  if (normalizedStatus === "COMPLETED") {
+    await syncAppointmentFinancialSnapshots(appointmentId, db);
+  }
+
+  return updatedAppointment;
+}
+
+export async function updateAppointmentStatusForAdmin(
+  {
+    appointmentId,
+    status,
+    cancellationReason,
+    itemDeliveryDecisions,
+  }: {
+    appointmentId: string;
+    status: string;
+    cancellationReason?: string | null;
+    itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
+  },
+  db: AppointmentPrismaClient = prisma
+) {
+  const normalizedStatus = normalizeAppointmentStatus(status) as AppointmentStatus;
+
+  if (!appointmentId || !APPOINTMENT_STATUSES.includes(normalizedStatus)) {
+    throw new AppointmentMutationError("Status de agendamento invalido.");
+  }
+
+  const updatedAppointment = await db.$transaction(
+    (tx) =>
+      updateAppointmentStatusWithSideEffects(
+        {
+          appointmentId,
+          nextStatus: normalizedStatus,
           cancellationReason:
             normalizedStatus === "CANCELLED"
-              ? cancellationReason?.trim() || "Cancelado pelo barbeiro."
+              ? cancellationReason?.trim() || "Cancelado pelo admin."
               : undefined,
           itemDeliveryDecisions:
             normalizedStatus === "COMPLETED"
@@ -1335,6 +1597,14 @@ async function updateAppointmentStatusWithSideEffects(
     throw new AppointmentMutationError(
       "Marque cada retirada como entregue ou não entregue antes de concluir."
     );
+  }
+
+  if (nextStatus === "COMPLETED") {
+    await assertNoLockedPayoutForAppointmentPeriod(db, {
+      shopId: appointment.shopId,
+      barberId: appointment.barberId,
+      date: appointment.date,
+    });
   }
 
   const shouldReturnExtras =

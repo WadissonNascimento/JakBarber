@@ -10,6 +10,7 @@ import {
   getAppointmentDisplayName,
   getAppointmentServiceMetaLine,
 } from "@/lib/appointmentServices";
+import { toMoneyNumber } from "@/lib/money";
 import { getCurrentScheduleDate } from "@/lib/scheduleTime";
 import { buildAppointmentContactWhatsAppUrl } from "@/lib/whatsapp";
 import type { getBarberDashboardData } from "../data";
@@ -20,6 +21,8 @@ type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
 
 type AppointmentsSectionProps = {
   appointments: BarberDashboardData["appointments"];
+  services: BarberDashboardData["services"];
+  extras: BarberDashboardData["walkInExtras"];
   filters: BarberDashboardData["filters"];
   barberName: string;
 };
@@ -66,6 +69,8 @@ function formatAgendaDay(dateString: string) {
 
 export function AppointmentsSection({
   appointments,
+  services,
+  extras,
   filters,
   barberName,
 }: AppointmentsSectionProps) {
@@ -280,10 +285,18 @@ export function AppointmentsSection({
               serviceMeta,
               items: appointment.items.map((item) => ({
                 id: item.id,
+                extraProductId: item.extraProductId,
                 productNameSnapshot: item.productNameSnapshot,
                 quantity: item.quantity,
                 isDelivered: item.isDelivered,
                 deliveredAt: item.deliveredAt,
+              })),
+              services: appointment.services.map((service) => ({
+                serviceId: service.serviceId,
+                nameSnapshot: service.nameSnapshot,
+                priceSnapshot: toMoneyNumber(service.priceSnapshot),
+                durationSnapshot: service.durationSnapshot,
+                orderIndex: service.orderIndex,
               })),
             };
             const contactHref = buildAppointmentContactWhatsAppUrl({
@@ -309,6 +322,15 @@ export function AppointmentsSection({
                     hasPickupItems={review.hasPickupItems}
                     allPickupItemsReviewed={review.allPickupItemsReviewed}
                     itemDeliveryDecisions={review.itemDeliveryDecisions}
+                    services={services}
+                    extras={extras}
+                    currentServiceIds={cardAppointment.services.map(
+                      (service) => service.serviceId
+                    )}
+                    currentExtraProductIds={cardAppointment.items.map(
+                      (item) => item.extraProductId
+                    )}
+                    notes={cardAppointment.notes}
                   />
                 )}
               />

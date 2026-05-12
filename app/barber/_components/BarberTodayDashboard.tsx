@@ -193,6 +193,15 @@ export default function BarberTodayDashboard({
                         hasPickupItems={review.hasPickupItems}
                         allPickupItemsReviewed={review.allPickupItemsReviewed}
                         itemDeliveryDecisions={review.itemDeliveryDecisions}
+                        services={walkInServices}
+                        extras={walkInExtras}
+                        currentServiceIds={(appointment.services || []).map(
+                          (service) => service.serviceId
+                        )}
+                        currentExtraProductIds={appointment.items.map(
+                          (item) => item.extraProductId || ""
+                        ).filter(Boolean)}
+                        notes={appointment.notes}
                       />
                     )}
                   />

@@ -62,6 +62,7 @@ function getSelectedDate(filters: BarberDashboardFilters) {
 function getAppointmentCardItems(
   items: Array<{
     id: string;
+    extraProductId: string;
     productNameSnapshot: string;
     quantity: number;
     isDelivered: boolean;
@@ -70,6 +71,7 @@ function getAppointmentCardItems(
 ) {
   return items.map((item) => ({
     id: item.id,
+    extraProductId: item.extraProductId,
     productNameSnapshot: item.productNameSnapshot,
     quantity: item.quantity,
     isDelivered: item.isDelivered,
@@ -395,6 +397,13 @@ export async function getBarberDashboardData(
         },
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
+        services: appointment.services.map((service) => ({
+          serviceId: service.serviceId,
+          nameSnapshot: service.nameSnapshot,
+          priceSnapshot: toMoneyNumber(service.priceSnapshot),
+          durationSnapshot: service.durationSnapshot,
+          orderIndex: service.orderIndex,
+        })),
         items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
@@ -415,6 +424,13 @@ export async function getBarberDashboardData(
         },
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
+        services: appointment.services.map((service) => ({
+          serviceId: service.serviceId,
+          nameSnapshot: service.nameSnapshot,
+          priceSnapshot: toMoneyNumber(service.priceSnapshot),
+          durationSnapshot: service.durationSnapshot,
+          orderIndex: service.orderIndex,
+        })),
         items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
@@ -471,23 +487,61 @@ export async function getBarberAgendaData(
           },
         };
 
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      ...appointmentWhere,
-      ...(status === "ACTIVE"
-        ? { status: { notIn: ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"] } }
-        : status !== "ALL"
-        ? { status }
-        : {}),
-    },
-    select: appointmentForBarberSelect,
-    orderBy: {
-      date: "asc",
-    },
-  });
+  const [appointments, services, extras] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        ...appointmentWhere,
+        ...(status === "ACTIVE"
+          ? { status: { notIn: ["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"] } }
+          : status !== "ALL"
+          ? { status }
+          : {}),
+      },
+      select: appointmentForBarberSelect,
+      orderBy: {
+        date: "asc",
+      },
+    }),
+    prisma.service.findMany({
+      where: {
+        OR: [{ barberId }, { barberId: null }],
+        isActive: true,
+      },
+      orderBy: [
+        {
+          barberId: "desc",
+        },
+        {
+          name: "asc",
+        },
+      ],
+    }),
+    prisma.extraProduct.findMany({
+      where: {
+        isActive: true,
+        stock: {
+          gt: 0,
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+      },
+    }),
+  ]);
 
   return {
     appointments,
+    services: serializeServicesForClient(services),
+    extras: extras.map((extra) => ({
+      ...extra,
+      price: toMoneyNumber(extra.price),
+    })),
     filters: {
       view,
       status,
@@ -635,6 +689,13 @@ export async function getBarberTodayDashboardData(barberId: string) {
         },
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
+        services: appointment.services.map((service) => ({
+          serviceId: service.serviceId,
+          nameSnapshot: service.nameSnapshot,
+          priceSnapshot: toMoneyNumber(service.priceSnapshot),
+          durationSnapshot: service.durationSnapshot,
+          orderIndex: service.orderIndex,
+        })),
         items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),

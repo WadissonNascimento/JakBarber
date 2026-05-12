@@ -17,18 +17,14 @@ export default function LoginForm({
   redirectTo?: string;
 }) {
   return (
-    <form
-      action="/login/submit"
-      method="post"
-      className="surface-card-strong w-full max-w-md rounded-[32px] p-6 shadow-2xl sm:p-8"
-    >
+    <div className="surface-card-strong w-full max-w-md rounded-[32px] p-6 shadow-2xl sm:p-8">
       <div className="mb-8 text-center">
         <p className="mb-2 text-xs uppercase tracking-[0.35em] text-[var(--brand-strong)]">
           Login
         </p>
         <h1 className="text-4xl font-bold">Entrar</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Entre para acessar sua conta e acompanhar seus horários.
+          Entre para acessar sua conta e acompanhar seus horarios.
         </p>
       </div>
 
@@ -37,7 +33,7 @@ export default function LoginForm({
         <AuthFormMessage message={errorMessage} />
       </div>
 
-      <div className="space-y-5">
+      <form action="/login/submit" method="post" className="space-y-5">
         <input type="hidden" name="redirectTo" value={redirectTo} />
 
         <div>
@@ -72,30 +68,28 @@ export default function LoginForm({
             className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-white outline-none placeholder:text-zinc-400"
             placeholder="Digite sua senha"
           />
-        </div>
-
-        {googleSignInEnabled && (
-          <GoogleSignInButton
-            type="submit"
-            formAction={googleSignInAction}
-            formNoValidate
-          />
-        )}
-
-        <div className="text-right text-sm">
-          <Link
-            href="/forgot-password"
-            className="font-semibold text-[var(--brand-strong)] hover:underline"
-          >
-            Esqueceu a senha?
-          </Link>
+          <div className="mt-3 text-right text-sm">
+            <Link
+              href="/forgot-password"
+              className="font-semibold text-[var(--brand-strong)] hover:underline"
+            >
+              Esqueceu a senha?
+            </Link>
+          </div>
         </div>
 
         <ReliableSubmitButton idleText="Entrar" loadingText="Entrando..." />
-      </div>
+      </form>
+
+      {googleSignInEnabled ? (
+        <form action={googleSignInAction} className="mt-4">
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          <GoogleSignInButton type="submit" />
+        </form>
+      ) : null}
 
       <p className="mt-6 text-center text-sm text-zinc-300">
-        Ainda não tem conta?{" "}
+        Ainda nao tem conta?{" "}
         <Link
           href={
             redirectTo
@@ -107,6 +101,6 @@ export default function LoginForm({
           Criar conta
         </Link>
       </p>
-    </form>
+    </div>
   );
 }

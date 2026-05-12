@@ -6,7 +6,11 @@ import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import { getScheduleDayRange, getScheduleDateValue } from "@/lib/scheduleTime";
+import {
+  formatScheduleTime,
+  getScheduleDayRange,
+  getScheduleDateValue,
+} from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 
 function formatCommission(type: string, value: MoneyValue) {
@@ -102,10 +106,7 @@ export default async function PayoutReport({
       .map((service) => ({
         id: service.id,
         appointmentId: appointment.id,
-        time: appointment.date.toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: formatScheduleTime(appointment.date),
         customerName: appointment.customer.name || "Cliente",
         name: service.nameSnapshot,
         gross: toMoneyNumber(service.priceSnapshot),
@@ -124,10 +125,7 @@ export default async function PayoutReport({
       .map((item) => ({
         id: item.id,
         appointmentId: appointment.id,
-        time: appointment.date.toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: formatScheduleTime(appointment.date),
         customerName: appointment.customer.name || "Cliente",
         name: `${item.productNameSnapshot} x${item.quantity}`,
         gross: toMoneyNumber(item.subtotal),

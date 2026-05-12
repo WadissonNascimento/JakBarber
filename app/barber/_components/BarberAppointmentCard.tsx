@@ -11,6 +11,7 @@ import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 
 export type BarberAppointmentCardItem = {
   id: string;
+  extraProductId?: string;
   productNameSnapshot: string;
   quantity: number;
   isDelivered: boolean;
@@ -32,6 +33,13 @@ export type BarberAppointmentCardData = {
   };
   serviceName: string;
   serviceMeta: string;
+  services?: Array<{
+    serviceId: string;
+    nameSnapshot: string;
+    priceSnapshot: number;
+    durationSnapshot: number;
+    orderIndex: number;
+  }>;
   items: BarberAppointmentCardItem[];
 };
 

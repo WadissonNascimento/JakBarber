@@ -29,10 +29,12 @@ function GoogleIcon() {
 
 export default function GoogleSignInButton({
   className = "",
+  type = "button",
   ...props
 }: ComponentPropsWithoutRef<"button">) {
   return (
     <button
+      type={type}
       {...props}
       className={`flex w-full min-h-14 items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white text-base font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${className}`}
     >

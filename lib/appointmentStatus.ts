@@ -13,6 +13,10 @@ export function normalizeAppointmentStatus(status: string) {
     return "COMPLETED";
   }
 
+  if (status === "IN_PROGRESS") {
+    return "CONFIRMED";
+  }
+
   return status;
 }
 
@@ -22,11 +26,11 @@ export function appointmentStatusLabel(status: string) {
     case "CONFIRMED":
       return "Agendado";
     case "COMPLETED":
-      return "Concluído";
+      return "Concluido";
     case "CANCELLED":
       return "Cancelado";
     case "NO_SHOW":
-      return "Não compareceu";
+      return "Nao compareceu";
     default:
       return "Agendado";
   }

@@ -10,13 +10,11 @@ import {
 import {
   AppointmentMutationError,
   createManualFitInAppointment,
+  editOpenAppointmentForBarber,
   setAppointmentItemDeliveryStatus,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
-import {
-  notifyCustomerAppointmentCancelled,
-  notifyCustomerAppointmentCompleted,
-} from "@/lib/appointmentEmails";
+import { notifyCustomerAppointmentCompleted } from "@/lib/appointmentEmails";
 import { notifyBarberNoShow } from "@/lib/barberEmails";
 import {
   mutationError,
@@ -141,6 +139,7 @@ export async function updateOwnBarberContactAction(
   formData: FormData
 ): Promise<MutationResult> {
   const barber = await requireBarber();
+  const name = normalizeCustomerName(formData.get("name")?.toString() || "");
   const email = sanitizeEmailInput(formData.get("email")?.toString() || "");
   const rawPhone = formData.get("phone")?.toString() || "";
   const phone = rawPhone.trim()
@@ -156,6 +155,10 @@ export async function updateOwnBarberContactAction(
 
   if (!rateLimit.allowed) {
     return mutationError("Muitas alteracoes em pouco tempo. Aguarde e tente novamente.");
+  }
+
+  if (name.length < 2 || name.length > 80) {
+    return mutationError("Informe um nome valido.");
   }
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -187,6 +190,7 @@ export async function updateOwnBarberContactAction(
       id: barber.id,
     },
     data: {
+      name,
       email,
       phone: phone || null,
     },
@@ -218,8 +222,8 @@ export async function updateAppointmentStatusAction(
     return mutationError("Status de agendamento invalido.");
   }
 
-  if (status === "CANCELLED" && !cancellationReason) {
-    return mutationError("Informe o motivo do cancelamento.");
+  if (status === "CANCELLED") {
+    return mutationError("Somente o admin pode cancelar agendamentos.");
   }
 
   const currentAppointment = await prisma.appointment.findFirst({
@@ -258,10 +262,6 @@ export async function updateAppointmentStatusAction(
       await notifyCustomerAppointmentCompleted(appointmentId);
     }
 
-    if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
-      await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
-    }
-
     if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
       await notifyBarberNoShow(appointmentId);
     }
@@ -297,6 +297,52 @@ export async function setAppointmentItemDeliveryStatusAction(
         ? `${result.productName} marcado como entregue.`
         : `${result.productName} marcado como não entregue.`
     );
+  } catch (error) {
+    if (error instanceof AppointmentMutationError) {
+      return mutationError(error.message);
+    }
+
+    throw error;
+  }
+}
+
+export async function editOpenBarberAppointmentAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const barber = await requireBarber();
+  const appointmentId = String(formData.get("appointmentId") || "").trim();
+  const serviceIds = formData
+    .getAll("serviceIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const extras = formData
+    .getAll("extraProductIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .map((extraProductId) => ({ extraProductId, quantity: 1 }));
+  const notes = String(formData.get("notes") || "").trim();
+
+  if (
+    !appointmentId ||
+    serviceIds.length === 0 ||
+    serviceIds.length > 8 ||
+    extras.length > 12 ||
+    notes.length > 400
+  ) {
+    return mutationError("Selecione servicos, extras e observacoes corretamente.");
+  }
+
+  try {
+    await editOpenAppointmentForBarber({
+      appointmentId,
+      barberId: barber.id,
+      serviceIds,
+      extras,
+      notes,
+    });
+
+    revalidateAppointmentStatusViews();
+    return mutationSuccess("Agendamento atualizado.");
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
       return mutationError(error.message);
