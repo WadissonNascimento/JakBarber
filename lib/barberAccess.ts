@@ -25,8 +25,10 @@ type SessionUserLike = {
 
 export async function ensureAdminBarberProfile(shopId?: string | null) {
   const targetShopId = shopId || DEFAULT_SHOP_ID;
-  const existingByDefaultEmail = await prisma.user.findUnique({
+  const existingByDefaultEmail = await prisma.user.findFirst({
     where: {
+      shopId: targetShopId,
+      role: "BARBER",
       email: ADMIN_BARBER_PROFILE.email,
     },
     select: activeBarberSelect,
@@ -37,7 +39,10 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
       where: {
         shopId: targetShopId,
         role: "BARBER",
-        name: ADMIN_BARBER_PROFILE.name,
+        OR: [
+          { name: ADMIN_BARBER_PROFILE.name },
+          { image: ADMIN_BARBER_PROFILE.image },
+        ],
       },
       select: activeBarberSelect,
       orderBy: {
