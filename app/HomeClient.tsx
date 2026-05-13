@@ -28,10 +28,16 @@ export default function HomeClient({
   reviews,
   hasMoreReviews,
   homeImages = [],
+  brandName,
+  addressLine,
+  businessHours,
 }: {
   reviews: HomeReview[];
   hasMoreReviews: boolean;
   homeImages?: string[];
+  brandName: string;
+  addressLine: string;
+  businessHours: string;
 }) {
   const galleryImages = homeImages.length > 0 ? homeImages.slice(0, 5) : corteImages;
   const [current, setCurrent] = useState(0);
@@ -119,7 +125,7 @@ export default function HomeClient({
 
             <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">
               Agende seu horário com praticidade e tenha uma experiência premium
-              na JakCompany.
+              na {brandName}.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -141,12 +147,12 @@ export default function HomeClient({
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <div className="surface-card rounded-lg p-4">
                 <p className="text-xs text-[var(--brand-strong)]">Local</p>
-                <p className="mt-2 text-sm text-zinc-200">Osasco, SP</p>
+                <p className="mt-2 text-sm text-zinc-200">{addressLine}</p>
               </div>
 
               <div className="surface-card rounded-lg p-4">
                 <p className="text-xs text-[var(--brand-strong)]">Horário</p>
-                <p className="mt-2 text-sm text-zinc-200">Terça a domingo</p>
+                <p className="mt-2 text-sm text-zinc-200">{businessHours}</p>
               </div>
 
               <div className="surface-card rounded-lg p-4">

@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { basePrisma } from "@/lib/prisma-core";
-import { getCurrentShopId } from "@/lib/shop";
+import { getCurrentShop } from "@/lib/shop";
 import HomeClient, { type HomeReview } from "./HomeClient";
 
 const getHomeReviews = unstable_cache(
@@ -51,7 +51,8 @@ const getHomeImages = unstable_cache(
 );
 
 export default async function HomePage() {
-  const shopId = await getCurrentShopId();
+  const shop = await getCurrentShop();
+  const shopId = shop.id;
   const [reviews, images] = await Promise.all([
     getHomeReviews(shopId),
     getHomeImages(shopId),
@@ -69,6 +70,9 @@ export default async function HomePage() {
       reviews={homeReviews}
       hasMoreReviews={reviews.length > 3}
       homeImages={images.map((image) => image.imageUrl).filter(Boolean)}
+      brandName={shop.name || "esta barbearia"}
+      addressLine={shop.addressLine || "Endereço sob consulta"}
+      businessHours={shop.businessHours || "Horário sob consulta"}
     />
   );
 }

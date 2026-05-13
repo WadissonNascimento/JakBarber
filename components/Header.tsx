@@ -83,7 +83,7 @@ function getHeaderLinks(role: HeaderRole): {
 
   return {
     homeHref: "/",
-    eyebrow: "JakCompany",
+    eyebrow: "Barbearia",
     primary: [
       { href: "/agendar", label: "Agendar" },
       { href: "/servicos", label: "Serviços" },

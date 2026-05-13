@@ -120,7 +120,7 @@ export default async function RootLayout({
         <AppChrome
           brandName={brandName}
           logoPath={logoPath}
-          publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : brandName}
+          publicEyebrow={brandName}
           role={role}
           userName={session?.user?.name || null}
           whatsappNumber={shop.whatsappNumber || ""}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import CrownRating from "@/components/ui/CrownRating";
+import { getCurrentShop } from "@/lib/shop";
 
 function formatReviewName(name: string | null) {
   const [firstName, ...rest] = (name || "Cliente").trim().split(/\s+/);
@@ -10,8 +11,10 @@ function formatReviewName(name: string | null) {
 }
 
 export default async function ReviewsPage() {
+  const shop = await getCurrentShop();
   const reviews = await prisma.review.findMany({
     where: {
+      shopId: shop.id,
       isVisible: true,
     },
     include: {
@@ -39,7 +42,9 @@ export default async function ReviewsPage() {
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
             Avaliações
           </p>
-          <h1 className="mt-2 text-3xl font-bold">Clientes da JakCompany</h1>
+          <h1 className="mt-2 text-3xl font-bold">
+            Clientes da {shop.name || "barbearia"}
+          </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Comentários enviados depois de atendimentos concluídos.
           </p>
