@@ -25,7 +25,7 @@ export default async function NovoProduto() {
             Novo produto
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Cadastre um item do catálogo com imagem, preço e estoque.
+            Cadastre um item visual do catálogo com imagem e preço.
           </p>
         </div>
 

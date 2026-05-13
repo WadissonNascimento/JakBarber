@@ -2,13 +2,9 @@ import "server-only";
 import { randomUUID } from "crypto";
 import { processProductImageBuffer } from "@/lib/productImagePipeline";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
+import { prepareImageFileBuffer } from "@/lib/serverImageFiles";
 
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 
 export { normalizeProductImageUrl };
 
@@ -30,27 +26,6 @@ function getStorageConfig() {
   };
 }
 
-function hasAllowedImageSignature(buffer: Buffer, type: string) {
-  if (type === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
-
-  if (type === "image/png") {
-    return buffer.subarray(0, 8).equals(
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-    );
-  }
-
-  if (type === "image/webp") {
-    return (
-      buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
-      buffer.subarray(8, 12).toString("ascii") === "WEBP"
-    );
-  }
-
-  return false;
-}
-
 function encodeStoragePath(path: string) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
@@ -66,25 +41,10 @@ function normalizeStorageSegment(value: string | null | undefined) {
 }
 
 async function getValidatedImageBuffer(file: File) {
-  if (!file || file.size === 0) {
-    throw new Error("Selecione uma imagem para enviar.");
-  }
-
-  if (file.size > MAX_IMAGE_SIZE) {
-    throw new Error("A imagem deve ter no maximo 2MB.");
-  }
-
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  if (!hasAllowedImageSignature(buffer, file.type)) {
-    throw new Error("O arquivo enviado nao parece ser uma imagem valida.");
-  }
-
-  return buffer;
+  return prepareImageFileBuffer(file, {
+    maxSizeBytes: MAX_IMAGE_SIZE,
+    maxSizeLabel: "8MB",
+  });
 }
 
 export async function uploadExtraProductImage({
@@ -97,8 +57,8 @@ export async function uploadExtraProductImage({
   file: File;
 }) {
   const { supabaseUrl, serviceRoleKey, bucket } = getStorageConfig();
-  const buffer = await getValidatedImageBuffer(file);
-  const processed = await processProductImageBuffer(buffer, file.type);
+  const { buffer, mimeType } = await getValidatedImageBuffer(file);
+  const processed = await processProductImageBuffer(buffer, mimeType);
   const imagePath = `extras/${normalizeStorageSegment(shopId)}/${extraProductId}/${randomUUID()}.${processed.extension}`;
   const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
     imagePath

@@ -8,7 +8,6 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 type Product = {
   id: string;
   name: string;
-  description: string | null;
   price: number;
   imageUrl: string | null;
 };
@@ -20,24 +19,6 @@ export function ProductGrid({
   products: Product[];
   whatsappNumber: string;
 }) {
-  const clampStyle = {
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical" as const,
-    overflow: "hidden",
-  };
-
-  const getShortDescription = (description: string | null) => {
-    const cleaned = (description ?? "Produto sem descrição.")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (cleaned.length <= 42) {
-      return cleaned;
-    }
-
-    return `${cleaned.slice(0, 39).trimEnd()}...`;
-  };
-
   return (
     <div className="space-y-8">
       <div className="dashboard-panel px-5 py-4">
@@ -82,17 +63,10 @@ export function ProductGrid({
             <div className="p-3 sm:p-4">
               <div>
                 <h3
-                  className="min-h-[3.9rem] text-[15px] font-semibold leading-6 text-white sm:min-h-[4rem] sm:text-lg"
-                  style={{ ...clampStyle, WebkitLineClamp: 2 }}
+                  className="min-h-[3.2rem] text-[15px] font-semibold leading-6 text-white sm:min-h-[3.5rem] sm:text-lg"
                 >
                   {product.name}
                 </h3>
-                <p
-                  className="mt-1.5 min-h-[2.9rem] text-[12px] leading-5 text-zinc-400 sm:min-h-[3.2rem] sm:text-sm"
-                  style={{ ...clampStyle, WebkitLineClamp: 2 }}
-                >
-                  {getShortDescription(product.description)}
-                </p>
               </div>
 
               <div className="mt-3 sm:mt-4">

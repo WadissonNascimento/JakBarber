@@ -1,6 +1,7 @@
 "use client";
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE = 8 * 1024 * 1024;
 const OUTPUT_IMAGE_SIZE = 800;
 const TARGET_PRODUCT_FILL = 0.94;
 const EDGE_ALPHA_THRESHOLD = 18;
@@ -10,8 +11,12 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
-const ALLOWED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
-const UNSUPPORTED_IMAGE_EXTENSIONS = new Set(["heic", "heif"]);
+const HEIC_IMAGE_TYPES = new Set(["image/heic", "image/heif"]);
+const ALLOWED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "heic", "heif"]);
+const HEIC_IMAGE_EXTENSIONS = new Set(["heic", "heif"]);
+const IMAGE_TYPE_MESSAGE = "Envie uma imagem JPG, PNG, WEBP ou HEIC.";
+const INVALID_IMAGE_MESSAGE =
+  "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
 
 function getExtension(fileName: string | undefined) {
   return String(fileName || "")
@@ -32,18 +37,28 @@ function validateProductImage(file: File) {
   const extension = getExtension(file.name);
 
   if (
-    (mimeType && ["image/heic", "image/heif"].includes(mimeType)) ||
-    (extension && UNSUPPORTED_IMAGE_EXTENSIONS.has(extension))
+    !(
+      (mimeType && (ALLOWED_IMAGE_TYPES.has(mimeType) || HEIC_IMAGE_TYPES.has(mimeType))) ||
+      (extension && ALLOWED_IMAGE_EXTENSIONS.has(extension))
+    )
   ) {
-    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
+    throw new Error(IMAGE_TYPE_MESSAGE);
   }
+}
 
-  if (
-    mimeType &&
-    !ALLOWED_IMAGE_TYPES.has(mimeType) &&
-    !(extension && ALLOWED_IMAGE_EXTENSIONS.has(extension))
-  ) {
-    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
+function isHeicImage(file: File) {
+  const mimeType = normalizeMimeType(file.type);
+  const extension = getExtension(file.name);
+
+  return (
+    HEIC_IMAGE_TYPES.has(mimeType) ||
+    Boolean(extension && HEIC_IMAGE_EXTENSIONS.has(extension))
+  );
+}
+
+function validateSourceSize(file: File) {
+  if (file.size > MAX_SOURCE_IMAGE_SIZE) {
+    throw new Error("A imagem deve ter no maximo 8MB.");
   }
 }
 
@@ -295,15 +310,21 @@ function drawStandardizedProduct(
 
 export async function prepareProductImageUpload(file: File) {
   validateProductImage(file);
+  validateSourceSize(file);
 
   let bitmap: ImageBitmap;
 
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error(
-      "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG ou WEBP."
-    );
+    if (isHeicImage(file)) {
+      return {
+        file,
+        previewUrl: URL.createObjectURL(file),
+      };
+    }
+
+    throw new Error(INVALID_IMAGE_MESSAGE);
   }
   const canvas = document.createElement("canvas");
   canvas.width = OUTPUT_IMAGE_SIZE;
@@ -342,15 +363,21 @@ export async function prepareProductImageUpload(file: File) {
 
 export async function prepareSecondaryProductImageUpload(file: File) {
   validateProductImage(file);
+  validateSourceSize(file);
 
   let bitmap: ImageBitmap;
 
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error(
-      "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG ou WEBP."
-    );
+    if (isHeicImage(file)) {
+      return {
+        file,
+        previewUrl: URL.createObjectURL(file),
+      };
+    }
+
+    throw new Error(INVALID_IMAGE_MESSAGE);
   }
   const canvas = document.createElement("canvas");
   const maxSize = OUTPUT_IMAGE_SIZE;

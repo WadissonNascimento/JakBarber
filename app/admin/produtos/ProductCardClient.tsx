@@ -6,11 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import StatusBadge from "@/components/ui/StatusBadge";
-import {
-  PRODUCT_CATEGORY_OPTIONS,
-  getProductCategoryLabel,
-} from "@/lib/productCategories";
-import { sanitizeTextInput, sanitizeTextareaInput } from "@/lib/inputSanitization";
+import { sanitizeTextInput } from "@/lib/inputSanitization";
 import { prepareProductImageUpload } from "@/lib/productImageClient";
 import {
   deleteProduct,
@@ -27,11 +23,9 @@ type ProductCardClientProps = {
   product: {
     id: string;
     name: string;
-    description: string | null;
     category: string;
     price: number;
     isActive: boolean;
-    stock: number;
     imageUrl: string | null;
   };
 };
@@ -44,7 +38,6 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
   const [imageUrl, setImageUrl] = useState(product.imageUrl);
   const [draft, setDraft] = useState({
     name: product.name,
-    description: product.description || "",
     category: product.category,
     price: product.price.toFixed(2),
   });
@@ -112,7 +105,6 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
     });
   }
 
-  const categoryLabel = getProductCategoryLabel(draft.category);
   const visibleImage = imageUpload?.previewUrl || imageUrl;
 
   return (
@@ -133,9 +125,6 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
         <div className="min-w-0">
           <p className="line-clamp-2 text-base font-semibold leading-5 text-white">
             {draft.name}
-          </p>
-          <p className="mt-1 truncate text-sm leading-5 text-zinc-400">
-            {categoryLabel}
           </p>
           <p className="mt-0.5 whitespace-nowrap text-sm font-semibold leading-5 text-zinc-300">
             R$ {Number(draft.price || 0).toFixed(2)}
@@ -163,10 +152,8 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   const formData = new FormData();
                   formData.set("productId", product.id);
                   formData.set("name", sanitizeTextInput(draft.name, { maxLength: 120 }));
-                  formData.set("description", sanitizeTextareaInput(draft.description, 500));
                   formData.set("category", draft.category);
                   formData.set("price", draft.price);
-                  formData.set("stock", String(product.stock));
                   if (imageUpload) {
                     formData.set("image", imageUpload.file);
                   }
@@ -179,7 +166,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   );
                 }}
               >
-                <div className="grid gap-2 sm:grid-cols-[1fr_13rem]">
+                <div className="grid gap-2">
                   <Field label="Nome">
                     <input
                       value={draft.name}
@@ -191,40 +178,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                     />
                   </Field>
 
-                  <Field label="Categoria">
-                    <select
-                      value={draft.category}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          category: event.target.value,
-                        }))
-                      }
-                      className="service-edit-control"
-                    >
-                      {PRODUCT_CATEGORY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-
-                <Field label="Descrição">
-                  <textarea
-                    value={draft.description}
-                    maxLength={500}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        description: event.target.value,
-                      }))
-                    }
-                    rows={2}
-                    className="service-edit-control min-h-20"
-                  />
-                </Field>
+               </div>
 
                 <div className="grid gap-2">
                   <Field label="Preço">
@@ -253,7 +207,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                         id={`product-image-${product.id}`}
                         name="image"
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                         onChange={async (event) => {
                           const file = event.currentTarget.files?.[0];
 
@@ -373,16 +327,9 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
             </div>
           ) : (
             <div className="mt-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid gap-2 text-sm">
                 <SummaryTile label="Preço" value={`R$ ${Number(draft.price || 0).toFixed(2)}`} />
-                <SummaryTile label="Categoria" value={categoryLabel} />
               </div>
-
-              {draft.description ? (
-                <p className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-400">
-                  {draft.description}
-                </p>
-              ) : null}
 
               <div className="mt-3 flex justify-end">
                 <button

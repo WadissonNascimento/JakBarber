@@ -123,7 +123,7 @@ export default function BarberPhotoUploader({
           ref={inputRef}
           type="file"
           name="photo"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
           disabled={isPending}
           onChange={(event) => submitPhoto(event.currentTarget.files?.[0])}
           className="sr-only"

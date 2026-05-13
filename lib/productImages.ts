@@ -2,17 +2,14 @@ import "server-only";
 import { randomUUID } from "crypto";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
 import { processProductImageBuffer } from "@/lib/productImagePipeline";
+import {
+  getImageFileExtension,
+  prepareImageFileBuffer,
+} from "@/lib/serverImageFiles";
 
-const MAX_PRODUCT_IMAGE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const MAX_PRODUCT_IMAGE_SIZE = 8 * 1024 * 1024;
 const VALID_IMAGE_MESSAGE =
-  "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG ou WEBP.";
-const IMAGE_TYPE_MESSAGE = "Envie uma imagem JPG, PNG ou WEBP.";
-const UNSUPPORTED_IMAGE_EXTENSIONS = new Set(["heic", "heif"]);
+  "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
 
 export { normalizeProductImageUrl };
 
@@ -34,57 +31,6 @@ function getStorageConfig() {
   };
 }
 
-function getExtension(fileName: string | undefined) {
-  return String(fileName || "")
-    .split(".")
-    .pop()
-    ?.trim()
-    .toLowerCase();
-}
-
-function normalizeMimeType(type: string | undefined) {
-  const normalized = String(type || "").trim().toLowerCase();
-
-  return normalized === "image/jpg" ? "image/jpeg" : normalized;
-}
-
-function inferAllowedImageType(buffer: Buffer) {
-  if (hasAllowedImageSignature(buffer, "image/jpeg")) {
-    return "image/jpeg";
-  }
-
-  if (hasAllowedImageSignature(buffer, "image/png")) {
-    return "image/png";
-  }
-
-  if (hasAllowedImageSignature(buffer, "image/webp")) {
-    return "image/webp";
-  }
-
-  return null;
-}
-
-function hasAllowedImageSignature(buffer: Buffer, type: string) {
-  if (type === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
-
-  if (type === "image/png") {
-    return buffer.subarray(0, 8).equals(
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-    );
-  }
-
-  if (type === "image/webp") {
-    return (
-      buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
-      buffer.subarray(8, 12).toString("ascii") === "WEBP"
-    );
-  }
-
-  return false;
-}
-
 function encodeStoragePath(path: string) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
@@ -104,50 +50,17 @@ function logProductImageFailure(stage: string, file: File, error: unknown) {
     stage,
     fileName: file.name || "(sem nome)",
     mime: file.type || "(sem mime)",
-    extension: getExtension(file.name) || "(sem extensao)",
+    extension: getImageFileExtension(file.name) || "(sem extensao)",
     size: file.size,
     error: error instanceof Error ? error.message : String(error),
   });
 }
 
 async function getValidatedImageBuffer(file: File) {
-  if (!file || file.size === 0) {
-    throw new Error("Selecione uma imagem para enviar.");
-  }
-
-  if (file.size > MAX_PRODUCT_IMAGE_SIZE) {
-    throw new Error("A imagem deve ter no maximo 2MB.");
-  }
-
-  const declaredType = normalizeMimeType(file.type);
-  const extension = getExtension(file.name);
-
-  if (
-    (declaredType && ["image/heic", "image/heif"].includes(declaredType)) ||
-    (extension && UNSUPPORTED_IMAGE_EXTENSIONS.has(extension))
-  ) {
-    throw new Error(IMAGE_TYPE_MESSAGE);
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const inferredType = inferAllowedImageType(buffer);
-
-  if (!inferredType) {
-    throw new Error(VALID_IMAGE_MESSAGE);
-  }
-
-  if (
-    declaredType &&
-    !ALLOWED_IMAGE_TYPES.has(declaredType) &&
-    declaredType !== "application/octet-stream"
-  ) {
-    throw new Error(IMAGE_TYPE_MESSAGE);
-  }
-
-  return {
-    buffer,
-    mimeType: inferredType,
-  };
+  return prepareImageFileBuffer(file, {
+    maxSizeBytes: MAX_PRODUCT_IMAGE_SIZE,
+    maxSizeLabel: "8MB",
+  });
 }
 
 export async function uploadProductImage({

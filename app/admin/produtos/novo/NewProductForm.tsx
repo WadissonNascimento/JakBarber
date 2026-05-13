@@ -65,7 +65,6 @@ export default function NewProductForm() {
       <FeedbackMessage message={feedback.message} tone={feedback.tone} />
 
       <input type="hidden" name="category" value="SHELF" />
-      <input type="hidden" name="stock" value="0" />
 
       <label className="block min-w-0">
         <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
@@ -77,19 +76,6 @@ export default function NewProductForm() {
           maxLength={120}
           className="service-edit-control"
           required
-        />
-      </label>
-
-      <label className="block min-w-0">
-        <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
-          Descrição
-        </span>
-        <textarea
-          name="description"
-          placeholder="Opcional"
-          maxLength={500}
-          rows={2}
-          className="service-edit-control min-h-20"
         />
       </label>
 
@@ -118,7 +104,7 @@ export default function NewProductForm() {
           <input
             name="image"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
             onChange={async (event) => {
               const file = event.currentTarget.files?.[0];
 
@@ -152,7 +138,7 @@ export default function NewProductForm() {
             className="w-full text-sm text-zinc-300 file:mr-3 file:rounded-xl file:border-0 file:bg-[var(--brand)] file:px-3 file:py-2 file:text-white"
           />
           <p className="mt-2 text-xs text-zinc-500">
-            JPG, PNG ou WEBP. O sistema compacta automaticamente para até 2MB.
+            JPG, PNG, WEBP ou HEIC. O sistema converte e compacta automaticamente.
           </p>
         </label>
 

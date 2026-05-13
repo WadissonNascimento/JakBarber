@@ -12,12 +12,23 @@ import {
 } from "./actions";
 
 const MAX_HOME_IMAGES = 5;
-const MAX_HOME_IMAGE_SIZE = 3 * 1024 * 1024;
+const MAX_HOME_IMAGE_SIZE = 8 * 1024 * 1024;
 const ALLOWED_HOME_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/heic",
+  "image/heif",
 ]);
+const ALLOWED_HOME_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "heic", "heif"]);
+
+function getExtension(fileName: string | undefined) {
+  return String(fileName || "")
+    .split(".")
+    .pop()
+    ?.trim()
+    .toLowerCase();
+}
 
 type HomeImageItem = {
   id: string;
@@ -26,12 +37,19 @@ type HomeImageItem = {
 };
 
 function validateHomeImageFile(file: File) {
-  if (!ALLOWED_HOME_IMAGE_TYPES.has(file.type)) {
-    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
+  const extension = getExtension(file.name);
+
+  if (
+    !(
+      (file.type && ALLOWED_HOME_IMAGE_TYPES.has(file.type)) ||
+      (extension && ALLOWED_HOME_IMAGE_EXTENSIONS.has(extension))
+    )
+  ) {
+    throw new Error("Envie uma imagem JPG, PNG, WEBP ou HEIC.");
   }
 
   if (file.size > MAX_HOME_IMAGE_SIZE) {
-    throw new Error("A imagem deve ter no maximo 3MB.");
+    throw new Error("A imagem deve ter no maximo 8MB.");
   }
 }
 
@@ -154,12 +172,12 @@ export default function AdminHomeImagesClient({
             <input
               name="image"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
               disabled={!canUpload || isPending}
               className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 file:mr-4 file:rounded-xl file:border-0 file:bg-[var(--brand)] file:px-4 file:py-2 file:text-sm file:font-bold file:text-white disabled:cursor-not-allowed disabled:opacity-50"
             />
             <span className="mt-2 block text-xs text-zinc-500">
-              JPG, JPEG, PNG ou WEBP ate 3MB.
+              JPG, JPEG, PNG, WEBP ou HEIC ate 8MB.
             </span>
           </label>
 
@@ -240,7 +258,7 @@ export default function AdminHomeImagesClient({
                   <input
                     name="image"
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                     disabled={isPending}
                     className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-300 file:mr-3 file:rounded-xl file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   />

@@ -344,7 +344,7 @@ export default function ExtraProductCardClient({ extra }: ExtraProductCardClient
                       id={`extra-image-${extra.id}`}
                       name="image"
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                       onChange={async (event) => {
                         const file = event.currentTarget.files?.[0];
                         if (!file) {

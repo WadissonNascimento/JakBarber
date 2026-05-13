@@ -236,7 +236,7 @@ export default function AdminExtrasClient({ extras }: AdminExtrasClientProps) {
             <Field label="Imagem opcional">
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                 onChange={async (event) => {
                   const file = event.currentTarget.files?.[0];
                   if (!file) {

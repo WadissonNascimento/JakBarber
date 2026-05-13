@@ -24,7 +24,6 @@ const getPublicProducts = unstable_cache(
       select: {
         id: true,
         name: true,
-        description: true,
         price: true,
         imageUrl: true,
       },

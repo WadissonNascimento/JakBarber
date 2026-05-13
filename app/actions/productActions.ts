@@ -83,27 +83,24 @@ export async function createProductFromForm(formData: FormData) {
   const admin = await ensureProductAccess();
 
   const name = String(formData.get("name") || "").trim();
-  const description = String(formData.get("description") || "").trim();
   const category = parseProductCategory(String(formData.get("category") || ""));
   const price = Number(formData.get("price") || 0);
-  const stock = Number(formData.get("stock") || 0);
+  const stock = 0;
   const imageFile = formData.get("image");
 
   if (
     !name ||
     !Number.isFinite(price) ||
-    price <= 0 ||
-    !Number.isInteger(stock) ||
-    stock < 0
+    price <= 0
   ) {
-    throw new Error("Preencha nome, preco e estoque corretamente.");
+    throw new Error("Preencha nome e preco corretamente.");
   }
 
   const product = await prisma.product.create({
     data: {
       shopId: admin.shopId || undefined,
       name,
-      description: description || null,
+      description: null,
       category,
       price,
       stock,
@@ -127,6 +124,7 @@ export async function createProductFromForm(formData: FormData) {
       });
     }
 
+    if (stock > 0) {
       await registerStockMovement({
         shopId: admin.shopId || undefined,
         productId: product.id,
@@ -134,6 +132,7 @@ export async function createProductFromForm(formData: FormData) {
         quantity: stock,
         reason: "Cadastro inicial do produto",
       });
+    }
   } catch (error) {
     await prisma.product.delete({ where: { id: product.id } }).catch(() => undefined);
     throw error;
@@ -207,28 +206,23 @@ export async function updateProductFromForm(formData: FormData) {
 
   const productId = String(formData.get("productId") || "").trim();
   const name = String(formData.get("name") || "").trim();
-  const description = String(formData.get("description") || "").trim();
   const category = parseProductCategory(String(formData.get("category") || ""));
   const price = Number(formData.get("price") || 0);
-  const stock = Number(formData.get("stock") || 0);
   const imageFile = formData.get("image");
 
   if (
     !productId ||
     !name ||
     !Number.isFinite(price) ||
-    price <= 0 ||
-    !Number.isInteger(stock) ||
-    stock < 0
+    price <= 0
   ) {
-    throw new Error("Preencha nome, categoria, preco e estoque corretamente.");
+    throw new Error("Preencha nome e preco corretamente.");
   }
 
   const currentProduct = await prisma.product.findUnique({
     where: { id: productId },
     select: {
       id: true,
-      stock: true,
       imagePath: true,
     },
   });
@@ -251,10 +245,9 @@ export async function updateProductFromForm(formData: FormData) {
       where: { id: productId },
       data: {
         name,
-        description: description || null,
+        description: null,
         category,
         price,
-        stock,
         ...(image
           ? {
               imageUrl: image.imageUrl,
@@ -273,18 +266,6 @@ export async function updateProductFromForm(formData: FormData) {
 
   if (image) {
     await deleteProductImage(currentProduct.imagePath);
-  }
-
-  if (stock !== currentProduct.stock) {
-    const difference = stock - currentProduct.stock;
-
-    await registerStockMovement({
-      shopId: admin.shopId || undefined,
-      productId,
-      type: difference > 0 ? "ADJUST_IN" : "ADJUST_OUT",
-      quantity: Math.abs(difference),
-      reason: "Ajuste manual de estoque",
-    });
   }
 
   revalidateProductViews();

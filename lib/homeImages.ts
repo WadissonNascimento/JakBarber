@@ -1,14 +1,10 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
+import { prepareImageFileBuffer } from "@/lib/serverImageFiles";
 
-const MAX_HOME_IMAGE_SIZE = 3 * 1024 * 1024;
+const MAX_HOME_IMAGE_SIZE = 8 * 1024 * 1024;
 const MAX_HOME_IMAGE_DIMENSION = 1800;
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
 
 function getStorageConfig() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -38,45 +34,11 @@ function buildPublicUrl(supabaseUrl: string, bucket: string, imagePath: string) 
   )}`;
 }
 
-function hasAllowedImageSignature(buffer: Buffer, type: string) {
-  if (type === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
-
-  if (type === "image/png") {
-    return buffer.subarray(0, 8).equals(
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-    );
-  }
-
-  if (type === "image/webp") {
-    return (
-      buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
-      buffer.subarray(8, 12).toString("ascii") === "WEBP"
-    );
-  }
-
-  return false;
-}
-
 async function getValidatedHomeImageBuffer(file: File) {
-  if (!file || file.size === 0) {
-    throw new Error("Selecione uma imagem para enviar.");
-  }
-
-  if (file.size > MAX_HOME_IMAGE_SIZE) {
-    throw new Error("A imagem deve ter no maximo 3MB.");
-  }
-
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  if (!hasAllowedImageSignature(buffer, file.type)) {
-    throw new Error("O arquivo enviado nao parece ser uma imagem valida.");
-  }
+  const { buffer } = await prepareImageFileBuffer(file, {
+    maxSizeBytes: MAX_HOME_IMAGE_SIZE,
+    maxSizeLabel: "8MB",
+  });
 
   return buffer;
 }

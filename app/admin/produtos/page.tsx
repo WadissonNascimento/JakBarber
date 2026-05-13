@@ -97,11 +97,9 @@ export default async function ProdutosPage() {
                   product={{
                     id: product.id,
                     name: product.name,
-                    description: product.description,
                     category: product.category,
                     price: toMoneyNumber(product.price),
                     isActive: product.isActive,
-                    stock: product.stock,
                     imageUrl: normalizeProductImageUrl(product.imageUrl),
                   }}
                 />
