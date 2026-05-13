@@ -70,7 +70,7 @@ export default function GlobalError({
         <main className="flex min-h-screen items-center justify-center px-5">
           <section className="w-full max-w-md rounded-[28px] border border-white/10 bg-white/[0.04] p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
             <p className="text-xs uppercase tracking-[0.28em] text-sky-300">
-              Jak Barber
+              Sistema
             </p>
             <h1 className="mt-3 text-2xl font-bold">Vamos recarregar o painel</h1>
             <p className="mt-3 text-sm text-zinc-300">

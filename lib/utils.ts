@@ -9,6 +9,5 @@ export function formatCurrency(value: MoneyValue) {
 }
 
 export function buildWhatsAppUrl(message: string) {
-  const number = process.env.BARBER_WHATSAPP_NUMBER || "";
-  return buildNormalizedWhatsAppUrl(number, message) || "#";
+  return buildNormalizedWhatsAppUrl("", message) || "#";
 }

@@ -10,23 +10,23 @@ const cache: typeof reactCache =
 
 export const DEFAULT_SHOP_ID = "shop_jak_barber";
 export const DEFAULT_SHOP_SLUG = "jak-barber";
+export const UNCONFIGURED_SHOP_ID = "__unconfigured_shop__";
 
-const FALLBACK_SHOP_CONFIG: ShopRuntimeConfig = {
-  id: DEFAULT_SHOP_ID,
-  name: "Jak Barber",
-  slug: DEFAULT_SHOP_SLUG,
-  primaryDomain: "jakbarbercompany.com",
-  isDefault: true,
-  isActive: true,
-  metadataTitle: "Jak Barber | Barbearia com hora marcada",
-  metadataDescription:
-    "Agende seu horario na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.",
-  whatsappNumber: "5511961971267",
-  instagramUrl: "https://www.instagram.com/jakcompany_/",
-  addressLine: "Osasco, SP",
-  businessHours: "Terça a domingo, das 09h as 20h",
-  logoPath: "/logo.png",
-  faviconPath: "/favicon.png?v=20260503-j",
+const UNCONFIGURED_SHOP_CONFIG: ShopRuntimeConfig = {
+  id: UNCONFIGURED_SHOP_ID,
+  name: "Loja nao configurada",
+  slug: "loja-nao-configurada",
+  primaryDomain: null,
+  isDefault: false,
+  isActive: false,
+  metadataTitle: "Loja nao configurada",
+  metadataDescription: "Esta loja ainda nao foi configurada para este dominio.",
+  whatsappNumber: null,
+  instagramUrl: null,
+  addressLine: null,
+  businessHours: null,
+  logoPath: null,
+  faviconPath: null,
   brandColor: "#0ea5e9",
   brandColorStrong: "#7dd3fc",
   brandColorMuted: "rgba(14, 165, 233, 0.18)",
@@ -111,6 +111,35 @@ function getConfiguredHost() {
   return null;
 }
 
+function isLocalHost(host: string | null | undefined) {
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function getDomainCandidates(host: string) {
+  const candidates = new Set([host]);
+
+  if (host.startsWith("www.")) {
+    candidates.add(host.slice(4));
+  } else {
+    candidates.add(`www.${host}`);
+  }
+
+  return [...candidates];
+}
+
+function canUseDefaultShopFallback(host: string | null) {
+  if (!host) {
+    return true;
+  }
+
+  if (process.env.NODE_ENV !== "production" && isLocalHost(host)) {
+    return true;
+  }
+
+  const configuredHost = getConfiguredHost();
+  return Boolean(configuredHost && getDomainCandidates(configuredHost).includes(host));
+}
+
 export async function getRequestHost() {
   try {
     const headerList = await headers();
@@ -138,7 +167,9 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
     const shopByDomain = await basePrisma.shop.findFirst({
       where: {
         isActive: true,
-        primaryDomain: host,
+        primaryDomain: {
+          in: getDomainCandidates(host),
+        },
       },
       select: shopRuntimeSelect,
     });
@@ -149,6 +180,14 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
         value: shopByDomain,
       });
       return shopByDomain;
+    }
+
+    if (!canUseDefaultShopFallback(host)) {
+      shopRuntimeCache.set(cacheKey, {
+        expiresAt: now + SHOP_CACHE_TTL_MS,
+        value: null,
+      });
+      return null;
     }
   }
 
@@ -183,7 +222,7 @@ export async function getCurrentShop() {
   const shop = await getShopByHost(host).catch(() => null);
 
   if (!shop) {
-    return FALLBACK_SHOP_CONFIG;
+    return UNCONFIGURED_SHOP_CONFIG;
   }
 
   return shop;

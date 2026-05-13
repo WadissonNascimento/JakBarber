@@ -7,6 +7,18 @@ export const ADMIN_BARBER_PROFILE = {
   image: "/uploads/barbers/jackson-barber.jpg",
 };
 
+function getAdminBarberProfile(shopId: string) {
+  if (shopId === DEFAULT_SHOP_ID) {
+    return ADMIN_BARBER_PROFILE;
+  }
+
+  return {
+    name: "Barbeiro da equipe",
+    email: `admin-barber+${shopId}@local.invalid`,
+    image: null,
+  };
+}
+
 const activeBarberSelect = {
   id: true,
   name: true,
@@ -25,11 +37,12 @@ type SessionUserLike = {
 
 export async function ensureAdminBarberProfile(shopId?: string | null) {
   const targetShopId = shopId || DEFAULT_SHOP_ID;
+  const profile = getAdminBarberProfile(targetShopId);
   const existingByDefaultEmail = await prisma.user.findFirst({
     where: {
       shopId: targetShopId,
       role: "BARBER",
-      email: ADMIN_BARBER_PROFILE.email,
+      email: profile.email,
     },
     select: activeBarberSelect,
   });
@@ -40,8 +53,8 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
         shopId: targetShopId,
         role: "BARBER",
         OR: [
-          { name: ADMIN_BARBER_PROFILE.name },
-          { image: ADMIN_BARBER_PROFILE.image },
+          { name: profile.name },
+          ...(profile.image ? [{ image: profile.image }] : []),
         ],
       },
       select: activeBarberSelect,
@@ -61,10 +74,10 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
       },
       data: {
         shopId: targetShopId,
-        name: existing.name || ADMIN_BARBER_PROFILE.name,
+        name: existing.name || profile.name,
         role: "BARBER",
         isActive: true,
-        image: existing.image || ADMIN_BARBER_PROFILE.image,
+        image: existing.image || profile.image,
       },
       select: activeBarberSelect,
     });
@@ -73,11 +86,11 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
   return prisma.user.create({
     data: {
       shopId: targetShopId,
-      name: ADMIN_BARBER_PROFILE.name,
-      email: ADMIN_BARBER_PROFILE.email,
+      name: profile.name,
+      email: profile.email,
       role: "BARBER",
       isActive: true,
-      image: ADMIN_BARBER_PROFILE.image,
+      image: profile.image,
     },
     select: activeBarberSelect,
   });

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireActiveBarber } from "@/app/barber/guard";
-import { DEFAULT_SHOP_ID } from "@/lib/shop";
 import {
   mutationError,
   mutationSuccess,
@@ -55,7 +54,11 @@ export async function createBarberTipAction(
   });
   const note = sanitizeTextareaInput(String(formData.get("note") || ""), 500);
   const amount = parseTipAmount(formData.get("amount"));
-  const shopId = session.user.shopId || DEFAULT_SHOP_ID;
+  const shopId = session.user.shopId;
+
+  if (!shopId) {
+    return mutationError("Loja do barbeiro nao encontrada.");
+  }
 
   if (!clientName) {
     return mutationError("Informe o cliente que deu a caixinha.");

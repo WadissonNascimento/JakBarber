@@ -2,7 +2,6 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SHOP_ID } from "@/lib/shop";
 import { toMoneyNumber } from "@/lib/money";
 import {
   createScheduleDayEnd,
@@ -56,9 +55,13 @@ async function requireAdmin() {
     throw new Error("Nao autorizado.");
   }
 
+  if (!session.user.shopId) {
+    throw new Error("Loja do administrador nao encontrada.");
+  }
+
   return {
     userId: session.user.id,
-    shopId: session.user.shopId || DEFAULT_SHOP_ID,
+    shopId: session.user.shopId,
   };
 }
 

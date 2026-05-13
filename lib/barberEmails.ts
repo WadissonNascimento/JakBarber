@@ -14,7 +14,6 @@ import {
 import { getAppointmentDisplayName } from "@/lib/appointmentServices";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import {
-  DEFAULT_EMAIL_LOGO_CID,
   getDefaultLogoAttachment,
   sendEmailMessage,
 } from "@/lib/mail";
@@ -28,12 +27,14 @@ import {
 
 const BARBER_PANEL_PATH = "/barber/agenda";
 const DEFAULT_BRAND_COLOR = "#0ea5e9";
+const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 const appointmentEmailInclude = {
   shop: {
     select: {
       id: true,
       name: true,
+      primaryDomain: true,
       addressLine: true,
       logoPath: true,
       brandColor: true,
@@ -67,38 +68,52 @@ function normalizeName(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
 }
 
-function absoluteAppUrl(pathname: string) {
-  const appUrl = getConfiguredAppUrl();
+function getShopAppUrl(shop?: { primaryDomain?: string | null } | null) {
+  const domain = shop?.primaryDomain?.trim();
+
+  if (domain) {
+    return `https://${domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`;
+  }
+
+  return getConfiguredAppUrl();
+}
+
+function absoluteAppUrl(pathname: string, shop?: { primaryDomain?: string | null } | null) {
+  const appUrl = getShopAppUrl(shop);
   return `${appUrl}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
 }
 
-function resolveLogoUrl(pathname: string | null | undefined) {
+function resolveLogoUrl(
+  pathname: string | null | undefined,
+  shop?: { primaryDomain?: string | null } | null
+) {
   const trimmed = pathname?.trim();
 
   if (!trimmed) {
-    return `cid:${DEFAULT_EMAIL_LOGO_CID}`;
+    return TRANSPARENT_LOGO_DATA_URI;
   }
 
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
   }
 
-  return absoluteAppUrl(trimmed.startsWith("/") ? trimmed : `/${trimmed}`);
+  return absoluteAppUrl(trimmed.startsWith("/") ? trimmed : `/${trimmed}`, shop);
 }
 
 function buildTheme(shop: {
   id: string;
   name: string;
+  primaryDomain?: string | null;
   addressLine: string | null;
   logoPath: string | null;
   brandColor: string | null;
 }): BarberEmailTheme {
   return {
     nomeBarbearia: shop.name,
-    logoBarbearia: resolveLogoUrl(shop.logoPath),
+    logoBarbearia: resolveLogoUrl(shop.logoPath, shop),
     corPrimaria: shop.brandColor || DEFAULT_BRAND_COLOR,
     enderecoBarbearia: shop.addressLine,
-    linkPainel: absoluteAppUrl(BARBER_PANEL_PATH),
+    linkPainel: absoluteAppUrl(BARBER_PANEL_PATH, shop),
   };
 }
 
@@ -290,6 +305,7 @@ export async function notifyBarberNewReview(reviewId: string) {
           select: {
             id: true,
             name: true,
+            primaryDomain: true,
             addressLine: true,
             logoPath: true,
             brandColor: true,
@@ -330,7 +346,7 @@ export async function notifyBarberNewReview(reviewId: string) {
 
     const rendered = renderBarberNewReviewEmail({
       ...buildTheme(review.shop),
-      linkPainel: absoluteAppUrl("/barber"),
+      linkPainel: absoluteAppUrl("/barber", review.shop),
       nomeBarbeiro: normalizeName(review.barber.name, "Barbeiro"),
       nomeCliente: normalizeName(review.customer.name, "Cliente"),
       servico: serviceLabel(review.appointment.services),
@@ -428,6 +444,7 @@ export async function sendDailyBarberAgendaEmails({
         select: {
           id: true,
           name: true,
+          primaryDomain: true,
           addressLine: true,
           logoPath: true,
           brandColor: true,

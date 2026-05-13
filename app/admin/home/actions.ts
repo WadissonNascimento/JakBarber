@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { deleteHomeImage, uploadHomeImage } from "@/lib/homeImages";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SHOP_ID } from "@/lib/shop";
 
 const MAX_ACTIVE_HOME_IMAGES = 5;
 
@@ -15,7 +14,14 @@ async function ensureHomeImageAdmin() {
     throw new Error("Nao autorizado.");
   }
 
-  return session.user;
+  if (!session.user.shopId) {
+    throw new Error("Loja do administrador nao encontrada.");
+  }
+
+  return {
+    id: session.user.id,
+    shopId: session.user.shopId,
+  };
 }
 
 function revalidateHomeImageViews() {
@@ -66,7 +72,7 @@ async function normalizeHomeImagePositions(shopId: string) {
 
 export async function uploadHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || DEFAULT_SHOP_ID;
+  const shopId = admin.shopId;
   const file = formData.get("image");
 
   if (!(file instanceof File) || file.size === 0) {
@@ -106,7 +112,7 @@ export async function uploadHomeImageAction(formData: FormData) {
 
 export async function replaceHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || DEFAULT_SHOP_ID;
+  const shopId = admin.shopId;
   const imageId = String(formData.get("imageId") || "").trim();
   const file = formData.get("image");
 
@@ -152,7 +158,7 @@ export async function replaceHomeImageAction(formData: FormData) {
 
 export async function removeHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || DEFAULT_SHOP_ID;
+  const shopId = admin.shopId;
   const imageId = String(formData.get("imageId") || "").trim();
 
   if (!imageId) {
@@ -184,7 +190,7 @@ export async function removeHomeImageAction(formData: FormData) {
 
 export async function reorderHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || DEFAULT_SHOP_ID;
+  const shopId = admin.shopId;
   const imageId = String(formData.get("imageId") || "").trim();
   const direction = String(formData.get("direction") || "");
 

@@ -14,10 +14,11 @@ import {
   type CustomerEmailTheme,
 } from "@/lib/email/customerTemplates";
 import { basePrisma } from "@/lib/prisma-core";
-import { getCurrentShop } from "@/lib/shop";
+import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
 
 const LOGO_CID = "jak-barber-logo";
 export const DEFAULT_EMAIL_LOGO_CID = LOGO_CID;
+const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 export type EmailDeliveryMetadata = Prisma.InputJsonValue;
 
@@ -39,12 +40,11 @@ export type SendEmailMessageInput = {
   maxAttempts?: number;
 };
 
-const DEFAULT_SHOP_ID = "shop_jak_barber";
-const DEFAULT_SHOP_NAME = "Jak Barber";
+const DEFAULT_SHOP_NAME = "Barbearia";
 const DEFAULT_BRAND_COLOR = "#0ea5e9";
 
 function formatFromAddress(from: string) {
-  return from.includes("<") ? from : `Jak Barber <${from}>`;
+  return from.includes("<") ? from : `Atendimento <${from}>`;
 }
 
 function getLogoAttachment() {
@@ -63,7 +63,7 @@ function resolveEmailLogoUrl(logoPath: string | null | undefined) {
   const value = logoPath?.trim();
 
   if (!value) {
-    return `cid:${LOGO_CID}`;
+    return TRANSPARENT_LOGO_DATA_URI;
   }
 
   if (/^https?:\/\//i.test(value)) {
@@ -73,6 +73,16 @@ function resolveEmailLogoUrl(logoPath: string | null | undefined) {
   const appUrl = getConfiguredAppUrl();
   const normalizedPath = value.startsWith("/") ? value : `/${value}`;
   return `${appUrl}${normalizedPath}`;
+}
+
+function getShopAppUrl(shop: { primaryDomain?: string | null } | null | undefined) {
+  const domain = shop?.primaryDomain?.trim();
+
+  if (domain) {
+    return `https://${domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`;
+  }
+
+  return getConfiguredAppUrl();
 }
 
 function buildCustomerThemeFromShop(shop: {
@@ -94,13 +104,17 @@ function buildCustomerThemeFromShop(shop: {
 async function getCurrentCustomerEmailTheme() {
   const shop = await getCurrentShop().catch(() => null);
 
-  return buildCustomerThemeFromShop({
-    name: shop?.name,
-    logoPath: shop?.logoPath,
-    brandColor: shop?.brandColor,
-    addressLine: shop?.addressLine,
-    whatsappNumber: shop?.whatsappNumber,
-  });
+  return {
+    shopId: shop?.id || DEFAULT_SHOP_ID,
+    appUrl: getShopAppUrl(shop),
+    theme: buildCustomerThemeFromShop({
+      name: shop?.name,
+      logoPath: shop?.logoPath,
+      brandColor: shop?.brandColor,
+      addressLine: shop?.addressLine,
+      whatsappNumber: shop?.whatsappNumber,
+    }),
+  };
 }
 
 function getMailConfig() {
@@ -297,7 +311,7 @@ export async function sendEmailMessage({
   html,
   template,
   eventKey,
-  shopId = "shop_jak_barber",
+  shopId = DEFAULT_SHOP_ID,
   recipientUserId,
   metadata,
   attachments,
@@ -497,7 +511,7 @@ function getCustomerThemeFromAppointmentPayload(
 ): CustomerEmailTheme {
   return {
     nomeBarbearia: payload.nomeBarbearia?.trim() || DEFAULT_SHOP_NAME,
-    logoBarbearia: payload.logoBarbearia || `cid:${LOGO_CID}`,
+    logoBarbearia: payload.logoBarbearia || TRANSPARENT_LOGO_DATA_URI,
     corPrimaria: payload.corPrimaria?.trim() || DEFAULT_BRAND_COLOR,
     enderecoBarbearia: payload.enderecoBarbearia || null,
     telefoneBarbearia: payload.telefoneBarbearia || null,
@@ -635,16 +649,17 @@ export async function sendVerificationCodeEmail({
   verifyUrl?: string;
   accountLabel?: string;
 }) {
+  const { shopId, theme } = await getCurrentCustomerEmailTheme();
+
   if (shouldUseConsoleMailFallback()) {
     logDevelopmentEmail({
       to,
-      subject: "Codigo de verificacao - Jak Barber",
+      subject: `Codigo de verificacao - ${theme.nomeBarbearia}`,
       code,
       verifyUrl,
     });
   }
 
-  const theme = await getCurrentCustomerEmailTheme();
   const rendered = renderCustomerVerificationCodeEmail({
     ...theme,
     nomeCliente: name || "cliente",
@@ -661,6 +676,7 @@ export async function sendVerificationCodeEmail({
     text: rendered.text,
     template: "customer.email_verification",
     eventKey: `customer:email_verification:${to.trim().toLowerCase()}:${Date.now()}`,
+    shopId,
     metadata: {
       accountLabel,
     },
@@ -681,18 +697,19 @@ export async function sendPasswordResetCodeEmail({
   name: string;
   code: string;
 }) {
+  const { shopId, appUrl, theme } = await getCurrentCustomerEmailTheme();
+
   if (shouldUseConsoleMailFallback()) {
     logDevelopmentEmail({
       to,
-      subject: "Recuperacao de senha - Jak Barber",
+      subject: `Recuperacao de senha - ${theme.nomeBarbearia}`,
       code,
     });
   }
 
-  const resetUrl = `${getConfiguredAppUrl()}/forgot-password/reset?email=${encodeURIComponent(
+  const resetUrl = `${appUrl}/forgot-password/reset?email=${encodeURIComponent(
     to.trim().toLowerCase()
   )}`;
-  const theme = await getCurrentCustomerEmailTheme();
   const rendered = renderCustomerPasswordResetEmail({
     ...theme,
     nomeCliente: name || "cliente",
@@ -709,6 +726,7 @@ export async function sendPasswordResetCodeEmail({
     text: rendered.text,
     template: "customer.password_reset",
     eventKey: `customer:password_reset:${to.trim().toLowerCase()}:${Date.now()}`,
+    shopId,
     metadata: {
       resetRequested: true,
     },

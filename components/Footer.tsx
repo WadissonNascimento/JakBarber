@@ -33,13 +33,15 @@ export default function Footer({
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image
-              src={logoPath}
-              alt={brandName}
-              width={50}
-              height={50}
-              className="object-contain"
-            />
+            {logoPath ? (
+              <Image
+                src={logoPath}
+                alt={brandName}
+                width={50}
+                height={50}
+                className="object-contain"
+              />
+            ) : null}
 
             <div>
               <p className="text-lg font-bold">{brandName}</p>

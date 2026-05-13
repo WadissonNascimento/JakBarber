@@ -170,14 +170,20 @@ export default function Header({
       <header className="sticky top-0 z-[100] w-full max-w-full overflow-hidden border-b border-white/10 bg-[#030712]/90 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link href={nav.homeHref} className="flex min-w-0 items-center gap-3">
-            <Image
-              src={logoPath}
-              alt={brandName}
-              width={120}
-              height={50}
-              className="h-auto w-[108px] object-contain sm:w-[120px]"
-              priority
-            />
+            {logoPath ? (
+              <Image
+                src={logoPath}
+                alt={brandName}
+                width={120}
+                height={50}
+                className="h-auto w-[108px] object-contain sm:w-[120px]"
+                priority
+              />
+            ) : (
+              <span className="max-w-[160px] truncate text-lg font-bold text-white">
+                {brandName}
+              </span>
+            )}
             {role ? (
               <span className="hidden max-w-[150px] truncate text-xs text-zinc-400 sm:inline">
                 {userName || eyebrow}

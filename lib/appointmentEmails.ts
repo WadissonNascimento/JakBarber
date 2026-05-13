@@ -28,6 +28,7 @@ import type { MoneyValue } from "@/lib/money";
 const ACTIVE_REMINDER_STATUSES = ["PENDING", "CONFIRMED"];
 const REMINDER_LOOKAHEAD_MINUTES = 30;
 const REMINDER_WINDOW_MINUTES = 10;
+const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 type EmailAppointment = {
   id: string;
@@ -36,6 +37,7 @@ type EmailAppointment = {
   date: Date;
   shop: {
     name: string;
+    primaryDomain: string | null;
     logoPath: string | null;
     brandColor: string | null;
     addressLine: string | null;
@@ -66,6 +68,7 @@ const appointmentEmailInclude = {
   shop: {
     select: {
       name: true,
+      primaryDomain: true,
       logoPath: true,
       brandColor: true,
       addressLine: true,
@@ -108,8 +111,18 @@ function normalizeName(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
 }
 
-function getCustomerAppointmentsUrl() {
-  return `${getConfiguredAppUrl()}/customer/agendamentos`;
+function getShopAppUrl(shop: { primaryDomain?: string | null }) {
+  const domain = shop.primaryDomain?.trim();
+
+  if (domain) {
+    return `https://${domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`;
+  }
+
+  return getConfiguredAppUrl();
+}
+
+function getCustomerAppointmentsUrl(shop: { primaryDomain?: string | null }) {
+  return `${getShopAppUrl(shop)}/customer/agendamentos`;
 }
 
 function formatDateTimeLabel(date: Date) {
@@ -121,18 +134,21 @@ function formatDateTimeLabel(date: Date) {
   })} as ${formatScheduleTime(date)}`;
 }
 
-function resolveEmailLogoUrl(logoPath: string | null | undefined) {
+function resolveEmailLogoUrl(
+  logoPath: string | null | undefined,
+  shop: { primaryDomain?: string | null }
+) {
   const value = logoPath?.trim();
 
   if (!value) {
-    return undefined;
+    return TRANSPARENT_LOGO_DATA_URI;
   }
 
   if (/^https?:\/\//i.test(value)) {
     return value;
   }
 
-  return `${getConfiguredAppUrl()}${value.startsWith("/") ? value : `/${value}`}`;
+  return `${getShopAppUrl(shop)}${value.startsWith("/") ? value : `/${value}`}`;
 }
 
 function buildAppointmentEmailPayload(
@@ -158,7 +174,7 @@ function buildAppointmentEmailPayload(
     recipientUserId: appointment.customer.id,
     eventKey: `customer:appointment:${appointment.id}`,
     nomeBarbearia: appointment.shop.name,
-    logoBarbearia: resolveEmailLogoUrl(appointment.shop.logoPath),
+    logoBarbearia: resolveEmailLogoUrl(appointment.shop.logoPath, appointment.shop),
     corPrimaria: appointment.shop.brandColor || undefined,
     enderecoBarbearia: appointment.shop.addressLine,
     telefoneBarbearia: appointment.shop.whatsappNumber,
@@ -178,7 +194,7 @@ function buildAppointmentEmailPayload(
       getAppointmentGrandTotal(appointment.services, appointment.items)
     ),
     extrasLabel,
-    actionUrl: getCustomerAppointmentsUrl(),
+    actionUrl: getCustomerAppointmentsUrl(appointment.shop),
     cancellationReason: cancellationReason?.trim() || null,
   };
 }
@@ -328,6 +344,7 @@ export async function sendDueAppointmentReminderEmails({
     const claimed = await basePrisma.appointment.updateMany({
       where: {
         id: appointment.id,
+        shopId: appointment.shopId,
         reminderSentAt: null,
         status: {
           in: ACTIVE_REMINDER_STATUSES,
@@ -354,6 +371,7 @@ export async function sendDueAppointmentReminderEmails({
         .updateMany({
           where: {
             id: appointment.id,
+            shopId: appointment.shopId,
           },
           data: {
             reminderSentAt: null,

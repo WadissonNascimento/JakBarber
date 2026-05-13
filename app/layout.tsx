@@ -5,6 +5,7 @@ import RequiredCustomerPhoneModal from "@/components/RequiredCustomerPhoneModal"
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
@@ -25,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     shop.metadataDescription ||
     "Agende seu horario, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
-  const faviconPath = shop.faviconPath || "/favicon.png?v=20260503-j";
+  const faviconPath = shop.faviconPath || "";
   const title = shop.metadataTitle || brandName;
 
   return {
@@ -35,41 +36,45 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s",
     },
     description,
-    icons: {
-      icon: [
-        {
-          url: faviconPath,
-          sizes: "64x64",
-          type: "image/png",
-        },
-      ],
-      shortcut: [
-        {
-          url: faviconPath,
-          type: "image/png",
-        },
-      ],
-      apple: [
-        {
-          url: "/apple-touch-icon.png?v=20260503-j",
-          sizes: "180x180",
-          type: "image/png",
-        },
-      ],
-    },
+    icons: faviconPath
+      ? {
+          icon: [
+            {
+              url: faviconPath,
+              sizes: "64x64",
+              type: "image/png",
+            },
+          ],
+          shortcut: [
+            {
+              url: faviconPath,
+              type: "image/png",
+            },
+          ],
+          apple: [
+            {
+              url: faviconPath,
+              sizes: "180x180",
+              type: "image/png",
+            },
+          ],
+        }
+      : undefined,
     openGraph: {
       title: brandName,
       description,
       url: "/",
       siteName: brandName,
-      images: [
-        {
-          url: "/cortes/corte1.webp",
-          width: 1200,
-          height: 630,
-          alt: brandName,
-        },
-      ],
+      images: shop.logoPath
+        ? [
+            {
+              url: shop.logoPath,
+              width: 1200,
+              height: 630,
+              alt: brandName,
+            },
+          ]
+        : undefined,
       locale: "pt_BR",
       type: "website",
     },
@@ -89,8 +94,12 @@ export default async function RootLayout({
     session?.user?.role === "CUSTOMER"
       ? session.user.role
       : null;
+  if (role && (!session?.user?.shopId || shop.id !== session.user.shopId)) {
+    redirect("/logout");
+  }
+
   const brandName = shop.name || "Barbearia";
-  const logoPath = shop.logoPath || "/logo.png";
+  const logoPath = shop.logoPath || "";
   const customerPhone =
     role === "CUSTOMER" && session?.user?.id
       ? (
@@ -111,7 +120,7 @@ export default async function RootLayout({
         <AppChrome
           brandName={brandName}
           logoPath={logoPath}
-          publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
+          publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : brandName}
           role={role}
           userName={session?.user?.name || null}
           whatsappNumber={shop.whatsappNumber || ""}
