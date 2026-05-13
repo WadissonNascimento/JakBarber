@@ -13,6 +13,7 @@ import {
 } from "@/lib/mutationResult";
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { prisma } from "@/lib/prisma";
+import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
 
 async function requireAdmin() {
   const session = await auth();
@@ -34,6 +35,60 @@ function getExpirationDate() {
 
 function buildVerificationUrl(email: string) {
   return `${getConfiguredAppUrl()}/register/verify?email=${encodeURIComponent(email)}`;
+}
+
+function isValidTimeRange(startTime: string, endTime: string) {
+  return /^\d{2}:\d{2}$/.test(startTime) &&
+    /^\d{2}:\d{2}$/.test(endTime) &&
+    startTime < endTime;
+}
+
+async function requireAdminBarberTarget(formData: FormData) {
+  const admin = await requireAdmin();
+  const barberId = String(formData.get("barberId") || "").trim();
+
+  if (!barberId) {
+    return {
+      admin,
+      barber: null,
+      error: "Barbeiro invalido.",
+    };
+  }
+
+  const barber = await prisma.user.findFirst({
+    where: {
+      id: barberId,
+      role: "BARBER",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!barber) {
+    return {
+      admin,
+      barber: null,
+      error: "Barbeiro nao encontrado.",
+    };
+  }
+
+  return {
+    admin,
+    barber,
+    error: null,
+  };
+}
+
+function revalidateAdminBarberAvailabilityViews(barberId: string) {
+  revalidatePath("/admin/barbeiros");
+  revalidatePath(`/admin/barbeiros/${barberId}`);
+  revalidatePath(`/admin/barbeiros/${barberId}/disponibilidade`);
+  revalidatePath("/admin/agenda");
+  revalidatePath("/barber");
+  revalidatePath("/barber/agenda");
+  revalidatePath("/barber/disponibilidade");
+  revalidatePath("/agendar");
 }
 
 export async function createBarberAction(
@@ -343,4 +398,137 @@ export async function upsertBarberServiceCommissionAction(
   revalidatePath("/admin/financeiro");
   revalidatePath("/barber");
   return mutationSuccess("Comissao do barbeiro atualizada.");
+}
+
+export async function saveAdminBarberAvailabilityAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const weekDay = Number(formData.get("weekDay") || -1);
+  const startTime = String(formData.get("startTime") || "");
+  const endTime = String(formData.get("endTime") || "");
+  const isActive = String(formData.get("isActive") || "false") === "true";
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  if (weekDay < 0 || weekDay > 6 || !isValidTimeRange(startTime, endTime)) {
+    return mutationError("Disponibilidade invalida.");
+  }
+
+  await prisma.barberAvailability.upsert({
+    where: {
+      barberId_weekDay: {
+        barberId: barber.id,
+        weekDay,
+      },
+    },
+    update: {
+      startTime,
+      endTime,
+      isActive,
+    },
+    create: {
+      barberId: barber.id,
+      weekDay,
+      startTime,
+      endTime,
+      isActive,
+    },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Disponibilidade do barbeiro atualizada.");
+}
+
+export async function createAdminBarberBlockAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const startDateTime = createScheduleDateTimeInput(
+    String(formData.get("startDateTime") || "")
+  );
+  const endDateTime = createScheduleDateTimeInput(
+    String(formData.get("endDateTime") || "")
+  );
+  const reason = String(formData.get("reason") || "").trim();
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  if (!startDateTime || !endDateTime || startDateTime >= endDateTime) {
+    return mutationError("Periodo de bloqueio invalido.");
+  }
+
+  await prisma.barberBlock.create({
+    data: {
+      barberId: barber.id,
+      startDateTime,
+      endDateTime,
+      reason: reason || null,
+    },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Bloqueio criado para o barbeiro.");
+}
+
+export async function createAdminRecurringBarberBlockAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const weekDay = Number(formData.get("weekDay") || -1);
+  const startTime = String(formData.get("startTime") || "");
+  const endTime = String(formData.get("endTime") || "");
+  const reason = String(formData.get("reason") || "").trim();
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  if (weekDay < 0 || weekDay > 6 || !isValidTimeRange(startTime, endTime)) {
+    return mutationError("Bloqueio recorrente invalido.");
+  }
+
+  await prisma.recurringBarberBlock.create({
+    data: {
+      barberId: barber.id,
+      weekDay,
+      startTime,
+      endTime,
+      reason: reason || null,
+      isActive: true,
+    },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Pausa fixa criada para o barbeiro.");
+}
+
+export async function deleteAdminBarberBlockAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const blockId = String(formData.get("blockId") || "").trim();
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  const block = await prisma.barberBlock.findUnique({
+    where: { id: blockId },
+  });
+
+  if (!block || block.barberId !== barber.id) {
+    return mutationError("Bloqueio nao encontrado para este barbeiro.");
+  }
+
+  await prisma.barberBlock.delete({
+    where: { id: block.id },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Bloqueio removido.");
 }

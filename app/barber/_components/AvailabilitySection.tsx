@@ -26,6 +26,11 @@ import {
 import type { getBarberDashboardData } from "../data";
 
 type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
+type AvailabilityMutationAction = (formData: FormData) => Promise<{
+  ok: boolean;
+  message: string;
+  tone: "success" | "error" | "info";
+}>;
 
 function formatDateTime(value: Date | string) {
   return new Date(value).toLocaleString("pt-BR", {
@@ -91,10 +96,20 @@ export function AvailabilitySection({
   availabilities,
   blocks,
   recurringBlocks,
+  targetBarberId,
+  saveAvailabilityAction = saveBarberAvailabilityAction,
+  createBlockAction = createBarberBlockAction,
+  createRecurringBlockAction = createRecurringBarberBlockAction,
+  deleteBlockAction = deleteBarberBlockAction,
 }: {
   availabilities: BarberDashboardData["availabilities"];
   blocks: BarberDashboardData["blocks"];
   recurringBlocks: BarberDashboardData["recurringBlocks"];
+  targetBarberId?: string;
+  saveAvailabilityAction?: AvailabilityMutationAction;
+  createBlockAction?: AvailabilityMutationAction;
+  createRecurringBlockAction?: AvailabilityMutationAction;
+  deleteBlockAction?: AvailabilityMutationAction;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<{
@@ -106,14 +121,14 @@ export function AvailabilitySection({
 
   function runAction(
     key: string,
-    action: (formData: FormData) => Promise<{
-      ok: boolean;
-      message: string;
-      tone: "success" | "error" | "info";
-    }>,
+    action: AvailabilityMutationAction,
     formData: FormData,
     onSuccess?: () => void
   ) {
+    if (targetBarberId) {
+      formData.set("barberId", targetBarberId);
+    }
+
     setPendingKey(key);
 
     startTransition(async () => {
@@ -149,7 +164,7 @@ export function AvailabilitySection({
           onSaveDay={(formData) =>
             runAction(
               `availability-day-${String(formData.get("weekDay") || "")}`,
-              saveBarberAvailabilityAction,
+              saveAvailabilityAction,
               formData
             )
           }
@@ -168,7 +183,7 @@ export function AvailabilitySection({
 
               runAction(
                 "create-block",
-                createBarberBlockAction,
+                createBlockAction,
                 new FormData(form),
                 () => form.reset()
               );
@@ -214,7 +229,7 @@ export function AvailabilitySection({
 
               runAction(
                 "recurring-block",
-                createRecurringBarberBlockAction,
+                createRecurringBlockAction,
                 new FormData(form),
                 () => form.reset()
               );
@@ -325,7 +340,7 @@ export function AvailabilitySection({
 
                         const formData = new FormData();
                         formData.set("blockId", block.id);
-                        runAction(`block-${block.id}`, deleteBarberBlockAction, formData);
+                        runAction(`block-${block.id}`, deleteBlockAction, formData);
                       }}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-400/35 text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                       aria-label="Remover bloqueio"

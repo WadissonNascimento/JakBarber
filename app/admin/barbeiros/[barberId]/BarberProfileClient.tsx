@@ -112,6 +112,12 @@ export default function BarberProfileClient({
               value={`${summary.servicesCount}`}
               helper="Editar comissões individuais"
             />
+            <ProfileMenuCard
+              href={`${baseHref}/disponibilidade`}
+              label="Disponibilidade"
+              value="Agenda"
+              helper="Editar horários e bloqueios"
+            />
           </div>
         </div>
       </SectionCard>
