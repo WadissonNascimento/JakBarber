@@ -47,8 +47,9 @@ function getInitialAgendaFilters(searchParams: SearchParams) {
 export default async function AdminAgendaPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: SearchParams | Promise<SearchParams>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const session = await auth();
 
   if (!session?.user) {
@@ -59,7 +60,7 @@ export default async function AdminAgendaPage({
     redirect("/painel");
   }
 
-  const initialFilters = getInitialAgendaFilters(searchParams);
+  const initialFilters = getInitialAgendaFilters(resolvedSearchParams);
 
   const [report, barbers, services, extras] = await Promise.all([
     getAdminAgendaReport({
