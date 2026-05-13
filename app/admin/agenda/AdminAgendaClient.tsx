@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -35,6 +35,7 @@ import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   formatScheduleDate,
   formatScheduleTime,
+  getCurrentScheduleDateValue,
   getScheduleDateValue,
 } from "@/lib/scheduleTime";
 
@@ -111,13 +112,15 @@ export default function AdminAgendaClient({
   limit?: number | null;
 }) {
   const router = useRouter();
-  const [filters, setFilters] = useState(initialFilters);
+  const [draftFilters, setDraftFilters] = useState(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+  const [isFilterPending, startFilterTransition] = useTransition();
   const visibleAppointments = useMemo(
     () =>
       appointments.filter((appointment) =>
-        matchesAgendaFilters(appointment, filters)
+        matchesAgendaFilters(appointment, appliedFilters)
       ),
-    [appointments, filters]
+    [appointments, appliedFilters]
   );
   const visibleSummary = useMemo(
     () => getVisibleAgendaSummary(visibleAppointments),
@@ -125,17 +128,33 @@ export default function AdminAgendaClient({
   );
 
   useEffect(() => {
-    window.history.replaceState(null, "", buildAgendaUrl(filters));
-  }, [filters]);
+    setDraftFilters(initialFilters);
+    setAppliedFilters(initialFilters);
+  }, [initialFilters]);
 
-  function updateFilter(key: keyof AdminAgendaFilters, value: string) {
-    const nextFilters = {
-      ...filters,
+  function updateDraftFilter(key: keyof AdminAgendaFilters, value: string) {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
       [key]: value,
-    };
+    }));
+  }
 
-    setFilters(nextFilters);
-    router.replace(buildAgendaUrl(nextFilters), { scroll: false });
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextFilters = normalizeAgendaDateFilters(draftFilters);
+
+    setDraftFilters(nextFilters);
+    startFilterTransition(() => {
+      router.push(buildAgendaUrl(nextFilters), { scroll: false });
+    });
+  }
+
+  function clearFilters() {
+    const today = getCurrentScheduleDateValue();
+    setDraftFilters({ dateFrom: today, dateTo: today });
+    startFilterTransition(() => {
+      router.push("/admin/agenda", { scroll: false });
+    });
   }
 
   return (
@@ -183,32 +202,64 @@ export default function AdminAgendaClient({
             </div>
           ) : null}
 
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-              Filtro por data
-            </p>
-          </div>
+          <form
+            onSubmit={applyFilters}
+            className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4"
+          >
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                  Filtro por data
+                </p>
 
-          <div className="space-y-1.5">
-            <div className="compact-filter-line">
-              <span className="compact-filter-label">Data</span>
-              <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(event) => updateFilter("dateFrom", event.target.value)}
-                  className="compact-filter-control min-w-0"
-                />
-                <span className="text-[11px] font-semibold text-zinc-500">até</span>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(event) => updateFilter("dateTo", event.target.value)}
-                  className="compact-filter-control min-w-0"
-                />
+                <div className="mt-3">
+                  <div className="grid gap-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:items-center">
+                    <span className="compact-filter-label">Data</span>
+                    <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={draftFilters.dateFrom}
+                        max={draftFilters.dateTo || undefined}
+                        onChange={(event) =>
+                          updateDraftFilter("dateFrom", event.target.value)
+                        }
+                        className="compact-filter-control min-w-0"
+                      />
+                      <span className="text-[11px] font-semibold text-zinc-500">
+                        até
+                      </span>
+                      <input
+                        type="date"
+                        value={draftFilters.dateTo}
+                        min={draftFilters.dateFrom || undefined}
+                        onChange={(event) =>
+                          updateDraftFilter("dateTo", event.target.value)
+                        }
+                        className="compact-filter-control min-w-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:shrink-0 lg:mt-0">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  disabled={isFilterPending}
+                  className="min-h-10 rounded-xl border border-white/10 px-4 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.06] disabled:opacity-60"
+                >
+                  Limpar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isFilterPending}
+                  className="min-h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-60"
+                >
+                  {isFilterPending ? "Aplicando..." : "Aplicar"}
+                </button>
               </div>
             </div>
-          </div>
+          </form>
         </div>
 
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -245,12 +296,12 @@ export default function AdminAgendaClient({
           <div className="mt-5">
             <EmptyState
               title={
-                filters.q
+                appliedFilters.q
                   ? "Nenhum resultado para a busca"
                   : "Nenhum agendamento encontrado"
               }
               description={
-                filters.q
+                appliedFilters.q
                   ? "Confira o ID, nome do cliente ou data digitada."
                   : "Ajuste os filtros para encontrar outros horários."
               }
@@ -357,6 +408,25 @@ function buildAgendaUrl(filters: AdminAgendaFilters) {
   return params.toString()
     ? `/admin/agenda?${params.toString()}`
     : "/admin/agenda";
+}
+
+function normalizeAgendaDateFilters(filters: AdminAgendaFilters) {
+  const dateFrom = filters.dateFrom.trim();
+  const dateTo = filters.dateTo.trim();
+
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    return {
+      ...filters,
+      dateFrom: dateTo,
+      dateTo: dateFrom,
+    };
+  }
+
+  return {
+    ...filters,
+    dateFrom,
+    dateTo,
+  };
 }
 
 function matchesAgendaFilters(

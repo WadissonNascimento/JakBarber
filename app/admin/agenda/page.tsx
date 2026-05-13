@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { getAdminAgendaReport } from "@/lib/adminReports";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
+import {
+  getCurrentScheduleDateValue,
+  getScheduleDayRange,
+} from "@/lib/scheduleTime";
 import AdminAgendaClient from "./AdminAgendaClient";
 
 const ADMIN_AGENDA_PAGE_LIMIT = 250;
@@ -12,6 +15,34 @@ type SearchParams = {
   dateFrom?: string;
   dateTo?: string;
 };
+
+function getValidDateFilter(value: string | undefined) {
+  const date = value?.trim();
+
+  if (!date || !getScheduleDayRange(date)) {
+    return "";
+  }
+
+  return date;
+}
+
+function getInitialAgendaFilters(searchParams: SearchParams) {
+  const today = getCurrentScheduleDateValue();
+  const dateFrom = getValidDateFilter(searchParams.dateFrom) || today;
+  const dateTo = getValidDateFilter(searchParams.dateTo) || dateFrom;
+
+  if (dateFrom > dateTo) {
+    return {
+      dateFrom: dateTo,
+      dateTo: dateFrom,
+    };
+  }
+
+  return {
+    dateFrom,
+    dateTo,
+  };
+}
 
 export default async function AdminAgendaPage({
   searchParams,
@@ -28,10 +59,7 @@ export default async function AdminAgendaPage({
     redirect("/painel");
   }
 
-  const initialFilters = {
-    dateFrom: searchParams.dateFrom || getCurrentScheduleDateValue(),
-    dateTo: searchParams.dateTo || getCurrentScheduleDateValue(),
-  };
+  const initialFilters = getInitialAgendaFilters(searchParams);
 
   const [report, barbers, services, extras] = await Promise.all([
     getAdminAgendaReport({
