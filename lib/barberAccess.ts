@@ -45,12 +45,7 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
       },
     }));
 
-  if (
-    existing &&
-    existing.role === "BARBER" &&
-    existing.isActive &&
-    existing.name === ADMIN_BARBER_PROFILE.name
-  ) {
+  if (existing && existing.role === "BARBER" && existing.isActive) {
     return existing;
   }
 
@@ -61,7 +56,7 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
       },
       data: {
         shopId: targetShopId,
-        name: ADMIN_BARBER_PROFILE.name,
+        name: existing.name || ADMIN_BARBER_PROFILE.name,
         role: "BARBER",
         isActive: true,
         image: existing.image || ADMIN_BARBER_PROFILE.image,
