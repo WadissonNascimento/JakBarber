@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { basePrisma } from "@/lib/prisma-core";
-import { getCurrentShopId } from "@/lib/shop";
+import { getCurrentShop, getCurrentShopId } from "@/lib/shop";
 import { formatCurrency } from "@/lib/utils";
 
-export const metadata = {
-  title: "Serviços | Jak Barber",
-  description: "Veja cortes, barba e serviços disponíveis na Jak Barber.",
-};
+export async function generateMetadata() {
+  const shop = await getCurrentShop();
+  const brandName = shop.name || "Barbearia";
+
+  return {
+    title: `Servicos | ${brandName}`,
+    description: `Veja cortes, barba e servicos disponiveis na ${brandName}.`,
+  };
+}
 
 const getPublicServices = unstable_cache(
   async (shopId: string) =>

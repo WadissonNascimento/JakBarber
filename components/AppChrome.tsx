@@ -14,6 +14,7 @@ type AppChromeProps = {
   whatsappNumber: string;
   instagramUrl: string;
   addressLine: string;
+  locationUrl: string;
   businessHours: string;
 };
 
@@ -27,6 +28,7 @@ export default function AppChrome({
   whatsappNumber,
   instagramUrl,
   addressLine,
+  locationUrl,
   businessHours,
 }: AppChromeProps) {
   const pathname = usePathname() || "/";
@@ -55,6 +57,7 @@ export default function AppChrome({
           whatsappNumber={whatsappNumber}
           instagramUrl={instagramUrl}
           addressLine={addressLine}
+          locationUrl={locationUrl}
           businessHours={businessHours}
         />
       )}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { deleteHomeImage, uploadHomeImage } from "@/lib/homeImages";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SHOP_ID } from "@/lib/shop";
 
 const MAX_ACTIVE_HOME_IMAGES = 5;
 
@@ -65,7 +66,7 @@ async function normalizeHomeImagePositions(shopId: string) {
 
 export async function uploadHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || "shop_jak_barber";
+  const shopId = admin.shopId || DEFAULT_SHOP_ID;
   const file = formData.get("image");
 
   if (!(file instanceof File) || file.size === 0) {
@@ -83,7 +84,7 @@ export async function uploadHomeImageAction(formData: FormData) {
     throw new Error("A home pode ter no maximo 5 fotos ativas.");
   }
 
-  const uploaded = await uploadHomeImage(file);
+  const uploaded = await uploadHomeImage(file, shopId);
 
   try {
     await prisma.homeImage.create({
@@ -105,7 +106,7 @@ export async function uploadHomeImageAction(formData: FormData) {
 
 export async function replaceHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || "shop_jak_barber";
+  const shopId = admin.shopId || DEFAULT_SHOP_ID;
   const imageId = String(formData.get("imageId") || "").trim();
   const file = formData.get("image");
 
@@ -128,7 +129,7 @@ export async function replaceHomeImageAction(formData: FormData) {
     throw new Error("Foto nao encontrada.");
   }
 
-  const uploaded = await uploadHomeImage(file);
+  const uploaded = await uploadHomeImage(file, shopId);
 
   try {
     await prisma.homeImage.update({
@@ -151,7 +152,7 @@ export async function replaceHomeImageAction(formData: FormData) {
 
 export async function removeHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || "shop_jak_barber";
+  const shopId = admin.shopId || DEFAULT_SHOP_ID;
   const imageId = String(formData.get("imageId") || "").trim();
 
   if (!imageId) {
@@ -183,7 +184,7 @@ export async function removeHomeImageAction(formData: FormData) {
 
 export async function reorderHomeImageAction(formData: FormData) {
   const admin = await ensureHomeImageAdmin();
-  const shopId = admin.shopId || "shop_jak_barber";
+  const shopId = admin.shopId || DEFAULT_SHOP_ID;
   const imageId = String(formData.get("imageId") || "").trim();
   const direction = String(formData.get("direction") || "");
 

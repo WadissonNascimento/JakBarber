@@ -38,7 +38,15 @@ const securityHeaders = [
 ];
 
 const isProduction = process.env.NODE_ENV === "production";
-const productionOrigins = ["jakbarbercompany.com", "www.jakbarbercompany.com"];
+const extraProductionOrigins = (process.env.ALLOWED_SERVER_ACTION_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const productionOrigins = [
+  "jakbarbercompany.com",
+  "www.jakbarbercompany.com",
+  ...extraProductionOrigins,
+];
 const developmentOrigins = [
   "*.trycloudflare.com",
   "*.ngrok-free.dev",

@@ -7,9 +7,9 @@ import authConfig from "@/auth.config";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { isGoogleSignInConfigured } from "@/lib/googleAuth";
 import { verifyRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
+import { DEFAULT_SHOP_ID, getCurrentShopId } from "@/lib/shop";
 
 const googleSignInConfigured = isGoogleSignInConfigured();
-const DEFAULT_GOOGLE_CUSTOMER_SHOP_ID = "shop_jak_barber";
 
 function getGoogleProviders() {
   if (!googleSignInConfigured) {
@@ -176,9 +176,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
+      const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
+
       await prisma.user.create({
         data: {
-          shopId: DEFAULT_GOOGLE_CUSTOMER_SHOP_ID,
+          shopId,
           name: user.name || email.split("@")[0],
           email,
           image: user.image,

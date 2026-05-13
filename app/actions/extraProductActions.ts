@@ -93,6 +93,7 @@ export async function createExtraProductFromForm(formData: FormData) {
     if (imageFile instanceof File && imageFile.size > 0) {
       const image = await uploadExtraProductImage({
         extraProductId: extra.id,
+        shopId: admin.shopId,
         file: imageFile,
       });
 
@@ -186,7 +187,7 @@ export async function updateExtraProductFromForm(formData: FormData) {
 }
 
 export async function updateExtraProductImage(formData: FormData) {
-  await ensureExtraAccess();
+  const admin = await ensureExtraAccess();
 
   const extraProductId = String(formData.get("extraProductId") || "");
   const imageFile = formData.get("image");
@@ -209,6 +210,7 @@ export async function updateExtraProductImage(formData: FormData) {
 
   const image = await uploadExtraProductImage({
     extraProductId: currentExtra.id,
+    shopId: admin.shopId,
     file: imageFile,
   });
 

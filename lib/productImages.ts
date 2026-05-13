@@ -61,6 +61,10 @@ function buildPublicUrl(supabaseUrl: string, bucket: string, imagePath: string) 
   )}`;
 }
 
+function normalizeStorageSegment(value: string | null | undefined) {
+  return (value || "default").replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
 async function getValidatedImageBuffer(file: File) {
   if (!file || file.size === 0) {
     throw new Error("Selecione uma imagem para enviar.");
@@ -85,16 +89,18 @@ async function getValidatedImageBuffer(file: File) {
 
 export async function uploadProductImage({
   productId,
+  shopId,
   file,
 }: {
   productId: string;
+  shopId?: string | null;
   file: File;
 }) {
   const { supabaseUrl, serviceRoleKey, bucket } = getStorageConfig();
   const buffer = await getValidatedImageBuffer(file);
   const processed = await processProductImageBuffer(buffer, file.type);
   const extension = processed.extension;
-  const imagePath = `products/${productId}/${randomUUID()}.${extension}`;
+  const imagePath = `products/${normalizeStorageSegment(shopId)}/${productId}/${randomUUID()}.${extension}`;
   const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
     imagePath
   )}`;

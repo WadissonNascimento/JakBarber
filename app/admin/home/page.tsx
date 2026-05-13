@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SHOP_ID } from "@/lib/shop";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import AdminHomeImagesClient from "./AdminHomeImagesClient";
@@ -13,7 +14,7 @@ export default async function AdminHomeImagesPage() {
 
   const images = await prisma.homeImage.findMany({
     where: {
-      shopId: session.user.shopId || "shop_jak_barber",
+      shopId: session.user.shopId || DEFAULT_SHOP_ID,
       isActive: true,
     },
     orderBy: [{ position: "asc" }, { createdAt: "asc" }],

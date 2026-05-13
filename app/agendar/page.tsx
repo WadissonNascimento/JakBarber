@@ -5,6 +5,7 @@ import { toMoneyNumber } from "@/lib/money";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { logSecurityEvent } from "@/lib/security";
+import { getCurrentShop } from "@/lib/shop";
 import {
   formatScheduleTime,
   getScheduleDateValue,
@@ -12,10 +13,15 @@ import {
 } from "@/lib/scheduleTime";
 import BookingClient from "./BookingClient";
 
-export const metadata = {
-  title: "Agendar horário",
-  description: "Escolha barbeiro, serviço, data e horário para agendar na Jak Barber.",
-};
+export async function generateMetadata() {
+  const shop = await getCurrentShop();
+  const brandName = shop.name || "Barbearia";
+
+  return {
+    title: "Agendar horario",
+    description: `Escolha barbeiro, servico, data e horario para agendar na ${brandName}.`,
+  };
+}
 
 function getTodayString() {
   const now = new Date();
@@ -59,6 +65,7 @@ export default async function AgendarPage({
 }) {
   const resolvedSearchParams = (await searchParams) || {};
   const session = await auth();
+  const shop = await getCurrentShop();
 
   if (!session?.user) {
     redirect("/login");
@@ -241,7 +248,7 @@ export default async function AgendarPage({
       }))}
       initialDate={getTodayString()}
       nextDays={getNextDays(12)}
-      whatsappNumber={process.env.BARBER_WHATSAPP_NUMBER || ""}
+      whatsappNumber={shop.whatsappNumber || ""}
       rescheduleAppointment={rescheduleAppointment}
     />
   );

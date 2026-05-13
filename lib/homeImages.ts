@@ -92,11 +92,15 @@ async function processHomeImageBuffer(buffer: Buffer) {
     .toBuffer();
 }
 
-export async function uploadHomeImage(file: File) {
+function normalizeStorageSegment(value: string | null | undefined) {
+  return (value || "default").replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
+export async function uploadHomeImage(file: File, shopId?: string | null) {
   const { supabaseUrl, serviceRoleKey, bucket } = getStorageConfig();
   const buffer = await getValidatedHomeImageBuffer(file);
   const processedBuffer = await processHomeImageBuffer(buffer);
-  const imagePath = `home/${Date.now()}-${randomUUID()}.webp`;
+  const imagePath = `home/${normalizeStorageSegment(shopId)}/${Date.now()}-${randomUUID()}.webp`;
   const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
     imagePath
   )}`;

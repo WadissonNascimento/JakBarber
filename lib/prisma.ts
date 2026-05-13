@@ -22,6 +22,8 @@ const SHOP_SCOPED_MODELS = new Set([
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
+  "BarberTip",
+  "HomeImage",
   "EmailDeliveryLog",
 ]);
 
@@ -46,6 +48,8 @@ const ID_SCOPED_MODELS = new Set([
   "StockMovement",
   "ExtraStockMovement",
   "BarberPayout",
+  "BarberTip",
+  "HomeImage",
   "EmailDeliveryLog",
 ]);
 

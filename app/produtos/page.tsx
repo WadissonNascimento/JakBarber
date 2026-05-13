@@ -69,7 +69,7 @@ export default async function ProdutosPage() {
                 ...product,
                 price: toMoneyNumber(product.price),
               }))}
-              whatsappNumber={shop.whatsappNumber || "5511961971267"}
+              whatsappNumber={shop.whatsappNumber || ""}
             />
           )}
         </section>

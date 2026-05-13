@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import type { Metadata } from "next";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
-import { getCurrentShop } from "@/lib/shop";
+import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -21,17 +21,18 @@ const headingFont = Space_Grotesk({
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getCurrentShop();
-  const brandName = shop.name || "Jak Barber";
+  const brandName = shop.name || "Barbearia";
   const description =
     shop.metadataDescription ||
-    "Agende seu horário na Jak Barber, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
+    "Agende seu horario, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
   const faviconPath = shop.faviconPath || "/favicon.png?v=20260503-j";
+  const title = shop.metadataTitle || brandName;
 
   return {
     metadataBase: new URL(getConfiguredAppUrl()),
     title: {
-      default: "JakBarber",
-      template: "JakBarber",
+      default: title,
+      template: "%s",
     },
     description,
     icons: {
@@ -88,7 +89,7 @@ export default async function RootLayout({
     session?.user?.role === "CUSTOMER"
       ? session.user.role
       : null;
-  const brandName = shop.name || "Jak Barber";
+  const brandName = shop.name || "Barbearia";
   const logoPath = shop.logoPath || "/logo.png";
   const customerPhone =
     role === "CUSTOMER" && session?.user?.id
@@ -113,10 +114,15 @@ export default async function RootLayout({
           publicEyebrow={shop.slug === "jak-barber" ? "JakCompany" : shop.name}
           role={role}
           userName={session?.user?.name || null}
-          whatsappNumber={shop.whatsappNumber || process.env.BARBER_WHATSAPP_NUMBER || ""}
-          instagramUrl={shop.instagramUrl || "https://www.instagram.com/jakcompany_/"}
-          addressLine={shop.addressLine || "Osasco, SP"}
-          businessHours={shop.businessHours || "Terça a domingo, das 09h as 20h"}
+          whatsappNumber={shop.whatsappNumber || ""}
+          instagramUrl={shop.instagramUrl || ""}
+          addressLine={shop.addressLine || ""}
+          locationUrl={
+            shop.id === DEFAULT_SHOP_ID
+              ? "https://www.google.com/maps?ftid=0x94cefd02794bf5e3:0xd23868a9ee010185"
+              : ""
+          }
+          businessHours={shop.businessHours || "Horario sob consulta"}
         >
           {children}
         </AppChrome>
