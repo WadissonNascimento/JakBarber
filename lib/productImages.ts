@@ -9,6 +9,10 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const VALID_IMAGE_MESSAGE =
+  "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG ou WEBP.";
+const IMAGE_TYPE_MESSAGE = "Envie uma imagem JPG, PNG ou WEBP.";
+const UNSUPPORTED_IMAGE_EXTENSIONS = new Set(["heic", "heif"]);
 
 export { normalizeProductImageUrl };
 
@@ -28,6 +32,36 @@ function getStorageConfig() {
     serviceRoleKey,
     bucket,
   };
+}
+
+function getExtension(fileName: string | undefined) {
+  return String(fileName || "")
+    .split(".")
+    .pop()
+    ?.trim()
+    .toLowerCase();
+}
+
+function normalizeMimeType(type: string | undefined) {
+  const normalized = String(type || "").trim().toLowerCase();
+
+  return normalized === "image/jpg" ? "image/jpeg" : normalized;
+}
+
+function inferAllowedImageType(buffer: Buffer) {
+  if (hasAllowedImageSignature(buffer, "image/jpeg")) {
+    return "image/jpeg";
+  }
+
+  if (hasAllowedImageSignature(buffer, "image/png")) {
+    return "image/png";
+  }
+
+  if (hasAllowedImageSignature(buffer, "image/webp")) {
+    return "image/webp";
+  }
+
+  return null;
 }
 
 function hasAllowedImageSignature(buffer: Buffer, type: string) {
@@ -65,6 +99,17 @@ function normalizeStorageSegment(value: string | null | undefined) {
   return (value || "default").replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
+function logProductImageFailure(stage: string, file: File, error: unknown) {
+  console.warn("[product-image] Falha no upload do produto", {
+    stage,
+    fileName: file.name || "(sem nome)",
+    mime: file.type || "(sem mime)",
+    extension: getExtension(file.name) || "(sem extensao)",
+    size: file.size,
+    error: error instanceof Error ? error.message : String(error),
+  });
+}
+
 async function getValidatedImageBuffer(file: File) {
   if (!file || file.size === 0) {
     throw new Error("Selecione uma imagem para enviar.");
@@ -74,17 +119,35 @@ async function getValidatedImageBuffer(file: File) {
     throw new Error("A imagem deve ter no maximo 2MB.");
   }
 
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
+  const declaredType = normalizeMimeType(file.type);
+  const extension = getExtension(file.name);
+
+  if (
+    (declaredType && ["image/heic", "image/heif"].includes(declaredType)) ||
+    (extension && UNSUPPORTED_IMAGE_EXTENSIONS.has(extension))
+  ) {
+    throw new Error(IMAGE_TYPE_MESSAGE);
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const inferredType = inferAllowedImageType(buffer);
 
-  if (!hasAllowedImageSignature(buffer, file.type)) {
-    throw new Error("O arquivo enviado nao parece ser uma imagem valida.");
+  if (!inferredType) {
+    throw new Error(VALID_IMAGE_MESSAGE);
   }
 
-  return buffer;
+  if (
+    declaredType &&
+    !ALLOWED_IMAGE_TYPES.has(declaredType) &&
+    declaredType !== "application/octet-stream"
+  ) {
+    throw new Error(IMAGE_TYPE_MESSAGE);
+  }
+
+  return {
+    buffer,
+    mimeType: inferredType,
+  };
 }
 
 export async function uploadProductImage({
@@ -97,34 +160,43 @@ export async function uploadProductImage({
   file: File;
 }) {
   const { supabaseUrl, serviceRoleKey, bucket } = getStorageConfig();
-  const buffer = await getValidatedImageBuffer(file);
-  const processed = await processProductImageBuffer(buffer, file.type);
-  const extension = processed.extension;
-  const imagePath = `products/${normalizeStorageSegment(shopId)}/${productId}/${randomUUID()}.${extension}`;
-  const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
-    imagePath
-  )}`;
+  let stage = "validacao";
 
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Cache-Control": "31536000",
-      "Content-Type": processed.mimeType,
-      "x-upsert": "false",
-    },
-    body: new Uint8Array(processed.buffer),
-  });
+  try {
+    const { buffer, mimeType } = await getValidatedImageBuffer(file);
+    stage = "processamento";
+    const processed = await processProductImageBuffer(buffer, mimeType);
+    const extension = processed.extension;
+    const imagePath = `products/${normalizeStorageSegment(shopId)}/${productId}/${randomUUID()}.${extension}`;
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
+      imagePath
+    )}`;
 
-  if (!response.ok) {
-    throw new Error("Nao foi possivel enviar a imagem para o Supabase Storage.");
+    stage = "storage";
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Cache-Control": "31536000",
+        "Content-Type": processed.mimeType,
+        "x-upsert": "false",
+      },
+      body: new Uint8Array(processed.buffer),
+    });
+
+    if (!response.ok) {
+      throw new Error("Nao foi possivel enviar a imagem para o Supabase Storage.");
+    }
+
+    return {
+      imagePath,
+      imageUrl: buildPublicUrl(supabaseUrl, bucket, imagePath),
+    };
+  } catch (error) {
+    logProductImageFailure(stage, file, error);
+    throw error instanceof Error ? error : new Error(VALID_IMAGE_MESSAGE);
   }
-
-  return {
-    imagePath,
-    imageUrl: buildPublicUrl(supabaseUrl, bucket, imagePath),
-  };
 }
 
 export async function deleteProductImage(imagePath: string | null | undefined) {

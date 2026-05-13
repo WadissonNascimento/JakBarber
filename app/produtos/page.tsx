@@ -17,9 +17,6 @@ const getPublicProducts = unstable_cache(
       where: {
         shopId,
         isActive: true,
-        stock: {
-          gt: 0,
-        },
       },
       orderBy: {
         createdAt: "desc",

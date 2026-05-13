@@ -11,15 +11,11 @@ import {
   getProductCategoryLabel,
 } from "@/lib/productCategories";
 import { sanitizeTextInput, sanitizeTextareaInput } from "@/lib/inputSanitization";
-import {
-  prepareProductImageUpload,
-  prepareSecondaryProductImageUpload,
-} from "@/lib/productImageClient";
+import { prepareProductImageUpload } from "@/lib/productImageClient";
 import {
   deleteProduct,
   toggleProduct,
   updateProductFromForm,
-  updateProductImage,
 } from "@/app/actions/productActions";
 
 type PreparedImageUpload = {
@@ -53,7 +49,6 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
     price: product.price.toFixed(2),
   });
   const [imageUpload, setImageUpload] = useState<PreparedImageUpload | null>(null);
-  const [secondaryUploads, setSecondaryUploads] = useState<PreparedImageUpload[]>([]);
   const [feedback, setFeedback] = useState<{
     message: string | null;
     tone: "success" | "error" | "info";
@@ -68,12 +63,6 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
       }
     };
   }, [imageUpload]);
-
-  useEffect(() => {
-    return () => {
-      secondaryUploads.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
-    };
-  }, [secondaryUploads]);
 
   function runAction(
     key: string,
@@ -252,6 +241,69 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   </Field>
                 </div>
 
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <div className="grid grid-cols-[4rem_1fr] gap-3 sm:grid-cols-[4.5rem_1fr] sm:items-center">
+                    <ProductImage imageUrl={visibleImage} name={draft.name} />
+
+                    <div className="min-w-0">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                        Imagem principal de capa
+                      </p>
+                      <input
+                        id={`product-image-${product.id}`}
+                        name="image"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={async (event) => {
+                          const file = event.currentTarget.files?.[0];
+
+                          if (!file) {
+                            setImageUpload(null);
+                            return;
+                          }
+
+                          try {
+                            const prepared = await prepareProductImageUpload(file);
+                            setImageUpload((current) => {
+                              if (current?.previewUrl) {
+                                URL.revokeObjectURL(current.previewUrl);
+                              }
+
+                              return prepared;
+                            });
+                            setFeedback({ message: null, tone: "success" });
+                          } catch (error) {
+                            event.currentTarget.value = "";
+                            setImageUpload(null);
+                            setFeedback({
+                              message:
+                                error instanceof Error
+                                  ? error.message
+                                  : "Nao foi possivel preparar a imagem.",
+                              tone: "error",
+                            });
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <div className="grid gap-2">
+                        <label
+                          htmlFor={`product-image-${product.id}`}
+                          className="btn-primary min-h-10 w-full cursor-pointer rounded-xl shadow-none"
+                        >
+                          Escolher imagem
+                        </label>
+                        <p className="truncate text-xs text-zinc-500">
+                          {imageUpload?.file.name || "Nenhuma nova imagem selecionada"}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          A imagem sera salva junto com os dados do produto.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="service-action-stack">
                   <div className="service-action-row service-action-row-primary">
                     <button
@@ -271,210 +323,6 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   </div>
                 </div>
               </form>
-
-              <form
-                className="rounded-2xl border border-white/10 bg-black/20 p-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const formData = new FormData(event.currentTarget);
-
-                  if (!imageUpload) {
-                    setFeedback({
-                      message: "Selecione uma nova imagem para enviar.",
-                      tone: "error",
-                    });
-                    return;
-                  }
-
-                  formData.set("image", imageUpload.file);
-
-                  runAction(
-                    "image",
-                    () => updateProductImage(formData),
-                    "Imagem atualizada com sucesso."
-                  );
-                }}
-              >
-                <input type="hidden" name="productId" value={product.id} />
-
-                <div className="grid grid-cols-[4rem_1fr] gap-3 sm:grid-cols-[4.5rem_1fr] sm:items-center">
-                  <ProductImage imageUrl={visibleImage} name={draft.name} />
-
-                  <div className="min-w-0">
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
-                      Imagem principal de capa
-                    </p>
-                    <input
-                      id={`product-image-${product.id}`}
-                      name="image"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={async (event) => {
-                        const file = event.currentTarget.files?.[0];
-
-                        if (!file) {
-                          setImageUpload(null);
-                          return;
-                        }
-
-                        try {
-                          const prepared = await prepareProductImageUpload(file);
-                          setImageUpload((current) => {
-                            if (current?.previewUrl) {
-                              URL.revokeObjectURL(current.previewUrl);
-                            }
-
-                            return prepared;
-                          });
-                          setFeedback({ message: null, tone: "success" });
-                        } catch (error) {
-                          event.currentTarget.value = "";
-                          setImageUpload(null);
-                          setFeedback({
-                            message:
-                              error instanceof Error
-                                ? error.message
-                                : "Não foi possível preparar a imagem.",
-                            tone: "error",
-                          });
-                        }
-                      }}
-                      className="sr-only"
-                    />
-                    <div className="grid gap-2">
-                      <label
-                        htmlFor={`product-image-${product.id}`}
-                        className="btn-primary min-h-10 w-full cursor-pointer rounded-xl shadow-none"
-                      >
-                        Escolher imagem
-                      </label>
-                      <p className="truncate text-xs text-zinc-500">
-                        {imageUpload?.file.name || "Nenhuma imagem selecionada"}
-                      </p>
-                      <button
-                        type="submit"
-                        disabled={isPending && pendingKey === "image"}
-                        className="btn-secondary min-h-10 whitespace-nowrap"
-                      >
-                        {isPending && pendingKey === "image" ? "Enviando..." : "Trocar capa"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </form>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                <div className="block min-w-0">
-                  <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
-                    Imagens secundárias
-                  </span>
-                  <input
-                    id={`product-secondary-images-${product.id}`}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    onChange={async (event) => {
-                      const files = Array.from(event.currentTarget.files || []);
-
-                      if (!files.length) {
-                        setSecondaryUploads((current) => {
-                          current.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
-                          return [];
-                        });
-                        return;
-                      }
-
-                      try {
-                        const preparedUploads = await Promise.all(
-                          files
-                            .slice(0, 6)
-                            .map((file) => prepareSecondaryProductImageUpload(file))
-                        );
-
-                        setSecondaryUploads((current) => {
-                          const nextUploads = [...current, ...preparedUploads];
-                          const visibleUploads = nextUploads.slice(0, 6);
-                          nextUploads
-                            .slice(6)
-                            .forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
-                          return visibleUploads;
-                        });
-                        event.currentTarget.value = "";
-                        setFeedback({ message: null, tone: "success" });
-                      } catch (error) {
-                        event.currentTarget.value = "";
-                        setSecondaryUploads((current) => {
-                          current.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
-                          return [];
-                        });
-                        setFeedback({
-                          message:
-                            error instanceof Error
-                              ? error.message
-                              : "Não foi possível preparar as imagens secundárias.",
-                          tone: "error",
-                        });
-                      }
-                    }}
-                    className="sr-only"
-                  />
-                  <div className="grid gap-2">
-                    <label
-                      htmlFor={`product-secondary-images-${product.id}`}
-                      className="btn-primary min-h-10 w-full cursor-pointer rounded-xl shadow-none"
-                    >
-                      Escolher imagens
-                    </label>
-                    <p className="truncate text-xs text-zinc-500">
-                      {secondaryUploads.length
-                        ? `${secondaryUploads.length} imagem(ns) selecionada(s)`
-                        : "Nenhuma imagem selecionada"}
-                    </p>
-                  </div>
-                </div>
-
-                {secondaryUploads.length ? (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {secondaryUploads.map((upload, index) => (
-                      <div
-                        key={`${upload.file.name}-${index}`}
-                        className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-[#edf1f7]"
-                      >
-                        <img
-                          src={upload.previewUrl}
-                          loading="lazy"
-                          decoding="async"
-                          alt={`Imagem secundária ${index + 1}`}
-                          className="h-full w-full object-contain"
-                        />
-                        <button
-                          type="button"
-                          aria-label={`Remover imagem secundária ${index + 1}`}
-                          onClick={() => {
-                            setSecondaryUploads((current) => {
-                              const target = current[index];
-                              if (target) {
-                                URL.revokeObjectURL(target.previewUrl);
-                              }
-
-                              return current.filter(
-                                (_, currentIndex) => currentIndex !== index
-                              );
-                            });
-                          }}
-                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-black/75 text-sm font-bold leading-none text-white shadow-lg"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                <p className="mt-2 text-xs text-zinc-500">
-                  Seleção preparada para a próxima etapa de exibição do catálogo.
-                </p>
-              </div>
 
               <div className="service-action-row service-action-row-danger">
                 <button

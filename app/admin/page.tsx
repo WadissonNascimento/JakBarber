@@ -16,6 +16,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import AccountPasswordForm from "@/components/AccountPasswordForm";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
+import AdminProfileForm from "./AdminProfileForm";
 import { updateOwnAccountPasswordAction } from "@/app/accountPasswordActions";
 import {
   getCurrentScheduleDateValue,
@@ -41,6 +42,16 @@ export default async function AdminPage() {
   }
 
   await ensureAdminBarberProfile(session.user.shopId);
+  const adminProfile = await prisma.user.findUnique({
+    where: {
+      id: session.user.id,
+    },
+    select: {
+      name: true,
+      email: true,
+      phone: true,
+    },
+  });
 
   const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange();
@@ -244,7 +255,12 @@ export default async function AdminPage() {
           </div>
         </section>
 
-        <section className="mt-4 max-w-xl">
+        <section className="mt-4 grid max-w-5xl gap-4 lg:grid-cols-2">
+          <AdminProfileForm
+            name={adminProfile?.name || ""}
+            email={adminProfile?.email || ""}
+            phone={adminProfile?.phone || null}
+          />
           <AccountPasswordForm
             action={updateOwnAccountPasswordAction}
             title="Senha do admin"

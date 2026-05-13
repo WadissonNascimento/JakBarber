@@ -10,9 +10,39 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const ALLOWED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+const UNSUPPORTED_IMAGE_EXTENSIONS = new Set(["heic", "heif"]);
+
+function getExtension(fileName: string | undefined) {
+  return String(fileName || "")
+    .split(".")
+    .pop()
+    ?.trim()
+    .toLowerCase();
+}
+
+function normalizeMimeType(type: string | undefined) {
+  const normalized = String(type || "").trim().toLowerCase();
+
+  return normalized === "image/jpg" ? "image/jpeg" : normalized;
+}
 
 function validateProductImage(file: File) {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+  const mimeType = normalizeMimeType(file.type);
+  const extension = getExtension(file.name);
+
+  if (
+    (mimeType && ["image/heic", "image/heif"].includes(mimeType)) ||
+    (extension && UNSUPPORTED_IMAGE_EXTENSIONS.has(extension))
+  ) {
+    throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
+  }
+
+  if (
+    mimeType &&
+    !ALLOWED_IMAGE_TYPES.has(mimeType) &&
+    !(extension && ALLOWED_IMAGE_EXTENSIONS.has(extension))
+  ) {
     throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
   }
 }
@@ -266,7 +296,15 @@ function drawStandardizedProduct(
 export async function prepareProductImageUpload(file: File) {
   validateProductImage(file);
 
-  const bitmap = await createImageBitmap(file);
+  let bitmap: ImageBitmap;
+
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(
+      "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG ou WEBP."
+    );
+  }
   const canvas = document.createElement("canvas");
   canvas.width = OUTPUT_IMAGE_SIZE;
   canvas.height = OUTPUT_IMAGE_SIZE;
@@ -305,7 +343,15 @@ export async function prepareProductImageUpload(file: File) {
 export async function prepareSecondaryProductImageUpload(file: File) {
   validateProductImage(file);
 
-  const bitmap = await createImageBitmap(file);
+  let bitmap: ImageBitmap;
+
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(
+      "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG ou WEBP."
+    );
+  }
   const canvas = document.createElement("canvas");
   const maxSize = OUTPUT_IMAGE_SIZE;
   const scale = Math.min(maxSize / bitmap.width, maxSize / bitmap.height, 1);

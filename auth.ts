@@ -5,7 +5,11 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
-import { isGoogleSignInConfigured } from "@/lib/googleAuth";
+import {
+  getGoogleClientId,
+  getGoogleClientSecret,
+  isGoogleSignInConfigured,
+} from "@/lib/googleAuth";
 import { verifyRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
 import { DEFAULT_SHOP_ID, getCurrentShopId } from "@/lib/shop";
 
@@ -18,14 +22,15 @@ function getGoogleProviders() {
 
   return [
     Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      clientId: getGoogleClientId(),
+      clientSecret: getGoogleClientSecret(),
     }),
   ];
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  trustHost: true,
 
   providers: [
     Credentials({
@@ -152,9 +157,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
 
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
-      });
+      const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
+      const existingUser =
+        (await prisma.user.findFirst({
+          where: { email, shopId },
+        })) ||
+        (await prisma.user.findUnique({
+          where: { email },
+        }));
 
       if (existingUser) {
         if (!existingUser.isActive) {
@@ -175,8 +185,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return true;
       }
-
-      const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
 
       await prisma.user.create({
         data: {
@@ -200,9 +208,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (params.account?.provider === "google" && params.user?.email) {
         const email = String(params.user.email).trim().toLowerCase();
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+        const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
+        const user =
+          (await prisma.user.findFirst({
+            where: { email, shopId },
+          })) ||
+          (await prisma.user.findUnique({
+            where: { email },
+          }));
 
         if (user) {
           token.id = user.id;
