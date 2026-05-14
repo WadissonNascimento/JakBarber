@@ -6,6 +6,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import type { CSSProperties } from "react";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
@@ -100,6 +101,35 @@ export default async function RootLayout({
 
   const brandName = shop.name || "Barbearia";
   const logoPath = shop.logoPath || "";
+  const tenantBrandStyle =
+    shop.id === "shop_rodrigo_style"
+      ? ({
+          "--app-bg": "#f8f5ef",
+          "--app-gradient-start": "#fafaf7",
+          "--app-gradient-mid": "#f8f5ef",
+          "--app-gradient-end": "#efe7d8",
+          "--panel-bg": "#ffffff",
+          "--panel-bg-strong": "#ffffff",
+          "--panel-border": "#e6dfd2",
+          "--surface-soft": "rgba(255, 255, 255, 0.76)",
+          "--text-primary": "#111111",
+          "--text-secondary": "#5f5f5f",
+          "--text-muted": "#767064",
+          "--brand": "#c9972b",
+          "--brand-strong": "#0b0b0b",
+          "--brand-muted": "rgba(201, 151, 43, 0.16)",
+          "--site-header-bg": "rgba(255, 255, 255, 0.96)",
+          "--site-header-border": "#e6dfd2",
+          "--site-header-text": "#0b0b0b",
+          "--site-header-muted": "#5f5f5f",
+          "--site-header-link": "#222222",
+          "--site-header-link-hover": "#0b0b0b",
+          "--site-header-active-text": "#0b0b0b",
+          "--site-header-control-bg": "#ffffff",
+          "--site-header-control-border": "#d8cfbf",
+          "--site-header-control-text": "#0b0b0b",
+        } as CSSProperties)
+      : undefined;
   const customerPhone =
     role === "CUSTOMER" && session?.user?.id
       ? (
@@ -115,6 +145,8 @@ export default async function RootLayout({
     <html lang="pt-BR">
       <body
         className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[var(--app-bg)] text-[var(--text-primary)]`}
+        data-shop-id={shop.id}
+        style={tenantBrandStyle}
       >
         <ClientRuntimeGuard />
         <AppChrome

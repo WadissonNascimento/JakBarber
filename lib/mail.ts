@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-import path from "path";
 import { Prisma } from "@prisma/client";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import {
@@ -15,9 +14,8 @@ import {
 } from "@/lib/email/customerTemplates";
 import { basePrisma } from "@/lib/prisma-core";
 import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
+import { getShopEmailIdentity } from "@/lib/shopEmailIdentity";
 
-const LOGO_CID = "jak-barber-logo";
-export const DEFAULT_EMAIL_LOGO_CID = LOGO_CID;
 const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 export type EmailDeliveryMetadata = Prisma.InputJsonValue;
@@ -31,6 +29,8 @@ export type SendEmailMessageInput = {
   eventKey: string;
   shopId?: string;
   recipientUserId?: string | null;
+  fromName?: string;
+  replyTo?: string;
   metadata?: EmailDeliveryMetadata;
   attachments?: Array<{
     filename: string;
@@ -43,23 +43,29 @@ export type SendEmailMessageInput = {
 const DEFAULT_SHOP_NAME = "Barbearia";
 const DEFAULT_BRAND_COLOR = "#0ea5e9";
 
-function formatFromAddress(from: string) {
+function sanitizeEmailHeaderText(value: string | null | undefined) {
+  return value?.replace(/[\r\n<>"]/g, "").trim() || "";
+}
+
+function extractEmailAddress(from: string) {
+  const match = from.match(/<([^>]+)>/);
+  return (match?.[1] || from).trim();
+}
+
+function formatFromAddress(from: string, fromName?: string) {
+  const safeFromName = sanitizeEmailHeaderText(fromName);
+
+  if (safeFromName) {
+    return `${safeFromName} <${extractEmailAddress(from)}>`;
+  }
+
   return from.includes("<") ? from : `Atendimento <${from}>`;
 }
 
-function getLogoAttachment() {
-  return {
-    filename: "logo.png",
-    path: path.join(process.cwd(), "public", "logo.png"),
-    cid: LOGO_CID,
-  };
-}
-
-export function getDefaultLogoAttachment() {
-  return getLogoAttachment();
-}
-
-function resolveEmailLogoUrl(logoPath: string | null | undefined) {
+function resolveEmailLogoUrl(
+  logoPath: string | null | undefined,
+  shop?: { primaryDomain?: string | null } | null
+) {
   const value = logoPath?.trim();
 
   if (!value) {
@@ -70,7 +76,7 @@ function resolveEmailLogoUrl(logoPath: string | null | undefined) {
     return value;
   }
 
-  const appUrl = getConfiguredAppUrl();
+  const appUrl = getShopAppUrl(shop);
   const normalizedPath = value.startsWith("/") ? value : `/${value}`;
   return `${appUrl}${normalizedPath}`;
 }
@@ -87,6 +93,7 @@ function getShopAppUrl(shop: { primaryDomain?: string | null } | null | undefine
 
 function buildCustomerThemeFromShop(shop: {
   name?: string | null;
+  primaryDomain?: string | null;
   logoPath?: string | null;
   brandColor?: string | null;
   addressLine?: string | null;
@@ -94,7 +101,7 @@ function buildCustomerThemeFromShop(shop: {
 }): CustomerEmailTheme {
   return {
     nomeBarbearia: shop.name?.trim() || DEFAULT_SHOP_NAME,
-    logoBarbearia: resolveEmailLogoUrl(shop.logoPath),
+    logoBarbearia: resolveEmailLogoUrl(shop.logoPath, shop),
     corPrimaria: shop.brandColor?.trim() || DEFAULT_BRAND_COLOR,
     enderecoBarbearia: shop.addressLine || null,
     telefoneBarbearia: shop.whatsappNumber || null,
@@ -103,21 +110,24 @@ function buildCustomerThemeFromShop(shop: {
 
 async function getCurrentCustomerEmailTheme() {
   const shop = await getCurrentShop().catch(() => null);
+  const emailIdentity = getShopEmailIdentity(shop?.id);
 
   return {
     shopId: shop?.id || DEFAULT_SHOP_ID,
     appUrl: getShopAppUrl(shop),
     theme: buildCustomerThemeFromShop({
       name: shop?.name,
+      primaryDomain: shop?.primaryDomain,
       logoPath: shop?.logoPath,
       brandColor: shop?.brandColor,
       addressLine: shop?.addressLine,
       whatsappNumber: shop?.whatsappNumber,
     }),
+    emailIdentity,
   };
 }
 
-function getMailConfig() {
+function getGlobalMailConfig() {
   const host = process.env.EMAIL_SERVER_HOST;
   const port = Number(process.env.EMAIL_SERVER_PORT || "587");
   const user = process.env.EMAIL_SERVER_USER;
@@ -135,6 +145,23 @@ function getMailConfig() {
     pass,
     from,
   };
+}
+
+function getMailConfig(shopId?: string) {
+  const globalConfig = getGlobalMailConfig();
+  const smtp = getShopEmailIdentity(shopId).smtp;
+
+  if (smtp?.user && smtp.pass) {
+    return {
+      host: smtp.host || globalConfig.host,
+      port: smtp.port || globalConfig.port,
+      user: smtp.user,
+      pass: smtp.pass,
+      from: smtp.from || smtp.user,
+    };
+  }
+
+  return globalConfig;
 }
 
 function shouldUseConsoleMailFallback() {
@@ -271,19 +298,25 @@ async function recordEmailDeliveryAttempt({
 }
 
 async function sendMailOnce({
+  shopId,
   to,
   subject,
   text,
   html,
   attachments,
+  fromName,
+  replyTo,
 }: {
+  shopId?: string;
   to: string;
   subject: string;
   text: string;
   html: string;
   attachments?: SendEmailMessageInput["attachments"];
+  fromName?: string;
+  replyTo?: string;
 }) {
-  const config = getMailConfig();
+  const config = getMailConfig(shopId);
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -294,13 +327,16 @@ async function sendMailOnce({
     },
   });
 
+  const safeReplyTo = replyTo?.trim();
+
   await transporter.sendMail({
-    from: formatFromAddress(config.from),
+    from: formatFromAddress(config.from, fromName),
     to,
     subject,
     text,
     html,
-    attachments: attachments?.length ? attachments : [getLogoAttachment()],
+    replyTo: safeReplyTo && isValidEmailAddress(safeReplyTo) ? safeReplyTo : undefined,
+    attachments: attachments?.length ? attachments : undefined,
   });
 }
 
@@ -313,6 +349,8 @@ export async function sendEmailMessage({
   eventKey,
   shopId = DEFAULT_SHOP_ID,
   recipientUserId,
+  fromName,
+  replyTo,
   metadata,
   attachments,
   maxAttempts = 2,
@@ -367,11 +405,14 @@ export async function sendEmailMessage({
 
     try {
       await sendMailOnce({
+        shopId,
         to: recipientEmail,
         subject,
         text,
         html,
         attachments,
+        fromName,
+        replyTo,
       });
 
       await recordEmailDeliveryAttempt({
@@ -558,6 +599,7 @@ async function sendAppointmentCustomerEmail(
 ) {
   const data = buildCustomerAppointmentTemplateData(payload);
   const rendered = render(data);
+  const emailIdentity = getShopEmailIdentity(payload.shopId);
 
   await sendEmailMessage({
     to: payload.to,
@@ -574,7 +616,8 @@ async function sendAppointmentCustomerEmail(
       appointmentCode: payload.appointmentCode,
       eventName,
     },
-    attachments: [getLogoAttachment()],
+    fromName: emailIdentity.fromName,
+    replyTo: emailIdentity.replyTo,
   });
 }
 
@@ -649,7 +692,7 @@ export async function sendVerificationCodeEmail({
   verifyUrl?: string;
   accountLabel?: string;
 }) {
-  const { shopId, theme } = await getCurrentCustomerEmailTheme();
+  const { shopId, theme, emailIdentity } = await getCurrentCustomerEmailTheme();
 
   if (shouldUseConsoleMailFallback()) {
     logDevelopmentEmail({
@@ -680,7 +723,8 @@ export async function sendVerificationCodeEmail({
     metadata: {
       accountLabel,
     },
-    attachments: [getLogoAttachment()],
+    fromName: emailIdentity.fromName,
+    replyTo: emailIdentity.replyTo,
   });
 
   if (!result.sent) {
@@ -697,7 +741,7 @@ export async function sendPasswordResetCodeEmail({
   name: string;
   code: string;
 }) {
-  const { shopId, appUrl, theme } = await getCurrentCustomerEmailTheme();
+  const { shopId, appUrl, theme, emailIdentity } = await getCurrentCustomerEmailTheme();
 
   if (shouldUseConsoleMailFallback()) {
     logDevelopmentEmail({
@@ -730,7 +774,8 @@ export async function sendPasswordResetCodeEmail({
     metadata: {
       resetRequested: true,
     },
-    attachments: [getLogoAttachment()],
+    fromName: emailIdentity.fromName,
+    replyTo: emailIdentity.replyTo,
   });
 
   if (!result.sent) {

@@ -1,4 +1,4 @@
-const DEFAULT_EMAIL_LOGO_CID = "jak-barber-logo";
+const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 export type CustomerEmailTheme = {
   nomeBarbearia: string;
@@ -73,7 +73,7 @@ function brandColor(theme: CustomerEmailTheme) {
 }
 
 function logoSource(theme: CustomerEmailTheme) {
-  return theme.logoBarbearia || `cid:${DEFAULT_EMAIL_LOGO_CID}`;
+  return theme.logoBarbearia || TRANSPARENT_LOGO_DATA_URI;
 }
 
 export function Button({

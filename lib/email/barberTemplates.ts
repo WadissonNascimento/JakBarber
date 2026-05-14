@@ -1,5 +1,3 @@
-import { DEFAULT_EMAIL_LOGO_CID } from "@/lib/mail";
-
 export type BarberEmailTheme = {
   nomeBarbearia: string;
   logoBarbearia?: string;
@@ -63,6 +61,7 @@ const CARD_DARK = "#0f172a";
 const BORDER = "rgba(148, 163, 184, 0.22)";
 const TEXT_MUTED = "#94a3b8";
 const TEXT_SOFT = "#cbd5e1";
+const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
 
 function escapeHtml(value: string) {
   return value
@@ -78,7 +77,7 @@ function clean(value: string | null | undefined, fallback = "Nao informado") {
 }
 
 function logoSource(theme: BarberEmailTheme) {
-  return theme.logoBarbearia || `cid:${DEFAULT_EMAIL_LOGO_CID}`;
+  return theme.logoBarbearia || TRANSPARENT_LOGO_DATA_URI;
 }
 
 function renderButton(label: string, href: string, color: string) {

@@ -13,11 +13,9 @@ import {
 } from "@/lib/email/barberTemplates";
 import { getAppointmentDisplayName } from "@/lib/appointmentServices";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
-import {
-  getDefaultLogoAttachment,
-  sendEmailMessage,
-} from "@/lib/mail";
+import { sendEmailMessage } from "@/lib/mail";
 import { basePrisma } from "@/lib/prisma-core";
+import { getShopEmailIdentity } from "@/lib/shopEmailIdentity";
 import {
   formatScheduleDate,
   formatScheduleTime,
@@ -209,6 +207,7 @@ async function sendBarberAppointmentEmail({
     }
 
     const rendered = render(appointment, data);
+    const emailIdentity = getShopEmailIdentity(appointment.shop.id);
 
     await sendEmailMessage({
       to: appointment.barber.email,
@@ -224,7 +223,8 @@ async function sendBarberAppointmentEmail({
         barberId: appointment.barber.id,
         customerId: appointment.customerId,
       },
-      attachments: [getDefaultLogoAttachment()],
+      fromName: emailIdentity.fromName,
+      replyTo: emailIdentity.replyTo,
     });
 
     return true;
@@ -358,6 +358,8 @@ export async function notifyBarberNewReview(reviewId: string) {
       comentario: review.comment,
     });
 
+    const emailIdentity = getShopEmailIdentity(review.shop.id);
+
     await sendEmailMessage({
       to: review.barber.email,
       subject: rendered.subject,
@@ -374,7 +376,8 @@ export async function notifyBarberNewReview(reviewId: string) {
         customerId: review.customerId,
         rating: review.rating,
       },
-      attachments: [getDefaultLogoAttachment()],
+      fromName: emailIdentity.fromName,
+      replyTo: emailIdentity.replyTo,
     });
 
     return true;
@@ -510,6 +513,7 @@ export async function sendDailyBarberAgendaEmails({
       atendimentos: appointments.map(toAgendaItem),
     });
 
+    const emailIdentity = getShopEmailIdentity(barber.shop.id);
     const result = await sendEmailMessage({
       to: barber.email || "",
       subject: rendered.subject,
@@ -524,7 +528,8 @@ export async function sendDailyBarberAgendaEmails({
         date,
         appointmentCount: appointments.length,
       },
-      attachments: [getDefaultLogoAttachment()],
+      fromName: emailIdentity.fromName,
+      replyTo: emailIdentity.replyTo,
     });
 
     if (result.sent) {
