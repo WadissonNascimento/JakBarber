@@ -194,7 +194,9 @@ function DefaultHomeClient({
             <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
               Seu estilo começa aqui.
             </h1>
+          </div>
 
+          <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
             <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">
               Agende seu horário com praticidade e tenha uma experiência premium
               na {brandName}.
@@ -301,7 +303,7 @@ function DefaultHomeClient({
             </div>
           </div>
 
-          <div className="order-3 grid gap-3 sm:grid-cols-3 lg:hidden">
+          <div className="order-4 grid gap-3 sm:grid-cols-3 lg:hidden">
             <div className="surface-card rounded-lg p-4">
               <p className="text-xs text-[var(--brand-strong)]">Local</p>
               <p className="mt-2 text-sm text-zinc-200">{addressLine}</p>
