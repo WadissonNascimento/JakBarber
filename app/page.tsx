@@ -142,9 +142,10 @@ export default async function HomePage() {
   const shop = await getCurrentShop();
   const shopId = shop.id;
   const shouldLoadTenantPublicData = shopId === "shop_rodrigo_style";
+  const shouldLoadTenantHomeImages = shopId === "shop_rodrigo_style";
   const [reviews, images, publicData] = await Promise.all([
     getHomeReviews(shopId),
-    getHomeImages(shopId),
+    shouldLoadTenantHomeImages ? getHomeImages(shopId) : Promise.resolve([]),
     shouldLoadTenantPublicData
       ? getHomePublicData(shopId)
       : Promise.resolve({ services: [], barbers: [], products: [] }),

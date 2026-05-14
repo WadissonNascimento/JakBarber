@@ -190,7 +190,7 @@ function DefaultHomeClient({
 
       <section className="mx-auto max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-10">
         <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
-          <div className="order-1 min-w-0 lg:order-1">
+          <div className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
             <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
               Seu estilo começa aqui.
             </h1>
@@ -216,7 +216,7 @@ function DefaultHomeClient({
               </Link>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="mt-8 hidden gap-3 sm:grid-cols-3 lg:grid">
               <div className="surface-card rounded-lg p-4">
                 <p className="text-xs text-[var(--brand-strong)]">Local</p>
                 <p className="mt-2 text-sm text-zinc-200">{addressLine}</p>
@@ -234,7 +234,7 @@ function DefaultHomeClient({
             </div>
           </div>
 
-          <div className="order-1 mx-auto w-full max-w-[560px] lg:order-2 lg:max-w-none">
+          <div className="order-2 mx-auto w-full max-w-[560px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none">
             <div className="relative">
               <div className="surface-card-strong relative overflow-hidden rounded-2xl p-2">
                 <div
@@ -298,6 +298,23 @@ function DefaultHomeClient({
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="order-3 grid gap-3 sm:grid-cols-3 lg:hidden">
+            <div className="surface-card rounded-lg p-4">
+              <p className="text-xs text-[var(--brand-strong)]">Local</p>
+              <p className="mt-2 text-sm text-zinc-200">{addressLine}</p>
+            </div>
+
+            <div className="surface-card rounded-lg p-4">
+              <p className="text-xs text-[var(--brand-strong)]">Horário</p>
+              <p className="mt-2 text-sm text-zinc-200">{businessHours}</p>
+            </div>
+
+            <div className="surface-card rounded-lg p-4">
+              <p className="text-xs text-[var(--brand-strong)]">Atendimento</p>
+              <p className="mt-2 text-sm text-zinc-200">Com hora marcada</p>
             </div>
           </div>
         </div>
