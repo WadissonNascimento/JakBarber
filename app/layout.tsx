@@ -150,6 +150,7 @@ export default async function RootLayout({
       >
         <ClientRuntimeGuard />
         <AppChrome
+          shopId={shop.id}
           brandName={brandName}
           logoPath={logoPath}
           publicEyebrow={brandName}

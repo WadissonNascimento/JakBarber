@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 
 type AppChromeProps = {
   children: React.ReactNode;
+  shopId: string;
   brandName: string;
   logoPath: string;
   publicEyebrow: string;
@@ -20,6 +21,7 @@ type AppChromeProps = {
 
 export default function AppChrome({
   children,
+  shopId,
   brandName,
   logoPath,
   publicEyebrow,
@@ -41,6 +43,7 @@ export default function AppChrome({
   return (
     <div className="flex min-h-screen flex-col">
       <Header
+        shopId={shopId}
         brandName={brandName}
         logoPath={logoPath}
         publicEyebrow={publicEyebrow}
