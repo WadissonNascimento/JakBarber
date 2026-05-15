@@ -76,11 +76,14 @@ export default function ClientsDirectoryClient({
               <div className="flex min-h-11 flex-1 items-center gap-2 rounded-xl bg-white/[0.035] px-3">
                 <Search className="h-4 w-4 shrink-0 text-zinc-500" />
                 <input
-                  type="text"
+                  type="search"
+                  inputMode="search"
+                  enterKeyHint="search"
                   name="q"
                   value={query}
                   onChange={(event) => setQuery(sanitizeSearchInput(event.target.value))}
-                  placeholder="Nome, e-mail ou telefone"
+                  placeholder="Nome, e-mail ou numero"
+                  autoComplete="off"
                   className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
                 />
               </div>

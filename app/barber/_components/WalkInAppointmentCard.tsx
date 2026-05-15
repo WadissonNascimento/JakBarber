@@ -928,9 +928,14 @@ function ClientPickerPopup({
           <div className="mt-4 flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3">
             <Search className="h-4 w-4 shrink-0 text-zinc-500" />
             <input
+              name="clientSearch"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Nome, telefone ou e-mail"
+              placeholder="Nome, numero ou e-mail"
+              autoComplete="off"
               className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
               autoFocus
             />

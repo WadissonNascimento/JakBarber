@@ -75,6 +75,16 @@ function isTextLikeInput(element: Element): element is HTMLInputElement {
 
 function isPhoneInput(element: HTMLInputElement) {
   const marker = `${element.name} ${element.id} ${element.placeholder}`.toLowerCase();
+
+  if (
+    element.type === "search" ||
+    marker.includes("search") ||
+    marker.includes("busca") ||
+    marker.includes("buscar")
+  ) {
+    return false;
+  }
+
   return element.type === "tel" || marker.includes("phone") || marker.includes("telefone");
 }
 
