@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { NextResponse } from "next/server";
 import { getPostLoginRedirect } from "@/lib/authRedirect";
+import { isWrTechInstitutionalHost } from "@/lib/wrTechInstitutional";
 
 const { auth } = NextAuth(authConfig);
 
@@ -10,6 +11,15 @@ export default auth((req) => {
   const pathname = req.nextUrl.pathname;
   const role = req.auth?.user?.role;
   const isHomePage = pathname === "/";
+  const isWrTechInstitutionalHome =
+    isHomePage &&
+    isWrTechInstitutionalHost(
+      req.headers.get("x-forwarded-host") || req.headers.get("host")
+    );
+
+  if (isWrTechInstitutionalHome) {
+    return NextResponse.next();
+  }
 
   const isAuthPage =
     pathname === "/login" ||

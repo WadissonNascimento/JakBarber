@@ -10,6 +10,11 @@ import type { CSSProperties } from "react";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
+import {
+  WR_TECH_LOGO_PATH,
+  WR_TECH_SITE_URL,
+} from "@/lib/wrTechInstitutional";
+import { isWrTechInstitutionalRequest } from "@/lib/wrTechInstitutionalServer";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -22,6 +27,37 @@ const headingFont = Space_Grotesk({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (await isWrTechInstitutionalRequest()) {
+    const title = "WR Tech Solutions | Sistema para barbearias";
+    const description =
+      "Sistema SaaS para barbearias com agendamento online, painel do barbeiro, painel administrativo, financeiro e gestao profissional.";
+
+    return {
+      metadataBase: new URL(WR_TECH_SITE_URL),
+      title: {
+        default: title,
+        template: "%s",
+      },
+      description,
+      openGraph: {
+        title,
+        description,
+        url: "/",
+        siteName: "WR Tech Solutions",
+        images: [
+          {
+            url: WR_TECH_LOGO_PATH,
+            width: 1200,
+            height: 630,
+            alt: "WR Tech Solutions",
+          },
+        ],
+        locale: "pt_BR",
+        type: "website",
+      },
+    };
+  }
+
   const shop = await getCurrentShop();
   const brandName = shop.name || "Barbearia";
   const description =
@@ -87,6 +123,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  if (await isWrTechInstitutionalRequest()) {
+    return (
+      <html lang="pt-BR">
+        <body
+          className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[#05070b] text-white`}
+          data-site="wr-tech-solutions"
+        >
+          <ClientRuntimeGuard />
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   const session = await auth();
   const shop = await getCurrentShop();
   const role =

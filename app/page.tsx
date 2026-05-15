@@ -2,6 +2,8 @@ import { unstable_cache } from "next/cache";
 import { basePrisma } from "@/lib/prisma-core";
 import { toMoneyNumber } from "@/lib/money";
 import { getCurrentShop } from "@/lib/shop";
+import { isWrTechInstitutionalRequest } from "@/lib/wrTechInstitutionalServer";
+import WrTechSolutionsLanding from "./WrTechSolutionsLanding";
 import HomeClient, {
   type HomeBarber,
   type HomeProduct,
@@ -139,6 +141,10 @@ const getHomePublicData = unstable_cache(
 );
 
 export default async function HomePage() {
+  if (await isWrTechInstitutionalRequest()) {
+    return <WrTechSolutionsLanding />;
+  }
+
   const shop = await getCurrentShop();
   const shopId = shop.id;
   const shouldLoadTenantPublicData = shopId === "shop_rodrigo_style";
