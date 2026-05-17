@@ -1,55 +1,60 @@
 import "server-only";
 
+import { basePrisma } from "@/lib/prisma-core";
+
 export type ShopEmailIdentity = {
   fromName?: string;
   replyTo?: string;
-  smtp?: {
-    host?: string;
-    port?: number;
-    user?: string;
-    pass?: string;
-    from?: string;
-  };
+  notificationEmail?: string;
 };
 
-function optionalNumber(value: string | undefined) {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+function normalizeOptionalEmail(value: string | null | undefined) {
+  const trimmed = value?.trim().toLowerCase();
+  return trimmed || undefined;
 }
 
-const RODRIGO_STYLE_REPLY_TO =
-  process.env.RODRIGO_STYLE_REPLY_TO || "rodrigostylebarbearia@gmail.com";
+function normalizeOptionalText(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
+}
 
-const SHOP_EMAIL_IDENTITIES: Record<string, ShopEmailIdentity> = {
-  shop_jak_barber: {
-    fromName: process.env.JAKBARBER_EMAIL_FROM_NAME || "Jak Barber",
-    replyTo: process.env.JAKBARBER_REPLY_TO || "jakcompanybarbearia@gmail.com",
-  },
-  shop_rodrigo_style: {
-    fromName: process.env.RODRIGO_STYLE_EMAIL_FROM_NAME || "Rodrigo Style",
-    replyTo: RODRIGO_STYLE_REPLY_TO,
-    smtp: {
-      host: process.env.RODRIGO_STYLE_EMAIL_SERVER_HOST,
-      port: optionalNumber(process.env.RODRIGO_STYLE_EMAIL_SERVER_PORT),
-      user: process.env.RODRIGO_STYLE_EMAIL_SERVER_USER,
-      pass: process.env.RODRIGO_STYLE_EMAIL_SERVER_PASS,
-      from:
-        process.env.RODRIGO_STYLE_EMAIL_FROM ||
-        (process.env.RODRIGO_STYLE_EMAIL_SERVER_USER
-          ? `${process.env.RODRIGO_STYLE_EMAIL_FROM_NAME || "Rodrigo Style"} <${process.env.RODRIGO_STYLE_EMAIL_SERVER_USER}>`
-          : undefined),
-    },
-  },
-};
-
-export function getShopEmailIdentity(shopId: string | null | undefined) {
+export async function getShopEmailIdentity(shopId: string | null | undefined) {
   if (!shopId) {
     return {};
   }
 
-  return SHOP_EMAIL_IDENTITIES[shopId] || {};
+  try {
+    const shop = await basePrisma.shop.findUnique({
+      where: {
+        id: shopId,
+      },
+      select: {
+        name: true,
+        emailSettings: {
+          select: {
+            fromName: true,
+            replyToEmail: true,
+            notificationEmail: true,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      return {};
+    }
+
+    return {
+      fromName: normalizeOptionalText(shop.emailSettings?.fromName) || normalizeOptionalText(shop.name),
+      replyTo: normalizeOptionalEmail(shop.emailSettings?.replyToEmail),
+      notificationEmail: normalizeOptionalEmail(shop.emailSettings?.notificationEmail),
+    };
+  } catch (error) {
+    console.warn(
+      `[email] Nao foi possivel carregar identidade de email da shop ${shopId}: ${
+        error instanceof Error ? error.message : "erro desconhecido"
+      }`
+    );
+    return {};
+  }
 }

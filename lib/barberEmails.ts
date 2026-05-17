@@ -207,7 +207,7 @@ async function sendBarberAppointmentEmail({
     }
 
     const rendered = render(appointment, data);
-    const emailIdentity = getShopEmailIdentity(appointment.shop.id);
+    const emailIdentity = await getShopEmailIdentity(appointment.shop.id);
 
     await sendEmailMessage({
       to: appointment.barber.email,
@@ -358,7 +358,7 @@ export async function notifyBarberNewReview(reviewId: string) {
       comentario: review.comment,
     });
 
-    const emailIdentity = getShopEmailIdentity(review.shop.id);
+    const emailIdentity = await getShopEmailIdentity(review.shop.id);
 
     await sendEmailMessage({
       to: review.barber.email,
@@ -513,7 +513,7 @@ export async function sendDailyBarberAgendaEmails({
       atendimentos: appointments.map(toAgendaItem),
     });
 
-    const emailIdentity = getShopEmailIdentity(barber.shop.id);
+    const emailIdentity = await getShopEmailIdentity(barber.shop.id);
     const result = await sendEmailMessage({
       to: barber.email || "",
       subject: rendered.subject,

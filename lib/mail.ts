@@ -110,7 +110,7 @@ function buildCustomerThemeFromShop(shop: {
 
 async function getCurrentCustomerEmailTheme() {
   const shop = await getCurrentShop().catch(() => null);
-  const emailIdentity = getShopEmailIdentity(shop?.id);
+  const emailIdentity = await getShopEmailIdentity(shop?.id);
 
   return {
     shopId: shop?.id || DEFAULT_SHOP_ID,
@@ -147,21 +147,8 @@ function getGlobalMailConfig() {
   };
 }
 
-function getMailConfig(shopId?: string) {
-  const globalConfig = getGlobalMailConfig();
-  const smtp = getShopEmailIdentity(shopId).smtp;
-
-  if (smtp?.user && smtp.pass) {
-    return {
-      host: smtp.host || globalConfig.host,
-      port: smtp.port || globalConfig.port,
-      user: smtp.user,
-      pass: smtp.pass,
-      from: smtp.from || smtp.user,
-    };
-  }
-
-  return globalConfig;
+function getMailConfig() {
+  return getGlobalMailConfig();
 }
 
 function shouldUseConsoleMailFallback() {
@@ -298,7 +285,6 @@ async function recordEmailDeliveryAttempt({
 }
 
 async function sendMailOnce({
-  shopId,
   to,
   subject,
   text,
@@ -307,7 +293,6 @@ async function sendMailOnce({
   fromName,
   replyTo,
 }: {
-  shopId?: string;
   to: string;
   subject: string;
   text: string;
@@ -316,7 +301,7 @@ async function sendMailOnce({
   fromName?: string;
   replyTo?: string;
 }) {
-  const config = getMailConfig(shopId);
+  const config = getMailConfig();
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -405,7 +390,6 @@ export async function sendEmailMessage({
 
     try {
       await sendMailOnce({
-        shopId,
         to: recipientEmail,
         subject,
         text,
@@ -599,7 +583,7 @@ async function sendAppointmentCustomerEmail(
 ) {
   const data = buildCustomerAppointmentTemplateData(payload);
   const rendered = render(data);
-  const emailIdentity = getShopEmailIdentity(payload.shopId);
+  const emailIdentity = await getShopEmailIdentity(payload.shopId);
 
   await sendEmailMessage({
     to: payload.to,

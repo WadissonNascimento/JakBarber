@@ -64,8 +64,21 @@ model Shop {
   barberTips               BarberTip[]
   homeImages               HomeImage[]
   emailDeliveryLogs        EmailDeliveryLog[]
+  emailSettings            ShopEmailSettings?
 
   @@index([isActive, isDefault])
+}
+
+model ShopEmailSettings {
+  id                String   @id @default(cuid())
+  shopId            String   @unique
+  fromName          String?
+  replyToEmail      String?
+  notificationEmail String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -97,7 +110,7 @@ model User {
   barberBlocks             BarberBlock[]
   recurringBarberBlocks    RecurringBarberBlock[]
   barberPayouts            BarberPayout[]
-  barberTips               BarberTip[]                 @relation("BarberTips")
+  barberTips               BarberTip[]               @relation("BarberTips")
   barberClientNotes        ClientNote[]              @relation("BarberClientNotes")
   customerClientNotes      ClientNote[]              @relation("CustomerClientNotes")
   customerProfile          CustomerProfile?          @relation("CustomerProfileOwner")
