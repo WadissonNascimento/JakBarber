@@ -1,5 +1,3 @@
-const LOCALHOST_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
-
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
@@ -13,18 +11,33 @@ export function getConfiguredAppUrl() {
   );
 }
 
-export function getRequestAwareAppUrl(requestUrl: string) {
-  const requestOrigin = new URL(requestUrl).origin;
+function getFirstHeaderValue(value: string | null | undefined) {
+  return value?.split(",")[0]?.trim() || "";
+}
 
-  if (process.env.NODE_ENV !== "production") {
-    return trimTrailingSlash(requestOrigin);
+function normalizeRequestProto(value: string | null | undefined) {
+  const proto = getFirstHeaderValue(value).toLowerCase();
+
+  return proto === "http" || proto === "https" ? proto : "";
+}
+
+export function getRequestAwareAppUrl(
+  requestUrl: string,
+  requestHeaders?: Headers
+) {
+  const parsedUrl = new URL(requestUrl);
+  const forwardedHost = getFirstHeaderValue(
+    requestHeaders?.get("x-forwarded-host")
+  );
+  const host = forwardedHost || getFirstHeaderValue(requestHeaders?.get("host"));
+
+  if (host) {
+    const proto =
+      normalizeRequestProto(requestHeaders?.get("x-forwarded-proto")) ||
+      parsedUrl.protocol.replace(":", "");
+
+    return trimTrailingSlash(`${proto}://${host}`);
   }
 
-  const configuredUrl = getConfiguredAppUrl();
-
-  if (configuredUrl && !LOCALHOST_PATTERN.test(configuredUrl)) {
-    return configuredUrl;
-  }
-
-  return trimTrailingSlash(requestOrigin);
+  return trimTrailingSlash(parsedUrl.origin);
 }

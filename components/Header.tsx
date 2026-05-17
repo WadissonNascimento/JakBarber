@@ -12,6 +12,7 @@ import {
   Menu,
   MessageSquareText,
   Scissors,
+  Settings,
   ShoppingBag,
   UserPlus,
   Users,
@@ -50,6 +51,7 @@ function getHeaderLinks(role: HeaderRole): {
         { href: "/admin/servicos", label: "Serviços" },
         { href: "/admin/produtos", label: "Produtos" },
         { href: "/admin/extras", label: "Extras" },
+        { href: "/admin/configuracoes", label: "Configuracoes" },
         { href: "/admin/avaliacoes", label: "Avaliações" },
       ],
     };
@@ -109,6 +111,7 @@ const navIcons: Record<string, LucideIcon> = {
   "/admin/agenda": CalendarDays,
   "/admin/avaliacoes": MessageSquareText,
   "/admin/barbeiros": Users,
+  "/admin/configuracoes": Settings,
   "/admin/extras": ShoppingBag,
   "/admin/financeiro": WalletCards,
   "/admin/produtos": Boxes,

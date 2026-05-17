@@ -8,6 +8,7 @@ import {
   PackageSearch,
   PiggyBank,
   Scissors,
+  Settings,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -201,6 +202,12 @@ export default async function AdminPage() {
       title: "Fotos da home",
       description: "Troque as imagens principais do site.",
       badge: `${homeImages}/5`,
+    },
+    {
+      href: "/admin/configuracoes",
+      icon: Settings,
+      title: "Configuracoes da barbearia",
+      description: "Contato publico, e-mail e identidade da loja.",
     },
     {
       href: "/admin/financeiro",

@@ -232,3 +232,7 @@ export async function getCurrentShopId() {
   const shop = await getCurrentShop();
   return shop.id;
 }
+
+export function clearShopRuntimeCache() {
+  shopRuntimeCache.clear();
+}
