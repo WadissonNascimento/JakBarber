@@ -3,6 +3,7 @@ import { DEFAULT_SHOP_ID, getCurrentShopId } from "@/lib/shop";
 
 const SHOP_SCOPED_MODELS = new Set([
   "User",
+  "Account",
   "PendingRegistration",
   "PasswordResetRequest",
   "EmailChangeRequest",
@@ -29,6 +30,7 @@ const SHOP_SCOPED_MODELS = new Set([
 
 const ID_SCOPED_MODELS = new Set([
   "User",
+  "Account",
   "PendingRegistration",
   "PasswordResetRequest",
   "EmailChangeRequest",

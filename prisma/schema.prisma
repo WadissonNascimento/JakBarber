@@ -65,6 +65,7 @@ model Shop {
   homeImages               HomeImage[]
   emailDeliveryLogs        EmailDeliveryLog[]
   emailSettings            ShopEmailSettings?
+  accounts                 Account[]
 
   @@index([isActive, isDefault])
 }
@@ -85,7 +86,7 @@ model User {
   id            String    @id @default(cuid())
   shopId        String    @default("shop_jak_barber")
   name          String?
-  email         String?   @unique
+  email         String?
   emailVerified DateTime?
   image         String?
   passwordHash  String?
@@ -119,12 +120,14 @@ model User {
   emailChangeRequests      EmailChangeRequest[]
 
   @@unique([id, shopId])
+  @@unique([shopId, email])
   @@index([shopId, role, isActive])
   @@index([shopId, createdAt])
 }
 
 model Account {
   id                String  @id @default(cuid())
+  shopId            String  @default("shop_jak_barber")
   userId            String
   type              String
   provider          String
@@ -137,9 +140,12 @@ model Account {
   id_token          String?
   session_state     String?
 
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@unique([id, shopId])
+  @@unique([shopId, provider, providerAccountId])
+  @@index([shopId, userId])
 }
 
 model Session {
@@ -200,7 +206,7 @@ model PendingRegistration {
   id           String   @id @default(cuid())
   shopId       String   @default("shop_jak_barber")
   name         String
-  email        String   @unique
+  email        String
   phone        String?
   passwordHash String
   role         String   @default("CUSTOMER")
@@ -213,13 +219,14 @@ model PendingRegistration {
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([id, shopId])
+  @@unique([shopId, email])
   @@index([shopId, email, expiresAt])
 }
 
 model PasswordResetRequest {
   id        String   @id @default(cuid())
   shopId    String   @default("shop_jak_barber")
-  email     String   @unique
+  email     String
   code      String
   expiresAt DateTime
   attempts  Int      @default(0)
@@ -229,6 +236,7 @@ model PasswordResetRequest {
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([id, shopId])
+  @@unique([shopId, email])
   @@index([shopId, email, expiresAt])
 }
 
@@ -236,7 +244,7 @@ model EmailChangeRequest {
   id        String   @id @default(cuid())
   shopId    String   @default("shop_jak_barber")
   userId    String   @unique
-  email     String   @unique
+  email     String
   code      String
   expiresAt DateTime
   attempts  Int      @default(0)
@@ -247,6 +255,7 @@ model EmailChangeRequest {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([id, shopId])
+  @@unique([shopId, email])
   @@index([shopId, email, expiresAt])
   @@index([shopId, userId, expiresAt])
 }

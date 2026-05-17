@@ -31,6 +31,7 @@ import {
 } from "@/lib/passwordPolicy";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { isUniqueConstraintError } from "@/lib/userIdentity";
 
 const MAX_EMAIL_CHANGE_ATTEMPTS = 5;
 
@@ -78,22 +79,6 @@ export async function updateCustomerProfileAction(
     return mutationError(`Use um telefone no formato ${BRAZILIAN_PHONE_EXAMPLE}.`);
   }
 
-  const emailOwner = await prisma.user.findFirst({
-    where: {
-      email,
-      NOT: {
-        id: session.user.id,
-      },
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (emailOwner) {
-    return mutationError("Este e-mail ja esta em uso.");
-  }
-
   const currentUser = await prisma.user.findUnique({
     where: {
       id: session.user.id,
@@ -107,6 +92,23 @@ export async function updateCustomerProfileAction(
 
   if (!currentUser) {
     return mutationError("Nao foi possivel atualizar seu perfil.");
+  }
+
+  const emailOwner = await prisma.user.findFirst({
+    where: {
+      shopId: currentUser.shopId,
+      email,
+      NOT: {
+        id: session.user.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (emailOwner) {
+    return mutationError("Este e-mail ja esta em uso.");
   }
 
   const emailChanged = currentUser.email?.toLowerCase() !== email;
@@ -125,6 +127,7 @@ export async function updateCustomerProfileAction(
 
     const pendingEmailOwner = await prisma.emailChangeRequest.findFirst({
       where: {
+        shopId: currentUser.shopId,
         email,
         NOT: {
           userId: session.user.id,
@@ -142,30 +145,40 @@ export async function updateCustomerProfileAction(
     const code = generateVerificationCode();
     const expiresAt = getEmailChangeExpirationDate();
 
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: session.user.id },
-        data: {
-          name,
-          phone: phone || null,
-        },
-      }),
-      prisma.emailChangeRequest.deleteMany({
-        where: {
-          userId: session.user.id,
-        },
-      }),
-      prisma.emailChangeRequest.create({
-        data: {
-          shopId: currentUser.shopId,
-          userId: session.user.id,
-          email,
-          code,
-          expiresAt,
-          attempts: 0,
-        },
-      }),
-    ]);
+    try {
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: session.user.id },
+          data: {
+            name,
+            phone: phone || null,
+          },
+        }),
+        prisma.emailChangeRequest.deleteMany({
+          where: {
+            userId: session.user.id,
+          },
+        }),
+        prisma.emailChangeRequest.create({
+          data: {
+            shopId: currentUser.shopId,
+            userId: session.user.id,
+            email,
+            code,
+            expiresAt,
+            attempts: 0,
+          },
+        }),
+      ]);
+    } catch (error) {
+      if (isUniqueConstraintError(error, "email")) {
+        return mutationError(
+          "Este e-mail ja esta em uso ou possui verificacao pendente."
+        );
+      }
+
+      throw error;
+    }
 
     try {
       await sendVerificationCodeEmail({
@@ -284,6 +297,7 @@ export async function verifyCustomerEmailChangeAction(
 
   const emailOwner = await prisma.user.findFirst({
     where: {
+      shopId: pending.shopId,
       email: pending.email,
       NOT: {
         id: session.user.id,
@@ -304,20 +318,28 @@ export async function verifyCustomerEmailChangeAction(
     return mutationError("Este e-mail ja esta em uso.");
   }
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        email: pending.email,
-        emailVerified: new Date(),
-      },
-    }),
-    prisma.emailChangeRequest.deleteMany({
-      where: {
-        userId: session.user.id,
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: session.user.id },
+        data: {
+          email: pending.email,
+          emailVerified: new Date(),
+        },
+      }),
+      prisma.emailChangeRequest.deleteMany({
+        where: {
+          userId: session.user.id,
+        },
+      }),
+    ]);
+  } catch (error) {
+    if (isUniqueConstraintError(error, "email")) {
+      return mutationError("Este e-mail ja esta em uso.");
+    }
+
+    throw error;
+  }
 
   logSecurityEvent("customer_email_change_verified", {
     userId: session.user.id,

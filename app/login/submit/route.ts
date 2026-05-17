@@ -5,6 +5,11 @@ import { signIn } from "@/auth";
 import { getPostLoginRedirect } from "@/lib/authRedirect";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { getCurrentShopId } from "@/lib/shop";
+import {
+  getShopEmailRateLimitIdentifier,
+  normalizeIdentityEmail,
+} from "@/lib/userIdentity";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +40,9 @@ function loginError(request: NextRequest, message: string) {
   return NextResponse.redirect(url, 303);
 }
 
-async function getLoginFailureMessage(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
+async function getLoginFailureMessage(shopId: string, email: string, password: string) {
+  const user = await prisma.user.findFirst({
+    where: { shopId, email },
     select: {
       id: true,
       isActive: true,
@@ -56,9 +61,8 @@ async function getLoginFailureMessage(email: string, password: string) {
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const shopId = await getCurrentShopId();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
   const password = String(formData.get("password") || "").trim();
 
   if (!email || !password) {
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   const rateLimit = await enforceRateLimit({
     scope: "login:http",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 8,
     windowMs: 15 * 60 * 1000,
   });
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
       logSecurityEvent("login_submit_failed", { email });
       return loginError(
         request,
-        (await getLoginFailureMessage(email, password)) ||
+        (await getLoginFailureMessage(shopId, email, password)) ||
           "Nao foi possivel autenticar. Confira e-mail e senha."
       );
     }
@@ -98,8 +102,9 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: {
+      shopId,
       email,
     },
     select: {

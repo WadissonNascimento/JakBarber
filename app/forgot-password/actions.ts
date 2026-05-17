@@ -15,6 +15,11 @@ import {
 } from "@/lib/passwordPolicy";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getCurrentShopId } from "@/lib/shop";
+import {
+  getShopEmailRateLimitIdentifier,
+  isUniqueConstraintError,
+  normalizeIdentityEmail,
+} from "@/lib/userIdentity";
 
 function generateCode() {
   return randomInt(100000, 1000000).toString();
@@ -31,9 +36,7 @@ export async function requestPasswordResetAction(
   formData: FormData
 ): Promise<FormFeedbackState> {
   const shopId = await getCurrentShopId();
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
 
   if (!email) {
     return {
@@ -44,7 +47,7 @@ export async function requestPasswordResetAction(
 
   const rateLimit = await enforceRateLimit({
     scope: "password_reset:start",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 5,
     windowMs: 60 * 60 * 1000,
   });
@@ -57,12 +60,12 @@ export async function requestPasswordResetAction(
   }
 
   const user = await prisma.user.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (!user || !user.passwordHash) {
     const pendingRegistration = await prisma.pendingRegistration.findFirst({
-      where: { email },
+      where: { shopId, email },
     });
 
     if (pendingRegistration) {
@@ -83,20 +86,30 @@ export async function requestPasswordResetAction(
   const code = generateCode();
 
   try {
-    await prisma.passwordResetRequest.upsert({
-      where: { email },
-      update: {
-        code,
-        expiresAt: getExpirationDate(),
-        attempts: 0,
-      },
-      create: {
-        shopId,
-        email,
-        code,
-        expiresAt: getExpirationDate(),
-      },
+    const existingResetRequest = await prisma.passwordResetRequest.findFirst({
+      where: { shopId, email },
+      select: { id: true },
     });
+
+    if (existingResetRequest) {
+      await prisma.passwordResetRequest.update({
+        where: { id: existingResetRequest.id },
+        data: {
+          code,
+          expiresAt: getExpirationDate(),
+          attempts: 0,
+        },
+      });
+    } else {
+      await prisma.passwordResetRequest.create({
+        data: {
+          shopId,
+          email,
+          code,
+          expiresAt: getExpirationDate(),
+        },
+      });
+    }
 
     await sendPasswordResetCodeEmail({
       to: email,
@@ -104,6 +117,14 @@ export async function requestPasswordResetAction(
       code,
     });
   } catch (error) {
+    if (isUniqueConstraintError(error, "email")) {
+      return {
+        error:
+          "Este e-mail existe em outra barbearia. A recuperacao por loja sera liberada na proxima etapa.",
+        success: null,
+      };
+    }
+
     return {
       error: "Nao foi possivel enviar o codigo de recuperacao.",
       success: null,
@@ -121,9 +142,8 @@ export async function resendPasswordResetCodeAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const shopId = await getCurrentShopId();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
 
   if (!email) {
     return {
@@ -134,7 +154,7 @@ export async function resendPasswordResetCodeAction(
 
   const rateLimit = await enforceRateLimit({
     scope: "password_reset:resend",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 3,
     windowMs: 30 * 60 * 1000,
   });
@@ -148,10 +168,10 @@ export async function resendPasswordResetCodeAction(
 
   const [resetRequest, user] = await Promise.all([
     prisma.passwordResetRequest.findFirst({
-      where: { email },
+      where: { shopId, email },
     }),
     prisma.user.findFirst({
-      where: { email },
+      where: { shopId, email },
     }),
   ]);
 
@@ -166,7 +186,7 @@ export async function resendPasswordResetCodeAction(
 
   try {
     await prisma.passwordResetRequest.update({
-      where: { email },
+      where: { id: resetRequest.id },
       data: {
         code,
         expiresAt: getExpirationDate(),
@@ -198,9 +218,8 @@ export async function resetPasswordWithCodeAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const shopId = await getCurrentShopId();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
   const code = String(formData.get("code") || "").trim();
   const password = String(formData.get("password") || "").trim();
   const confirmPassword = String(formData.get("confirmPassword") || "").trim();
@@ -214,7 +233,7 @@ export async function resetPasswordWithCodeAction(
 
   const rateLimit = await enforceRateLimit({
     scope: "password_reset:verify",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 10,
     windowMs: 15 * 60 * 1000,
   });
@@ -241,7 +260,7 @@ export async function resetPasswordWithCodeAction(
   }
 
   const resetRequest = await prisma.passwordResetRequest.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (!resetRequest) {
@@ -268,7 +287,7 @@ export async function resetPasswordWithCodeAction(
   if (resetRequest.code !== code) {
     logSecurityEvent("password_reset_code_failed", { email });
     await prisma.passwordResetRequest.update({
-      where: { email },
+      where: { id: resetRequest.id },
       data: {
         attempts: {
           increment: 1,
@@ -283,12 +302,12 @@ export async function resetPasswordWithCodeAction(
   }
 
   const user = await prisma.user.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (!user) {
-    await prisma.passwordResetRequest.delete({
-      where: { email },
+    await prisma.passwordResetRequest.deleteMany({
+      where: { shopId, email },
     });
 
     return {
@@ -301,13 +320,13 @@ export async function resetPasswordWithCodeAction(
 
   await prisma.$transaction([
     prisma.user.update({
-      where: { email },
+      where: { id: user.id },
       data: {
         passwordHash,
       },
     }),
     prisma.passwordResetRequest.delete({
-      where: { email },
+      where: { id: resetRequest.id },
     }),
   ]);
 

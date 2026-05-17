@@ -20,6 +20,7 @@ import {
 } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { isUniqueConstraintError } from "@/lib/userIdentity";
 
 export async function updateOwnAdminContactAction(
   formData: FormData
@@ -62,6 +63,7 @@ export async function updateOwnAdminContactAction(
 
   const emailOwner = await prisma.user.findFirst({
     where: {
+      shopId: session.user.shopId || undefined,
       email,
       NOT: {
         id: session.user.id,
@@ -76,16 +78,24 @@ export async function updateOwnAdminContactAction(
     return mutationError("Este e-mail ja esta em uso.");
   }
 
-  await prisma.user.update({
-    where: {
-      id: session.user.id,
-    },
-    data: {
-      name,
-      email,
-      phone: phone || null,
-    },
-  });
+  try {
+    await prisma.user.update({
+      where: {
+        id: session.user.id,
+      },
+      data: {
+        name,
+        email,
+        phone: phone || null,
+      },
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error, "email")) {
+      return mutationError("Este e-mail ja esta em uso.");
+    }
+
+    throw error;
+  }
 
   revalidatePath("/admin");
   revalidatePath("/barber");

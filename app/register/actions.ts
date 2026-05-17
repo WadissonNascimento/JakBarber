@@ -17,6 +17,11 @@ import { getPostLoginRedirect, sanitizeInternalRedirect } from "@/lib/authRedire
 import { getCurrentShopId } from "@/lib/shop";
 import { createRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
 import {
+  getShopEmailRateLimitIdentifier,
+  isUniqueConstraintError,
+  normalizeIdentityEmail,
+} from "@/lib/userIdentity";
+import {
   CUSTOMER_PASSWORD_REQUIREMENT_MESSAGE,
   FULL_NAME_REQUIREMENT_MESSAGE,
   isValidCustomerFullName,
@@ -64,9 +69,7 @@ export async function registerCustomerAction(
 ): Promise<FormFeedbackState> {
   const shopId = await getCurrentShopId();
   const name = normalizeCustomerName(String(formData.get("name") || ""));
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
   const password = String(formData.get("password") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const redirectTo = sanitizeInternalRedirect(
@@ -90,7 +93,7 @@ export async function registerCustomerAction(
 
   const rateLimit = await enforceRateLimit({
     scope: "register:start",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 5,
     windowMs: 60 * 60 * 1000,
   });
@@ -110,7 +113,7 @@ export async function registerCustomerAction(
   }
 
   const existingUser = await prisma.user.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (existingUser) {
@@ -121,13 +124,13 @@ export async function registerCustomerAction(
   }
 
   const existingPendingRegistration = await prisma.pendingRegistration.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (existingPendingRegistration) {
     if (existingPendingRegistration.expiresAt.getTime() < Date.now()) {
-      await prisma.pendingRegistration.delete({
-        where: { email },
+      await prisma.pendingRegistration.deleteMany({
+        where: { shopId, email },
       });
     } else {
       redirect(
@@ -170,8 +173,15 @@ export async function registerCustomerAction(
   } catch (error) {
     if (pendingCreated) {
       await prisma.pendingRegistration.deleteMany({
-        where: { email },
+        where: { shopId, email },
       });
+    }
+
+    if (isUniqueConstraintError(error, "email")) {
+      return {
+        error: "Ja existe uma conta ou cadastro pendente com esse e-mail.",
+        success: null,
+      };
     }
 
     return {
@@ -187,9 +197,8 @@ export async function verifyRegistrationCodeAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const shopId = await getCurrentShopId();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
   const code = String(formData.get("code") || "").trim();
   const redirectTo = sanitizeInternalRedirect(
     formData.get("redirectTo"),
@@ -205,7 +214,7 @@ export async function verifyRegistrationCodeAction(
 
   const rateLimit = await enforceRateLimit({
     scope: "register:verify",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 10,
     windowMs: 15 * 60 * 1000,
   });
@@ -218,7 +227,7 @@ export async function verifyRegistrationCodeAction(
   }
 
   const pending = await prisma.pendingRegistration.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (!pending) {
@@ -245,7 +254,7 @@ export async function verifyRegistrationCodeAction(
   if (pending.code !== code) {
     logSecurityEvent("registration_code_failed", { email });
     await prisma.pendingRegistration.update({
-      where: { email },
+      where: { id: pending.id },
       data: {
         attempts: {
           increment: 1,
@@ -260,12 +269,12 @@ export async function verifyRegistrationCodeAction(
   }
 
   const existingUser = await prisma.user.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (existingUser) {
-    await prisma.pendingRegistration.delete({
-      where: { email },
+    await prisma.pendingRegistration.deleteMany({
+      where: { shopId, email },
     });
 
     return {
@@ -274,26 +283,43 @@ export async function verifyRegistrationCodeAction(
     };
   }
 
-  const user = await prisma.$transaction(async (tx) => {
-    const createdUser = await tx.user.create({
-      data: {
-        name: pending.name,
-        shopId: pending.shopId,
-        email: pending.email,
-        passwordHash: pending.passwordHash,
-        phone: pending.phone,
-        role: pending.role,
-        isActive: true,
-        emailVerified: new Date(),
-      },
-    });
+  let user;
 
-    await tx.pendingRegistration.delete({
-      where: { email },
-    });
+  try {
+    user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name: pending.name,
+          shopId: pending.shopId,
+          email: pending.email,
+          passwordHash: pending.passwordHash,
+          phone: pending.phone,
+          role: pending.role,
+          isActive: true,
+          emailVerified: new Date(),
+        },
+      });
 
-    return createdUser;
-  });
+      await tx.pendingRegistration.delete({
+        where: { id: pending.id },
+      });
+
+      return createdUser;
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error, "email")) {
+      await prisma.pendingRegistration.deleteMany({
+        where: { shopId, email },
+      });
+
+      return {
+        error: "Ja existe uma conta ativa com esse e-mail.",
+        success: null,
+      };
+    }
+
+    throw error;
+  }
 
   try {
     await signIn("registration-auto-login", {
@@ -320,9 +346,8 @@ export async function resendRegistrationCodeAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const shopId = await getCurrentShopId();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
   const redirectTo = sanitizeInternalRedirect(formData.get("redirectTo"), "");
 
   if (!email) {
@@ -334,7 +359,7 @@ export async function resendRegistrationCodeAction(
 
   const rateLimit = await enforceRateLimit({
     scope: "register:resend",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 3,
     windowMs: 30 * 60 * 1000,
   });
@@ -347,7 +372,7 @@ export async function resendRegistrationCodeAction(
   }
 
   const pending = await prisma.pendingRegistration.findFirst({
-    where: { email },
+    where: { shopId, email },
   });
 
   if (!pending) {
@@ -371,7 +396,7 @@ export async function resendRegistrationCodeAction(
 
   try {
     await prisma.pendingRegistration.update({
-      where: { email },
+      where: { id: pending.id },
       data: {
         code,
         expiresAt: getExpirationDate(),
@@ -388,7 +413,7 @@ export async function resendRegistrationCodeAction(
     });
   } catch (error) {
     await prisma.pendingRegistration.update({
-      where: { email },
+      where: { id: pending.id },
       data: {
         code: previousCode,
         expiresAt: previousExpiresAt,

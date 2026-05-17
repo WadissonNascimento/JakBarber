@@ -21,6 +21,7 @@ function getAdminBarberProfile(shopId: string) {
 
 const activeBarberSelect = {
   id: true,
+  shopId: true,
   name: true,
   email: true,
   phone: true,

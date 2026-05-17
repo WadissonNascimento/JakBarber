@@ -12,6 +12,11 @@ import {
 } from "@/lib/googleAuth";
 import { verifyRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
 import { DEFAULT_SHOP_ID, getCurrentShopId } from "@/lib/shop";
+import {
+  getShopEmailRateLimitIdentifier,
+  isUniqueConstraintError,
+  normalizeIdentityEmail,
+} from "@/lib/userIdentity";
 
 const googleSignInConfigured = isGoogleSignInConfigured();
 
@@ -42,16 +47,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
 
       async authorize(credentials) {
-        const email = String(credentials?.email || "")
-          .trim()
-          .toLowerCase();
+        const email = normalizeIdentityEmail(String(credentials?.email || ""));
         const password = String(credentials?.password || "");
 
         if (!email || !password) return null;
 
+        const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
         const rateLimit = await enforceRateLimit({
           scope: "auth:credentials",
-          identifier: email,
+          identifier: getShopEmailRateLimitIdentifier(shopId, email),
           limit: 8,
           windowMs: 15 * 60 * 1000,
         });
@@ -60,8 +64,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        const user = await prisma.user.findFirst({
+          where: { shopId, email },
         });
 
         if (!user || !user.isActive || !user.passwordHash) {
@@ -145,7 +149,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      const email = String(user.email || "").trim().toLowerCase();
+      const email = normalizeIdentityEmail(user.email);
       const emailVerified = (profile as { email_verified?: boolean } | undefined)
         ?.email_verified;
 
@@ -158,13 +162,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
-      const existingUser =
-        (await prisma.user.findFirst({
-          where: { email, shopId },
-        })) ||
-        (await prisma.user.findUnique({
-          where: { email },
-        }));
+      const existingUser = await prisma.user.findFirst({
+        where: { email, shopId },
+      });
 
       if (existingUser) {
         if (!existingUser.isActive) {
@@ -186,17 +186,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      await prisma.user.create({
-        data: {
-          shopId,
-          name: user.name || email.split("@")[0],
-          email,
-          image: user.image,
-          role: "CUSTOMER",
-          isActive: true,
-          emailVerified: new Date(),
-        },
-      });
+      try {
+        await prisma.user.create({
+          data: {
+            shopId,
+            name: user.name || email.split("@")[0],
+            email,
+            image: user.image,
+            role: "CUSTOMER",
+            isActive: true,
+            emailVerified: new Date(),
+          },
+        });
+      } catch (error) {
+        if (isUniqueConstraintError(error, "email")) {
+          logSecurityEvent("google_login_failed", {
+            reason: "email_unique_constraint",
+            email,
+            shopId,
+          });
+          return false;
+        }
+
+        throw error;
+      }
 
       return true;
     },
@@ -207,15 +220,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         : params.token;
 
       if (params.account?.provider === "google" && params.user?.email) {
-        const email = String(params.user.email).trim().toLowerCase();
+        const email = normalizeIdentityEmail(params.user.email);
         const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
-        const user =
-          (await prisma.user.findFirst({
-            where: { email, shopId },
-          })) ||
-          (await prisma.user.findUnique({
-            where: { email },
-          }));
+        const user = await prisma.user.findFirst({
+          where: { email, shopId },
+        });
 
         if (user) {
           token.id = user.id;

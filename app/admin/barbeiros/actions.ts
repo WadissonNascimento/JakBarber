@@ -14,6 +14,7 @@ import {
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { prisma } from "@/lib/prisma";
 import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
+import { isUniqueConstraintError } from "@/lib/userIdentity";
 
 async function requireAdmin() {
   const session = await auth();
@@ -57,6 +58,7 @@ async function requireAdminBarberTarget(formData: FormData) {
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId: admin.shopId || undefined,
       id: barberId,
       role: "BARBER",
     },
@@ -111,10 +113,10 @@ export async function createBarberAction(
 
   const [existingUser, existingPendingRegistration] = await Promise.all([
     prisma.user.findFirst({
-      where: { email },
+      where: { shopId: admin.shopId || undefined, email },
     }),
     prisma.pendingRegistration.findFirst({
-      where: { email },
+      where: { shopId: admin.shopId || undefined, email },
     }),
   ]);
 
@@ -162,8 +164,14 @@ export async function createBarberAction(
   } catch (error) {
     if (pendingCreated) {
       await prisma.pendingRegistration.deleteMany({
-        where: { email },
+        where: { shopId: admin.shopId || undefined, email },
       });
+    }
+
+    if (isUniqueConstraintError(error, "email")) {
+      return mutationError(
+        "Ja existe uma conta ou cadastro pendente com esse e-mail."
+      );
     }
 
     return mutationError(
@@ -182,7 +190,7 @@ export async function createBarberAction(
 export async function toggleBarberStatusAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const barberId = String(formData.get("barberId") || "");
   const currentActive = String(formData.get("currentActive") || "") === "true";
@@ -193,6 +201,7 @@ export async function toggleBarberStatusAction(
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId: admin.shopId || undefined,
       id: barberId,
       role: "BARBER",
     },
@@ -223,7 +232,7 @@ export async function toggleBarberStatusAction(
 export async function updateBarberPhotoAction(
   formData: FormData
 ): Promise<MutationResult | MutationResult<{ image: string }>> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const barberId = String(formData.get("barberId") || "");
   const file = formData.get("photo");
@@ -238,6 +247,7 @@ export async function updateBarberPhotoAction(
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId: admin.shopId || undefined,
       id: barberId,
       role: "BARBER",
     },
@@ -281,7 +291,7 @@ export async function updateBarberPhotoAction(
 export async function deleteBarberAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const barberId = String(formData.get("barberId") || "");
 
@@ -291,6 +301,7 @@ export async function deleteBarberAction(
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId: admin.shopId || undefined,
       id: barberId,
       role: "BARBER",
     },
@@ -351,6 +362,7 @@ export async function upsertBarberServiceCommissionAction(
   const [barber, service] = await Promise.all([
     prisma.user.findFirst({
       where: {
+        shopId: admin.shopId || undefined,
         id: barberId,
         role: "BARBER",
       },
@@ -358,6 +370,7 @@ export async function upsertBarberServiceCommissionAction(
     }),
     prisma.service.findFirst({
       where: {
+        shopId: admin.shopId || undefined,
         id: serviceId,
         OR: [{ barberId }, { barberId: null }],
       },

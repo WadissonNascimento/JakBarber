@@ -9,10 +9,15 @@ import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { isGoogleSignInConfigured } from "@/lib/googleAuth";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { getCurrentShopId } from "@/lib/shop";
+import {
+  getShopEmailRateLimitIdentifier,
+  normalizeIdentityEmail,
+} from "@/lib/userIdentity";
 
-async function getLoginFailureMessage(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
+async function getLoginFailureMessage(shopId: string, email: string, password: string) {
+  const user = await prisma.user.findFirst({
+    where: { shopId, email },
     select: {
       id: true,
       isActive: true,
@@ -30,9 +35,8 @@ async function getLoginFailureMessage(email: string, password: string) {
 }
 
 async function runLogin(formData: FormData): Promise<FormFeedbackState> {
-  const email = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
+  const shopId = await getCurrentShopId();
+  const email = normalizeIdentityEmail(formData.get("email")?.toString());
   const password = String(formData.get("password") || "").trim();
 
   if (!email || !password) {
@@ -41,7 +45,7 @@ async function runLogin(formData: FormData): Promise<FormFeedbackState> {
 
   const rateLimit = await enforceRateLimit({
     scope: "login:action",
-    identifier: email,
+    identifier: getShopEmailRateLimitIdentifier(shopId, email),
     limit: 8,
     windowMs: 15 * 60 * 1000,
   });
@@ -64,7 +68,7 @@ async function runLogin(formData: FormData): Promise<FormFeedbackState> {
       logSecurityEvent("login_action_failed", { email });
       return {
         error:
-          (await getLoginFailureMessage(email, password)) ||
+          (await getLoginFailureMessage(shopId, email, password)) ||
           "Nao foi possivel autenticar. Confira e-mail e senha.",
         success: null,
       };
@@ -73,8 +77,9 @@ async function runLogin(formData: FormData): Promise<FormFeedbackState> {
     throw error;
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: {
+      shopId,
       email,
     },
     select: {

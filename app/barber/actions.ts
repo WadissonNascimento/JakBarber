@@ -32,6 +32,7 @@ import {
 } from "@/lib/phone";
 import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
 import { enforceRateLimit } from "@/lib/security";
+import { isUniqueConstraintError } from "@/lib/userIdentity";
 import {
   isValidCustomerFullName,
   normalizeCustomerName,
@@ -171,6 +172,7 @@ export async function updateOwnBarberContactAction(
 
   const emailOwner = await prisma.user.findFirst({
     where: {
+      shopId: barber.shopId,
       email,
       NOT: {
         id: barber.id,
@@ -185,16 +187,24 @@ export async function updateOwnBarberContactAction(
     return mutationError("Este e-mail ja esta em uso.");
   }
 
-  await prisma.user.update({
-    where: {
-      id: barber.id,
-    },
-    data: {
-      name,
-      email,
-      phone: phone || null,
-    },
-  });
+  try {
+    await prisma.user.update({
+      where: {
+        id: barber.id,
+      },
+      data: {
+        name,
+        email,
+        phone: phone || null,
+      },
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error, "email")) {
+      return mutationError("Este e-mail ja esta em uso.");
+    }
+
+    throw error;
+  }
 
   revalidateBarberViews();
   revalidatePath("/barber");
