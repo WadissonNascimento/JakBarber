@@ -2,7 +2,6 @@ import {
   CalendarRange,
   Coins,
   DollarSign,
-  Images,
   MessageSquareText,
   PackagePlus,
   PackageSearch,
@@ -62,7 +61,6 @@ export default async function AdminPage() {
     openPayouts,
     pendingInvites,
     visibleReviews,
-    homeImages,
     todayAppointmentsCount,
     canceledTodayAppointments,
     completedTodayAppointments,
@@ -96,11 +94,6 @@ export default async function AdminPage() {
     prisma.review.count({
       where: {
         isVisible: true,
-      },
-    }),
-    prisma.homeImage.count({
-      where: {
-        isActive: true,
       },
     }),
     prisma.appointment.count({
@@ -197,17 +190,10 @@ export default async function AdminPage() {
       badge: visibleReviews ? `${visibleReviews}` : undefined,
     },
     {
-      href: "/admin/home",
-      icon: Images,
-      title: "Fotos da home",
-      description: "Troque as imagens principais do site.",
-      badge: `${homeImages}/5`,
-    },
-    {
       href: "/admin/configuracoes",
       icon: Settings,
       title: "Configuracoes da barbearia",
-      description: "Contato publico, e-mail e identidade da loja.",
+      description: "WhatsApp, e-mail, Instagram e fotos da home.",
     },
     {
       href: "/admin/financeiro",

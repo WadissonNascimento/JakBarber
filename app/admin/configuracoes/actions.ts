@@ -17,7 +17,6 @@ type ActionResult = {
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 async function requireAdminShop() {
   const session = await auth();
@@ -33,15 +32,6 @@ async function requireAdminShop() {
   return {
     shopId: session.user.shopId,
   };
-}
-
-function normalizeOptionalText(
-  formData: FormData,
-  key: string,
-  maxLength: number
-) {
-  const value = sanitizeTextInput(formData.get(key)?.toString(), { maxLength });
-  return value || null;
 }
 
 function normalizeOptionalEmail(formData: FormData, key: string) {
@@ -88,38 +78,12 @@ function normalizeInstagram(value: string | null | undefined) {
   }
 }
 
-function normalizeOptionalColor(formData: FormData, key: string) {
-  const value = sanitizeTextInput(formData.get(key)?.toString(), { maxLength: 7 });
-
-  if (!value) {
-    return null;
-  }
-
-  if (!HEX_COLOR_PATTERN.test(value)) {
-    throw new Error("Use cores no formato #RRGGBB.");
-  }
-
-  return value.toUpperCase();
-}
-
-function hexToMutedColor(hex: string | null) {
-  if (!hex || !HEX_COLOR_PATTERN.test(hex)) {
-    return null;
-  }
-
-  const value = hex.slice(1);
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-
-  return `rgba(${r}, ${g}, ${b}, 0.18)`;
-}
-
 function revalidateShopSettingsViews() {
   revalidatePath("/");
   revalidatePath("/agendar");
   revalidatePath("/produtos");
   revalidatePath("/admin");
+  revalidatePath("/admin/home");
   revalidatePath("/admin/configuracoes");
 }
 
@@ -128,7 +92,6 @@ export async function updateAdminShopSettingsAction(
 ): Promise<ActionResult> {
   try {
     const admin = await requireAdminShop();
-    const name = normalizeOptionalText(formData, "name", 80);
     const rawWhatsapp = formData.get("whatsappNumber")?.toString() || "";
     const whatsappNumber = rawWhatsapp.trim()
       ? normalizeBrazilianPhoneForSubmit(rawWhatsapp)
@@ -136,26 +99,7 @@ export async function updateAdminShopSettingsAction(
     const instagramUrl = normalizeInstagram(
       formData.get("instagramUrl")?.toString()
     );
-    const addressLine = normalizeOptionalText(formData, "addressLine", 180);
-    const businessHours = normalizeOptionalText(formData, "businessHours", 120);
-    const metadataTitle = normalizeOptionalText(formData, "metadataTitle", 80);
-    const metadataDescription = normalizeOptionalText(
-      formData,
-      "metadataDescription",
-      180
-    );
-    const brandColor = normalizeOptionalColor(formData, "brandColor");
-    const brandColorStrong = normalizeOptionalColor(formData, "brandColorStrong");
-    const emailFromName = normalizeOptionalText(formData, "emailFromName", 80);
     const replyToEmail = normalizeOptionalEmail(formData, "replyToEmail");
-
-    if (!name || name.length < 2) {
-      return {
-        ok: false,
-        tone: "error",
-        message: "Informe o nome publico da barbearia.",
-      };
-    }
 
     if (rawWhatsapp.trim() && !isValidBrazilianPhone(whatsappNumber)) {
       return {
@@ -171,16 +115,8 @@ export async function updateAdminShopSettingsAction(
           id: admin.shopId,
         },
         data: {
-          name,
           whatsappNumber,
           instagramUrl,
-          addressLine,
-          businessHours,
-          metadataTitle,
-          metadataDescription,
-          brandColor,
-          brandColorStrong,
-          brandColorMuted: hexToMutedColor(brandColor),
         },
       }),
       prisma.shopEmailSettings.upsert({
@@ -189,11 +125,9 @@ export async function updateAdminShopSettingsAction(
         },
         create: {
           shopId: admin.shopId,
-          fromName: emailFromName || name,
           replyToEmail,
         },
         update: {
-          fromName: emailFromName || name,
           replyToEmail,
         },
       }),
