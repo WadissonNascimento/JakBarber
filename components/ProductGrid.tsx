@@ -38,6 +38,18 @@ export function ProductGrid({
     }
 
     setSecondaryIndex(0);
+    const scrollY = window.scrollY;
+    const bodyStyle = document.body.style;
+    const htmlStyle = document.documentElement.style;
+    const previousBodyStyles = {
+      left: bodyStyle.left,
+      overflow: bodyStyle.overflow,
+      position: bodyStyle.position,
+      right: bodyStyle.right,
+      top: bodyStyle.top,
+      width: bodyStyle.width,
+    };
+    const previousOverscrollBehavior = htmlStyle.overscrollBehavior;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -46,11 +58,24 @@ export function ProductGrid({
     }
 
     document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
+    htmlStyle.overscrollBehavior = "none";
+    bodyStyle.left = "0";
+    bodyStyle.overflow = "hidden";
+    bodyStyle.position = "fixed";
+    bodyStyle.right = "0";
+    bodyStyle.top = `-${scrollY}px`;
+    bodyStyle.width = "100%";
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      htmlStyle.overscrollBehavior = previousOverscrollBehavior;
+      bodyStyle.left = previousBodyStyles.left;
+      bodyStyle.overflow = previousBodyStyles.overflow;
+      bodyStyle.position = previousBodyStyles.position;
+      bodyStyle.right = previousBodyStyles.right;
+      bodyStyle.top = previousBodyStyles.top;
+      bodyStyle.width = previousBodyStyles.width;
+      window.scrollTo(0, scrollY);
     };
   }, [selectedProduct]);
 
@@ -177,7 +202,7 @@ function ProductDetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 px-3 py-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center overflow-hidden overscroll-none bg-black/80 p-0 backdrop-blur-md sm:items-center sm:px-4 sm:py-6"
       role="dialog"
       aria-modal="true"
       aria-label={`Detalhes de ${product.name}`}
@@ -187,140 +212,139 @@ function ProductDetailsModal({
         }
       }}
     >
-      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#080a0f] shadow-2xl">
+      <div className="relative flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-white/10 bg-[#080a0f] shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px] sm:border">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/70 text-xl font-bold text-white"
+          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-lg font-bold text-white sm:top-3 sm:h-11 sm:w-11 sm:text-xl"
           aria-label="Fechar detalhes do produto"
         >
           X
         </button>
 
-        <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)]">
-          <div className="border-b border-white/10 p-4 md:border-b-0 md:border-r md:p-5">
-            <div className="relative aspect-square overflow-hidden rounded-[24px] bg-[#edf1f7]">
-              {mainImageUrl ? (
-                <Image
-                  src={mainImageUrl}
-                  alt={product.name}
-                  fill
-                  sizes="(max-width: 768px) 92vw, 45vw"
-                  className="object-contain"
-                  priority
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                  Sem imagem principal
-                </div>
-              )}
-            </div>
-
-            {secondaryImages.length > 0 && currentSecondaryImage ? (
-              <div className="mt-4">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] border border-white/10 bg-black/25">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)]">
+            <div className="border-b border-white/10 p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:border-b-0 md:border-r md:p-5">
+              <div className="relative h-[34dvh] min-h-[220px] max-h-[320px] overflow-hidden rounded-[22px] bg-[#edf1f7] sm:aspect-square sm:h-auto sm:max-h-none">
+                {mainImageUrl ? (
                   <Image
-                    src={currentSecondaryImage.url}
-                    alt={`Foto secundaria de ${product.name}`}
+                    src={mainImageUrl}
+                    alt={product.name}
                     fill
-                    sizes="(max-width: 768px) 92vw, 45vw"
-                    className="object-cover"
+                    sizes="(max-width: 768px) 94vw, 45vw"
+                    className="object-contain"
+                    priority
                   />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                    Sem imagem principal
+                  </div>
+                )}
+              </div>
+
+              {secondaryImages.length > 0 && currentSecondaryImage ? (
+                <div className="mt-3">
+                  <div className="relative h-[24dvh] min-h-[150px] max-h-[240px] overflow-hidden rounded-[20px] border border-white/10 bg-black/25 sm:aspect-[4/3] sm:h-auto sm:max-h-none">
+                    <Image
+                      src={currentSecondaryImage.url}
+                      alt={`Foto secundaria de ${product.name}`}
+                      fill
+                      sizes="(max-width: 768px) 94vw, 45vw"
+                      className="object-cover"
+                    />
+
+                    {secondaryImages.length > 1 ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={goToPreviousImage}
+                          className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white"
+                          aria-label="Imagem anterior"
+                        >
+                          {"<"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goToNextImage}
+                          className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white"
+                          aria-label="Proxima imagem"
+                        >
+                          {">"}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
 
                   {secondaryImages.length > 1 ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={goToPreviousImage}
-                        className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white"
-                        aria-label="Imagem anterior"
-                      >
-                        {"<"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={goToNextImage}
-                        className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white"
-                        aria-label="Proxima imagem"
-                      >
-                        {">"}
-                      </button>
-                    </>
+                    <div className="mt-2.5 flex justify-center gap-2">
+                      {secondaryImages.map((image, index) => (
+                        <button
+                          key={image.id}
+                          type="button"
+                          onClick={() => setSecondaryIndex(index)}
+                          className={`h-2.5 rounded-full transition ${
+                            index === secondaryIndex
+                              ? "w-7 bg-[var(--brand)]"
+                              : "w-2.5 bg-white/30"
+                          }`}
+                          aria-label={`Ver foto ${index + 1}`}
+                        />
+                      ))}
+                    </div>
                   ) : null}
                 </div>
+              ) : null}
+            </div>
 
-                {secondaryImages.length > 1 ? (
-                  <div className="mt-3 flex justify-center gap-2">
-                    {secondaryImages.map((image, index) => (
-                      <button
-                        key={image.id}
-                        type="button"
-                        onClick={() => setSecondaryIndex(index)}
-                        className={`h-2.5 rounded-full transition ${
-                          index === secondaryIndex
-                            ? "w-7 bg-[var(--brand)]"
-                            : "w-2.5 bg-white/30"
-                        }`}
-                        aria-label={`Ver foto ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                ) : null}
+            <div className="flex flex-col p-4 pt-3 sm:p-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
+                Detalhes do produto
+              </p>
+              <h3 className="mt-1.5 text-2xl font-black leading-tight text-white sm:text-3xl">
+                {product.name}
+              </h3>
+
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:mt-5 sm:p-4">
+                <p className="text-sm font-bold text-white">Descricao</p>
+                <p className="mt-1.5 text-sm leading-6 text-zinc-300">
+                  {product.description ||
+                    "Entre em contato com a barbearia para receber mais detalhes sobre este produto."}
+                </p>
               </div>
-            ) : null}
-          </div>
 
-          <div className="flex flex-col p-5 sm:p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-              Detalhes do produto
-            </p>
-            <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
-              {product.name}
-            </h3>
-
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-sm font-bold text-white">Descricao</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-300">
-                {product.description ||
-                  "Entre em contato com a barbearia para receber mais detalhes sobre este produto."}
-              </p>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-sm font-bold text-white">Fotos reais</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                {secondaryImages.length > 0
-                  ? `${secondaryImages.length} foto(s) secundaria(s) disponivel(is).`
-                  : "Este produto ainda nao tem fotos secundarias."}
-              </p>
-            </div>
-
-            <div className="mt-5 grid gap-2">
-              {whatsappHref ? (
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-primary w-full px-4 py-3 text-center text-sm leading-6"
-                >
-                  Falar com o vendedor
-                </a>
-              ) : (
-                <span className="block rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-zinc-400">
-                  WhatsApp da barbearia nao configurado
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-secondary w-full"
-              >
-                Fechar
-              </button>
+              {secondaryImages.length > 0 ? (
+                <p className="mt-3 text-xs leading-5 text-zinc-500">
+                  {secondaryImages.length} foto(s) secundaria(s) disponivel(is).
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
+
+        <div className="grid shrink-0 gap-2 border-t border-white/10 bg-[#080a0f]/95 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-16px_40px_rgba(0,0,0,0.35)] backdrop-blur-md sm:grid-cols-[1fr_auto] sm:p-4">
+          {whatsappHref ? (
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary w-full px-4 py-3 text-center text-sm leading-6"
+            >
+              Falar com o vendedor
+            </a>
+          ) : (
+            <span className="block rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-zinc-400">
+              WhatsApp da barbearia nao configurado
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary w-full sm:w-auto"
+        >
+          Fechar
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
 }
