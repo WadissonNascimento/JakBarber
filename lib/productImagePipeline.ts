@@ -16,8 +16,19 @@ export async function processProductImageBuffer(
   mimeType: string,
   options?: {
     outputFormat?: "webp" | "jpeg" | "png";
+    passthroughPrepared?: boolean;
   }
 ) {
+  if (options?.passthroughPrepared && mimeType === "image/webp") {
+    return {
+      buffer: inputBuffer,
+      mimeType: "image/webp",
+      extension: "webp",
+      size: null,
+      backgroundRemoved: false,
+    };
+  }
+
   const outputFormat = options?.outputFormat ?? "webp";
   const backgroundRemoved = await removeBackgroundIfConfigured(
     inputBuffer,
@@ -71,6 +82,16 @@ export async function processProductImageBuffer(
     size: OUTPUT_IMAGE_SIZE,
     backgroundRemoved: backgroundRemoved.backgroundRemoved,
   };
+}
+
+export function isClientPreparedProductImage(file: File) {
+  const name = String(file.name || "").trim().toLowerCase();
+  const type = String(file.type || "").trim().toLowerCase();
+
+  return (
+    (name === "image.webp" || name === "prepared-product-image.webp") &&
+    (!type || type === "image/webp" || type === "application/octet-stream")
+  );
 }
 
 async function removeBackgroundIfConfigured(

@@ -340,6 +340,9 @@ export async function prepareProductImageUpload(file: File) {
     };
   }
 
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+
   const bounds = getContentBounds(bitmap);
   drawMarketplaceBackground(context, OUTPUT_IMAGE_SIZE);
   drawStandardizedProduct(context, bitmap, bounds, OUTPUT_IMAGE_SIZE);
@@ -348,7 +351,7 @@ export async function prepareProductImageUpload(file: File) {
   const blob = await compressCanvasToProductBlob(canvas);
   const uploadFile =
     blob && blob.size <= MAX_IMAGE_SIZE
-      ? new File([blob], "image.webp", { type: "image/webp" })
+      ? new File([blob], "prepared-product-image.webp", { type: "image/webp" })
       : file;
 
   if (uploadFile.size > MAX_IMAGE_SIZE) {
@@ -396,13 +399,15 @@ export async function prepareSecondaryProductImageUpload(file: File) {
     };
   }
 
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 
   const blob = await compressCanvasToProductBlob(canvas);
   const uploadFile =
     blob && blob.size <= MAX_IMAGE_SIZE
-      ? new File([blob], "image.webp", { type: "image/webp" })
+      ? new File([blob], "prepared-product-image.webp", { type: "image/webp" })
       : file;
 
   if (uploadFile.size > MAX_IMAGE_SIZE) {
