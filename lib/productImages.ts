@@ -9,7 +9,7 @@ import {
 } from "@/lib/serverImageFiles";
 
 const MAX_PRODUCT_IMAGE_SIZE = 8 * 1024 * 1024;
-const SECONDARY_IMAGE_SIZE = 1200;
+const SECONDARY_IMAGE_SIZE = 1600;
 const VALID_IMAGE_MESSAGE =
   "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
 
@@ -72,7 +72,7 @@ async function processSecondaryProductImageBuffer(buffer: Buffer) {
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp({ quality: 84 })
+    .webp({ quality: 90 })
     .toBuffer();
 
   return {

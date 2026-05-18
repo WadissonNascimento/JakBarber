@@ -128,6 +128,7 @@ export function ProductGrid({
                   alt={product.name}
                   fill
                   sizes="(max-width: 768px) 50vw, (max-width: 1280px) 50vw, 33vw"
+                  quality={90}
                   className="object-contain transition duration-300 group-hover:scale-[1.02]"
                 />
               ) : (
@@ -258,6 +259,7 @@ function ProductDetailsModal({
                     alt={currentCarouselImage.alt}
                     fill
                     sizes="(max-width: 768px) 94vw, 45vw"
+                    quality={95}
                     className={
                       currentCarouselImage.fit === "contain"
                         ? "object-contain"

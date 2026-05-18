@@ -2,7 +2,7 @@
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const MAX_SOURCE_IMAGE_SIZE = 8 * 1024 * 1024;
-const OUTPUT_IMAGE_SIZE = 800;
+const OUTPUT_IMAGE_SIZE = 1200;
 const TARGET_PRODUCT_FILL = 0.94;
 const EDGE_ALPHA_THRESHOLD = 18;
 const EDGE_COLOR_THRESHOLD = 34;
@@ -69,7 +69,7 @@ async function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
 }
 
 async function compressCanvasToProductBlob(canvas: HTMLCanvasElement) {
-  const qualities = [0.82, 0.72, 0.62, 0.52, 0.42];
+  const qualities = [0.92, 0.86, 0.8, 0.72, 0.64];
 
   for (const quality of qualities) {
     const blob = await canvasToBlob(canvas, quality);
@@ -79,7 +79,7 @@ async function compressCanvasToProductBlob(canvas: HTMLCanvasElement) {
     }
   }
 
-  return canvasToBlob(canvas, 0.34);
+  return canvasToBlob(canvas, 0.56);
 }
 
 function getBackgroundReference(data: Uint8ClampedArray, width: number, height: number) {
