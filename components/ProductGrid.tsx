@@ -171,12 +171,12 @@ export function ProductGrid({
                     href={productWhatsappHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-3 inline-flex min-h-9 items-center rounded-full border border-white/10 px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-strong)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand)]/10 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/70"
+                    className="mt-3 flex min-h-[4.5rem] w-full items-center justify-center rounded-2xl border border-[var(--brand)]/30 bg-[var(--brand)] px-3 py-3 text-center text-[13px] font-black leading-5 text-white shadow-[0_18px_36px_rgba(14,165,233,0.25)] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/70"
                   >
-                    Entrar em contato
+                    Entrar em contato com o vendedor
                   </a>
                 ) : (
-                  <span className="mt-3 inline-flex min-h-9 items-center rounded-full border border-white/10 px-3 text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
+                  <span className="mt-3 flex min-h-[4.5rem] w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-[13px] font-black leading-5 text-zinc-500">
                     WhatsApp indisponivel
                   </span>
                 )}
