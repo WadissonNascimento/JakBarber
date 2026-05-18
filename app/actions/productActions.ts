@@ -10,7 +10,11 @@ import {
   deleteProductImage,
   normalizeProductImageUrl,
   uploadProductImage,
+  uploadSecondaryProductImage,
 } from "@/lib/productImages";
+
+const MAX_PRODUCT_DESCRIPTION_LENGTH = 360;
+const MAX_SECONDARY_PRODUCT_IMAGES = 5;
 
 async function ensureProductAccess() {
   const session = await auth();
@@ -35,6 +39,109 @@ function revalidateProductViews() {
 
 function parseProductCategory(value: string) {
   return isProductCategoryValue(value) ? value : ProductCategory.OTHER;
+}
+
+function parseProductDescription(value: FormDataEntryValue | null) {
+  const description = String(value || "").trim();
+
+  if (description.length > MAX_PRODUCT_DESCRIPTION_LENGTH) {
+    throw new Error(
+      `A descricao curta deve ter no maximo ${MAX_PRODUCT_DESCRIPTION_LENGTH} caracteres.`
+    );
+  }
+
+  return description || null;
+}
+
+function getSecondaryImageFiles(formData: FormData) {
+  const files = formData
+    .getAll("secondaryImages")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+
+  if (files.length > MAX_SECONDARY_PRODUCT_IMAGES) {
+    throw new Error("Cada produto pode ter no maximo 5 imagens secundarias.");
+  }
+
+  return files;
+}
+
+async function addSecondaryProductImages({
+  productId,
+  shopId,
+  files,
+}: {
+  productId: string;
+  shopId?: string | null;
+  files: File[];
+}) {
+  if (files.length === 0) {
+    return [];
+  }
+
+  const currentCount = await prisma.productImage.count({
+    where: {
+      productId,
+      ...(shopId ? { shopId } : {}),
+    },
+  });
+
+  if (currentCount + files.length > MAX_SECONDARY_PRODUCT_IMAGES) {
+    throw new Error("Cada produto pode ter no maximo 5 imagens secundarias.");
+  }
+
+  const orderInfo = await prisma.productImage.aggregate({
+    where: {
+      productId,
+      ...(shopId ? { shopId } : {}),
+    },
+    _max: {
+      order: true,
+    },
+  });
+  const firstOrder = (orderInfo._max.order ?? -1) + 1;
+  const createdImages: { id: string; imagePath: string | null }[] = [];
+  const uploadedImages: { imageUrl: string; imagePath: string }[] = [];
+
+  try {
+    for (const [index, file] of files.entries()) {
+      const uploaded = await uploadSecondaryProductImage({
+        productId,
+        shopId,
+        file,
+      });
+
+      uploadedImages.push(uploaded);
+
+      const createdImage = await prisma.productImage.create({
+        data: {
+          shopId: shopId || undefined,
+          productId,
+          url: uploaded.imageUrl,
+          imagePath: uploaded.imagePath,
+          order: firstOrder + index,
+        },
+        select: {
+          id: true,
+          imagePath: true,
+        },
+      });
+
+      createdImages.push(createdImage);
+    }
+
+    return createdImages;
+  } catch (error) {
+    await Promise.allSettled(
+      createdImages.map((image) =>
+        prisma.productImage.delete({ where: { id: image.id } })
+      )
+    );
+    await Promise.allSettled(
+      uploadedImages.map((image) => deleteProductImage(image.imagePath))
+    );
+
+    throw error;
+  }
 }
 
 export async function createProduct(data: {
@@ -83,10 +190,12 @@ export async function createProductFromForm(formData: FormData) {
   const admin = await ensureProductAccess();
 
   const name = String(formData.get("name") || "").trim();
+  const description = parseProductDescription(formData.get("description"));
   const category = parseProductCategory(String(formData.get("category") || ""));
   const price = Number(formData.get("price") || 0);
   const stock = 0;
   const imageFile = formData.get("image");
+  const secondaryImageFiles = getSecondaryImageFiles(formData);
 
   if (
     !name ||
@@ -100,12 +209,15 @@ export async function createProductFromForm(formData: FormData) {
     data: {
       shopId: admin.shopId || undefined,
       name,
-      description: null,
+      description,
       category,
       price,
       stock,
     },
   });
+
+  let imagePathToCleanup: string | null = null;
+  let createdSecondaryImages: { imagePath: string | null }[] = [];
 
   try {
     if (imageFile instanceof File && imageFile.size > 0) {
@@ -114,6 +226,7 @@ export async function createProductFromForm(formData: FormData) {
         shopId: admin.shopId,
         file: imageFile,
       });
+      imagePathToCleanup = image.imagePath;
 
       await prisma.product.update({
         where: { id: product.id },
@@ -123,6 +236,12 @@ export async function createProductFromForm(formData: FormData) {
         },
       });
     }
+
+    createdSecondaryImages = await addSecondaryProductImages({
+      productId: product.id,
+      shopId: admin.shopId,
+      files: secondaryImageFiles,
+    });
 
     if (stock > 0) {
       await registerStockMovement({
@@ -134,6 +253,10 @@ export async function createProductFromForm(formData: FormData) {
       });
     }
   } catch (error) {
+    await deleteProductImage(imagePathToCleanup);
+    await Promise.allSettled(
+      createdSecondaryImages.map((image) => deleteProductImage(image.imagePath))
+    );
     await prisma.product.delete({ where: { id: product.id } }).catch(() => undefined);
     throw error;
   }
@@ -206,9 +329,11 @@ export async function updateProductFromForm(formData: FormData) {
 
   const productId = String(formData.get("productId") || "").trim();
   const name = String(formData.get("name") || "").trim();
+  const description = parseProductDescription(formData.get("description"));
   const category = parseProductCategory(String(formData.get("category") || ""));
   const price = Number(formData.get("price") || 0);
   const imageFile = formData.get("image");
+  const secondaryImageFiles = getSecondaryImageFiles(formData);
 
   if (
     !productId ||
@@ -223,6 +348,7 @@ export async function updateProductFromForm(formData: FormData) {
     where: { id: productId },
     select: {
       id: true,
+      shopId: true,
       imagePath: true,
     },
   });
@@ -245,7 +371,7 @@ export async function updateProductFromForm(formData: FormData) {
       where: { id: productId },
       data: {
         name,
-        description: null,
+        description,
         category,
         price,
         ...(image
@@ -255,6 +381,12 @@ export async function updateProductFromForm(formData: FormData) {
             }
           : {}),
       },
+    });
+
+    await addSecondaryProductImages({
+      productId: currentProduct.id,
+      shopId: currentProduct.shopId,
+      files: secondaryImageFiles,
     });
   } catch (error) {
     if (image) {
@@ -323,6 +455,40 @@ export async function updateProductImage(formData: FormData) {
   return image;
 }
 
+export async function deleteProductSecondaryImage(formData: FormData) {
+  const admin = await ensureProductAccess();
+  const imageId = String(formData.get("imageId") || "").trim();
+
+  if (!imageId) {
+    throw new Error("Imagem secundaria nao encontrada.");
+  }
+
+  const image = await prisma.productImage.findFirst({
+    where: {
+      id: imageId,
+      ...(admin.shopId ? { shopId: admin.shopId } : {}),
+    },
+    select: {
+      id: true,
+      imagePath: true,
+    },
+  });
+
+  if (!image) {
+    throw new Error("Imagem secundaria nao encontrada.");
+  }
+
+  await prisma.productImage.delete({
+    where: { id: image.id },
+  });
+  await deleteProductImage(image.imagePath);
+  revalidateProductViews();
+
+  return {
+    message: "Imagem removida com sucesso.",
+  };
+}
+
 export async function deleteProduct(id: string) {
   await ensureProductAccess();
 
@@ -332,6 +498,11 @@ export async function deleteProduct(id: string) {
       id: true,
       isActive: true,
       imagePath: true,
+      secondaryImages: {
+        select: {
+          imagePath: true,
+        },
+      },
       _count: {
         select: {
           stockMovements: true,
@@ -351,10 +522,16 @@ export async function deleteProduct(id: string) {
         isActive: false,
         imageUrl: null,
         imagePath: null,
+        secondaryImages: {
+          deleteMany: {},
+        },
       },
     });
 
     await deleteProductImage(product.imagePath);
+    await Promise.allSettled(
+      product.secondaryImages.map((image) => deleteProductImage(image.imagePath))
+    );
     revalidateProductViews();
     return {
       deleted: false,
@@ -369,6 +546,9 @@ export async function deleteProduct(id: string) {
   });
 
   await deleteProductImage(product.imagePath);
+  await Promise.allSettled(
+    product.secondaryImages.map((image) => deleteProductImage(image.imagePath))
+  );
   revalidateProductViews();
   return {
     deleted: true,

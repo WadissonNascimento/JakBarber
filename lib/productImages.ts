@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
 import { processProductImageBuffer } from "@/lib/productImagePipeline";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/lib/serverImageFiles";
 
 const MAX_PRODUCT_IMAGE_SIZE = 8 * 1024 * 1024;
+const SECONDARY_IMAGE_SIZE = 1200;
 const VALID_IMAGE_MESSAGE =
   "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
 
@@ -63,6 +65,23 @@ async function getValidatedImageBuffer(file: File) {
   });
 }
 
+async function processSecondaryProductImageBuffer(buffer: Buffer) {
+  const outputBuffer = await sharp(buffer, { failOn: "none" })
+    .rotate()
+    .resize(SECONDARY_IMAGE_SIZE, SECONDARY_IMAGE_SIZE, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 84 })
+    .toBuffer();
+
+  return {
+    buffer: outputBuffer,
+    mimeType: "image/webp",
+    extension: "webp",
+  };
+}
+
 export async function uploadProductImage({
   productId,
   shopId,
@@ -81,6 +100,54 @@ export async function uploadProductImage({
     const processed = await processProductImageBuffer(buffer, mimeType);
     const extension = processed.extension;
     const imagePath = `products/${normalizeStorageSegment(shopId)}/${productId}/${randomUUID()}.${extension}`;
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
+      imagePath
+    )}`;
+
+    stage = "storage";
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Cache-Control": "31536000",
+        "Content-Type": processed.mimeType,
+        "x-upsert": "false",
+      },
+      body: new Uint8Array(processed.buffer),
+    });
+
+    if (!response.ok) {
+      throw new Error("Nao foi possivel enviar a imagem para o Supabase Storage.");
+    }
+
+    return {
+      imagePath,
+      imageUrl: buildPublicUrl(supabaseUrl, bucket, imagePath),
+    };
+  } catch (error) {
+    logProductImageFailure(stage, file, error);
+    throw error instanceof Error ? error : new Error(VALID_IMAGE_MESSAGE);
+  }
+}
+
+export async function uploadSecondaryProductImage({
+  productId,
+  shopId,
+  file,
+}: {
+  productId: string;
+  shopId?: string | null;
+  file: File;
+}) {
+  const { supabaseUrl, serviceRoleKey, bucket } = getStorageConfig();
+  let stage = "validacao";
+
+  try {
+    const { buffer } = await getValidatedImageBuffer(file);
+    stage = "processamento";
+    const processed = await processSecondaryProductImageBuffer(buffer);
+    const imagePath = `products/${normalizeStorageSegment(shopId)}/${productId}/secondary/${randomUUID()}.${processed.extension}`;
     const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
       imagePath
     )}`;

@@ -18,6 +18,15 @@ export default async function ProdutosPage() {
 
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      secondaryImages: {
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          url: true,
+        },
+      },
+    },
   });
 
   const activeProducts = products.filter((product) => product.isActive).length;
@@ -97,10 +106,15 @@ export default async function ProdutosPage() {
                   product={{
                     id: product.id,
                     name: product.name,
+                    description: product.description,
                     category: product.category,
                     price: toMoneyNumber(product.price),
                     isActive: product.isActive,
                     imageUrl: normalizeProductImageUrl(product.imageUrl),
+                    secondaryImages: product.secondaryImages.map((image) => ({
+                      id: image.id,
+                      url: normalizeProductImageUrl(image.url) || image.url,
+                    })),
                   }}
                 />
               ))}

@@ -24,8 +24,16 @@ const getPublicProducts = unstable_cache(
       select: {
         id: true,
         name: true,
+        description: true,
         price: true,
         imageUrl: true,
+        secondaryImages: {
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          select: {
+            id: true,
+            url: true,
+          },
+        },
       },
     }),
   ["public-products"],

@@ -3,30 +3,44 @@
 /* eslint-disable @next/next/no-img-element */
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import type { ChangeEvent, ReactNode } from "react";
 import { useEffect, useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { sanitizeTextInput } from "@/lib/inputSanitization";
-import { prepareProductImageUpload } from "@/lib/productImageClient";
+import {
+  prepareProductImageUpload,
+  prepareSecondaryProductImageUpload,
+} from "@/lib/productImageClient";
 import {
   deleteProduct,
+  deleteProductSecondaryImage,
   toggleProduct,
   updateProductFromForm,
 } from "@/app/actions/productActions";
+
+const MAX_SECONDARY_IMAGES = 5;
 
 type PreparedImageUpload = {
   file: File;
   previewUrl: string;
 };
 
+type SecondaryProductImage = {
+  id: string;
+  url: string;
+};
+
 type ProductCardClientProps = {
   product: {
     id: string;
     name: string;
+    description: string | null;
     category: string;
     price: number;
     isActive: boolean;
     imageUrl: string | null;
+    secondaryImages: SecondaryProductImage[];
   };
 };
 
@@ -36,12 +50,15 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isActive, setIsActive] = useState(product.isActive);
   const [imageUrl, setImageUrl] = useState(product.imageUrl);
+  const [secondaryImages, setSecondaryImages] = useState(product.secondaryImages);
   const [draft, setDraft] = useState({
     name: product.name,
+    description: product.description || "",
     category: product.category,
     price: product.price.toFixed(2),
   });
   const [imageUpload, setImageUpload] = useState<PreparedImageUpload | null>(null);
+  const [secondaryUploads, setSecondaryUploads] = useState<PreparedImageUpload[]>([]);
   const [feedback, setFeedback] = useState<{
     message: string | null;
     tone: "success" | "error" | "info";
@@ -54,8 +71,22 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
       if (imageUpload?.previewUrl) {
         URL.revokeObjectURL(imageUpload.previewUrl);
       }
+
+      for (const upload of secondaryUploads) {
+        URL.revokeObjectURL(upload.previewUrl);
+      }
     };
-  }, [imageUpload]);
+  }, [imageUpload, secondaryUploads]);
+
+  function clearSecondaryUploads() {
+    setSecondaryUploads((current) => {
+      for (const upload of current) {
+        URL.revokeObjectURL(upload.previewUrl);
+      }
+
+      return [];
+    });
+  }
 
   function runAction(
     key: string,
@@ -72,6 +103,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
         if (actionResult?.deleted === false) {
           setIsActive(false);
           setImageUrl(null);
+          setSecondaryImages([]);
         }
 
         if (actionResult?.imageUrl) {
@@ -96,7 +128,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
       } catch (error) {
         setFeedback({
           message:
-            error instanceof Error ? error.message : "Não foi possível atualizar o produto.",
+            error instanceof Error ? error.message : "Nao foi possivel atualizar o produto.",
           tone: "error",
         });
       } finally {
@@ -105,7 +137,77 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
     });
   }
 
+  async function handleMainImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) {
+      setImageUpload(null);
+      return;
+    }
+
+    try {
+      const prepared = await prepareProductImageUpload(file);
+      setImageUpload((current) => {
+        if (current?.previewUrl) {
+          URL.revokeObjectURL(current.previewUrl);
+        }
+
+        return prepared;
+      });
+      setFeedback({ message: null, tone: "success" });
+    } catch (error) {
+      event.currentTarget.value = "";
+      setImageUpload(null);
+      setFeedback({
+        message:
+          error instanceof Error ? error.message : "Nao foi possivel preparar a imagem.",
+        tone: "error",
+      });
+    }
+  }
+
+  async function handleSecondaryImagesChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files || []);
+    const availableSlots = MAX_SECONDARY_IMAGES - secondaryImages.length;
+
+    if (files.length === 0) {
+      clearSecondaryUploads();
+      return;
+    }
+
+    if (files.length > availableSlots) {
+      event.currentTarget.value = "";
+      clearSecondaryUploads();
+      setFeedback({
+        message: `Voce ainda pode adicionar ${availableSlots} imagem(ns) secundaria(s).`,
+        tone: "error",
+      });
+      return;
+    }
+
+    try {
+      const prepared = await Promise.all(
+        files.map((file) => prepareSecondaryProductImageUpload(file))
+      );
+      clearSecondaryUploads();
+      setSecondaryUploads(prepared);
+      setFeedback({ message: null, tone: "success" });
+    } catch (error) {
+      event.currentTarget.value = "";
+      clearSecondaryUploads();
+      setFeedback({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel preparar as imagens secundarias.",
+        tone: "error",
+      });
+    }
+  }
+
   const visibleImage = imageUpload?.previewUrl || imageUrl;
+  const secondaryCount = secondaryImages.length + secondaryUploads.length;
+  const canAddSecondaryImages = secondaryImages.length < MAX_SECONDARY_IMAGES;
 
   return (
     <article className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
@@ -126,7 +228,12 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
           <p className="line-clamp-2 text-base font-semibold leading-5 text-white">
             {draft.name}
           </p>
-          <p className="mt-0.5 whitespace-nowrap text-sm font-semibold leading-5 text-zinc-300">
+          {draft.description ? (
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
+              {draft.description}
+            </p>
+          ) : null}
+          <p className="mt-1 whitespace-nowrap text-sm font-semibold leading-5 text-zinc-300">
             R$ {Number(draft.price || 0).toFixed(2)}
           </p>
         </div>
@@ -152,48 +259,71 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   const formData = new FormData();
                   formData.set("productId", product.id);
                   formData.set("name", sanitizeTextInput(draft.name, { maxLength: 120 }));
+                  formData.set(
+                    "description",
+                    sanitizeTextInput(draft.description, { maxLength: 360 })
+                  );
                   formData.set("category", draft.category);
                   formData.set("price", draft.price);
+
                   if (imageUpload) {
                     formData.set("image", imageUpload.file);
+                  }
+
+                  for (const upload of secondaryUploads) {
+                    formData.append("secondaryImages", upload.file);
                   }
 
                   runAction(
                     "details",
                     () => updateProductFromForm(formData),
                     "Produto atualizado com sucesso.",
-                    () => setIsEditing(false)
+                    () => {
+                      setIsEditing(false);
+                      clearSecondaryUploads();
+                    }
                   );
                 }}
               >
-                <div className="grid gap-2">
-                  <Field label="Nome">
-                    <input
-                      value={draft.name}
-                      maxLength={120}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, name: event.target.value }))
-                      }
-                      className="service-edit-control"
-                    />
-                  </Field>
+                <Field label="Nome">
+                  <input
+                    value={draft.name}
+                    maxLength={120}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, name: event.target.value }))
+                    }
+                    className="service-edit-control"
+                  />
+                </Field>
 
-               </div>
+                <Field label="Descricao curta">
+                  <textarea
+                    value={draft.description}
+                    maxLength={360}
+                    rows={3}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
+                    placeholder="Ex.: Maquina profissional com acabamento preciso."
+                    className="service-edit-control min-h-24 resize-y"
+                  />
+                </Field>
 
-                <div className="grid gap-2">
-                  <Field label="Preço">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={draft.price}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, price: event.target.value }))
-                      }
-                      className="service-edit-control"
-                    />
-                  </Field>
-                </div>
+                <Field label="Preco">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draft.price}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, price: event.target.value }))
+                    }
+                    className="service-edit-control"
+                  />
+                </Field>
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
                   <div className="grid grid-cols-[4rem_1fr] gap-3 sm:grid-cols-[4.5rem_1fr] sm:items-center">
@@ -208,36 +338,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                         name="image"
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                        onChange={async (event) => {
-                          const file = event.currentTarget.files?.[0];
-
-                          if (!file) {
-                            setImageUpload(null);
-                            return;
-                          }
-
-                          try {
-                            const prepared = await prepareProductImageUpload(file);
-                            setImageUpload((current) => {
-                              if (current?.previewUrl) {
-                                URL.revokeObjectURL(current.previewUrl);
-                              }
-
-                              return prepared;
-                            });
-                            setFeedback({ message: null, tone: "success" });
-                          } catch (error) {
-                            event.currentTarget.value = "";
-                            setImageUpload(null);
-                            setFeedback({
-                              message:
-                                error instanceof Error
-                                  ? error.message
-                                  : "Nao foi possivel preparar a imagem.",
-                              tone: "error",
-                            });
-                          }
-                        }}
+                        onChange={handleMainImageChange}
                         className="sr-only"
                       />
                       <div className="grid gap-2">
@@ -251,11 +352,99 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                           {imageUpload?.file.name || "Nenhuma nova imagem selecionada"}
                         </p>
                         <p className="text-xs text-zinc-500">
-                          A imagem sera salva junto com os dados do produto.
+                          A capa continua com tratamento de fundo automatico.
                         </p>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                        Fotos secundarias
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-500">
+                        Fotos reais do produto, sem remocao de fundo.
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-bold text-zinc-300">
+                      {secondaryCount}/{MAX_SECONDARY_IMAGES}
+                    </span>
+                  </div>
+
+                  {secondaryImages.length > 0 || secondaryUploads.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                      {secondaryImages.map((image) => (
+                        <div
+                          key={image.id}
+                          className="group relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/25"
+                        >
+                          <Image
+                            src={image.url}
+                            alt={`Foto secundaria de ${draft.name}`}
+                            fill
+                            sizes="90px"
+                            className="object-cover"
+                          />
+                          <button
+                            type="button"
+                            disabled={isPending && pendingKey === `secondary-${image.id}`}
+                            onClick={() => {
+                              const formData = new FormData();
+                              formData.set("imageId", image.id);
+                              runAction(
+                                `secondary-${image.id}`,
+                                () => deleteProductSecondaryImage(formData),
+                                "Imagem removida.",
+                                () =>
+                                  setSecondaryImages((current) =>
+                                    current.filter((item) => item.id !== image.id)
+                                  )
+                              );
+                            }}
+                            className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-1 text-[10px] font-bold text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ))}
+
+                      {secondaryUploads.map((upload) => (
+                        <div
+                          key={upload.previewUrl}
+                          className="relative aspect-square overflow-hidden rounded-xl border border-[var(--brand)]/40 bg-black/25"
+                        >
+                          <img
+                            src={upload.previewUrl}
+                            alt="Preview de foto secundaria"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {canAddSecondaryImages ? (
+                    <div className="mt-3">
+                      <input
+                        id={`product-secondary-images-${product.id}`}
+                        name="secondaryImages"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+                        multiple
+                        onChange={handleSecondaryImagesChange}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor={`product-secondary-images-${product.id}`}
+                        className="btn-secondary min-h-10 w-full cursor-pointer rounded-xl"
+                      >
+                        Adicionar fotos secundarias
+                      </label>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="service-action-stack">
@@ -269,7 +458,10 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        setIsEditing(false);
+                        clearSecondaryUploads();
+                      }}
                       className="btn-secondary"
                     >
                       Cancelar
@@ -297,8 +489,8 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   {isPending && pendingKey === "toggle"
                     ? "Salvando..."
                     : isActive
-                    ? "Ocultar"
-                    : "Ativar"}
+                      ? "Ocultar"
+                      : "Ativar"}
                 </button>
 
                 <button
@@ -307,7 +499,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   onClick={() => {
                     if (
                       !window.confirm(
-                        "Excluir produto do catálogo? Esta ação remove o item definitivamente."
+                        "Excluir produto do catalogo? Esta acao remove o item definitivamente."
                       )
                     ) {
                       return;
@@ -316,7 +508,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                     runAction(
                       "delete",
                       () => deleteProduct(product.id),
-                      "Produto excluído com sucesso."
+                      "Produto excluido com sucesso."
                     );
                   }}
                   className="btn-danger"
@@ -328,7 +520,21 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
           ) : (
             <div className="mt-3">
               <div className="grid gap-2 text-sm">
-                <SummaryTile label="Preço" value={`R$ ${Number(draft.price || 0).toFixed(2)}`} />
+                <SummaryTile label="Preco" value={`R$ ${Number(draft.price || 0).toFixed(2)}`} />
+                <SummaryTile
+                  label="Fotos secundarias"
+                  value={`${secondaryImages.length}/${MAX_SECONDARY_IMAGES}`}
+                />
+                {draft.description ? (
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+                      Descricao
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-zinc-300">
+                      {draft.description}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <div className="mt-3 flex justify-end">
@@ -420,7 +626,7 @@ function Field({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label className="block min-w-0">

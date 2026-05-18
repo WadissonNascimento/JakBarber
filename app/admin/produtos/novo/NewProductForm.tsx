@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import { createProductFromForm } from "@/app/actions/productActions";
-import { prepareProductImageUpload } from "@/lib/productImageClient";
+import {
+  prepareProductImageUpload,
+  prepareSecondaryProductImageUpload,
+} from "@/lib/productImageClient";
+
+const MAX_SECONDARY_IMAGES = 5;
 
 type PreparedImageUpload = {
   file: File;
@@ -19,6 +24,7 @@ export default function NewProductForm() {
     tone: "success" | "error" | "info";
   }>({ message: null, tone: "success" });
   const [imageUpload, setImageUpload] = useState<PreparedImageUpload | null>(null);
+  const [secondaryUploads, setSecondaryUploads] = useState<PreparedImageUpload[]>([]);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -26,8 +32,22 @@ export default function NewProductForm() {
       if (imageUpload?.previewUrl) {
         URL.revokeObjectURL(imageUpload.previewUrl);
       }
+
+      for (const upload of secondaryUploads) {
+        URL.revokeObjectURL(upload.previewUrl);
+      }
     };
-  }, [imageUpload]);
+  }, [imageUpload, secondaryUploads]);
+
+  function clearSecondaryUploads() {
+    setSecondaryUploads((current) => {
+      for (const upload of current) {
+        URL.revokeObjectURL(upload.previewUrl);
+      }
+
+      return [];
+    });
+  }
 
   return (
     <form
@@ -41,6 +61,11 @@ export default function NewProductForm() {
           try {
             if (imageUpload) {
               formData.set("image", imageUpload.file);
+            }
+            formData.delete("secondaryImages");
+
+            for (const upload of secondaryUploads) {
+              formData.append("secondaryImages", upload.file);
             }
 
             await createProductFromForm(formData);
@@ -77,6 +102,22 @@ export default function NewProductForm() {
           className="service-edit-control"
           required
         />
+      </label>
+
+      <label className="block min-w-0">
+        <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+          Descricao curta
+        </span>
+        <textarea
+          name="description"
+          placeholder="Ex.: Maquina profissional com acabamento preciso."
+          maxLength={360}
+          rows={3}
+          className="service-edit-control min-h-24 resize-y"
+        />
+        <p className="mt-1.5 text-xs text-zinc-500">
+          Texto curto para aparecer no catalogo e no detalhe do produto.
+        </p>
       </label>
 
       <div className="grid gap-3">
@@ -154,6 +195,93 @@ export default function NewProductForm() {
             />
           </div>
         ) : null}
+      </div>
+
+      <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+              Fotos secundarias
+            </p>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              Ate 5 fotos reais do produto. Elas nao passam por remocao de fundo.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-bold text-zinc-300">
+            {secondaryUploads.length}/{MAX_SECONDARY_IMAGES}
+          </span>
+        </div>
+
+        {secondaryUploads.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {secondaryUploads.map((upload) => (
+              <div
+                key={upload.previewUrl}
+                className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/25"
+              >
+                <img
+                  src={upload.previewUrl}
+                  loading="lazy"
+                  decoding="async"
+                  alt="Preview de foto secundaria"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <input
+          id="new-product-secondary-images"
+          name="secondaryImages"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+          multiple
+          onChange={async (event) => {
+            const files = Array.from(event.currentTarget.files || []);
+
+            if (files.length === 0) {
+              clearSecondaryUploads();
+              return;
+            }
+
+            if (files.length > MAX_SECONDARY_IMAGES) {
+              event.currentTarget.value = "";
+              clearSecondaryUploads();
+              setFeedback({
+                message: "Escolha no maximo 5 fotos secundarias.",
+                tone: "error",
+              });
+              return;
+            }
+
+            try {
+              const prepared = await Promise.all(
+                files.map((file) => prepareSecondaryProductImageUpload(file))
+              );
+              clearSecondaryUploads();
+              setSecondaryUploads(prepared);
+              setFeedback({ message: null, tone: "success" });
+            } catch (error) {
+              event.currentTarget.value = "";
+              clearSecondaryUploads();
+              setFeedback({
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "Nao foi possivel preparar as fotos secundarias.",
+                tone: "error",
+              });
+            }
+          }}
+          className="sr-only"
+        />
+        <label
+          htmlFor="new-product-secondary-images"
+          className="btn-secondary min-h-10 w-full cursor-pointer rounded-xl"
+        >
+          Escolher fotos secundarias
+        </label>
       </div>
 
       <button
