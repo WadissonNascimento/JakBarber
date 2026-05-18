@@ -149,12 +149,12 @@ export function ProductGrid({
                 </p>
               ) : (
                 <p className="mt-2 min-h-[3.75rem] text-xs leading-5 text-zinc-500 sm:text-sm">
-                  Ver detalhes do produto
+                  Entre em contato com o vendedor.
                 </p>
               )}
 
               <span className="mt-3 inline-flex min-h-9 items-center rounded-full border border-white/10 px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-strong)]">
-                Ver detalhes
+                Falar com vendedor
               </span>
             </div>
           </button>
