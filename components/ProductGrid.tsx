@@ -18,6 +18,14 @@ type Product = {
   }[];
 };
 
+function buildProductInterestMessage(productName: string, currentUrl: string) {
+  return (
+    `Ola, tenho interesse na maquina ${productName}. ` +
+    "Poderia me passar mais informacoes?" +
+    (currentUrl ? `\n\nLink: ${currentUrl}` : "")
+  );
+}
+
 export function ProductGrid({
   products,
   whatsappNumber,
@@ -92,12 +100,10 @@ export function ProductGrid({
       return null;
     }
 
-    const message =
-      `Ola, tenho interesse na maquina ${selectedProduct.name}. ` +
-      "Poderia me passar mais informacoes?" +
-      (currentUrl ? `\n\nLink: ${currentUrl}` : "");
-
-    return buildWhatsAppUrl(whatsappNumber, message);
+    return buildWhatsAppUrl(
+      whatsappNumber,
+      buildProductInterestMessage(selectedProduct.name, currentUrl)
+    );
   }, [currentUrl, selectedProduct, whatsappNumber]);
 
   return (
@@ -114,51 +120,70 @@ export function ProductGrid({
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {products.map((product) => (
-          <button
-            key={product.id}
-            type="button"
-            onClick={() => setSelectedProduct(product)}
-            className="group overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] text-left shadow-[0_16px_36px_rgba(0,0,0,0.24)] transition hover:border-[var(--brand)]/35 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/70"
-          >
-            <div className="relative aspect-square overflow-hidden border-b border-white/10 bg-[#edf1f7]">
-              {normalizeProductImageUrl(product.imageUrl) ? (
-                <Image
-                  src={normalizeProductImageUrl(product.imageUrl) || ""}
-                  alt={product.name}
-                  fill
-                  sizes="(max-width: 768px) 50vw, (max-width: 1280px) 50vw, 33vw"
-                  quality={90}
-                  className="object-contain transition duration-300 group-hover:scale-[1.02]"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-500">
-                  Sem imagem
-                </div>
-              )}
-            </div>
+        {products.map((product) => {
+          const productWhatsappHref = buildWhatsAppUrl(
+            whatsappNumber,
+            buildProductInterestMessage(product.name, currentUrl)
+          );
 
-            <div className="p-3 sm:p-4">
-              <h3 className="line-clamp-2 min-h-[3rem] text-[15px] font-semibold leading-6 text-white sm:text-lg">
-                {product.name}
-              </h3>
+          return (
+            <article
+              key={product.id}
+              className="group overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] text-left shadow-[0_16px_36px_rgba(0,0,0,0.24)] transition hover:border-[var(--brand)]/35"
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedProduct(product)}
+                className="relative block aspect-square w-full overflow-hidden border-b border-white/10 bg-[#edf1f7] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--brand)]/70"
+                aria-label={`Ver fotos de ${product.name}`}
+              >
+                {normalizeProductImageUrl(product.imageUrl) ? (
+                  <Image
+                    src={normalizeProductImageUrl(product.imageUrl) || ""}
+                    alt={product.name}
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1280px) 50vw, 33vw"
+                    quality={90}
+                    className="object-contain transition duration-300 group-hover:scale-[1.02]"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-500">
+                    Sem imagem
+                  </div>
+                )}
+              </button>
 
-              {product.description ? (
-                <p className="mt-2 line-clamp-3 min-h-[3.75rem] text-xs leading-5 text-zinc-400 sm:text-sm">
-                  {product.description}
-                </p>
-              ) : (
-                <p className="mt-2 min-h-[3.75rem] text-xs leading-5 text-zinc-500 sm:text-sm">
-                  Entre em contato com o vendedor.
-                </p>
-              )}
+              <div className="p-3 sm:p-4">
+                <h3 className="line-clamp-2 min-h-[3rem] text-[15px] font-semibold leading-6 text-white sm:text-lg">
+                  {product.name}
+                </h3>
 
-              <span className="mt-3 inline-flex min-h-9 items-center rounded-full border border-white/10 px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-strong)]">
-                Falar com vendedor
-              </span>
-            </div>
-          </button>
-        ))}
+                {product.description ? (
+                  <p className="mt-2 line-clamp-3 min-h-[3.75rem] text-xs leading-5 text-zinc-400 sm:text-sm">
+                    {product.description}
+                  </p>
+                ) : (
+                  <div className="mt-2 min-h-[3.75rem]" aria-hidden="true" />
+                )}
+
+                {productWhatsappHref ? (
+                  <a
+                    href={productWhatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex min-h-9 items-center rounded-full border border-white/10 px-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-strong)] transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand)]/10 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/70"
+                  >
+                    Entrar em contato
+                  </a>
+                ) : (
+                  <span className="mt-3 inline-flex min-h-9 items-center rounded-full border border-white/10 px-3 text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
+                    WhatsApp indisponivel
+                  </span>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {selectedProduct && isMounted
