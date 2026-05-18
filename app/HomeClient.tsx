@@ -252,6 +252,7 @@ function DefaultHomeClient({
                       alt={`Corte ${current + 1}`}
                       fill
                       sizes="(max-width: 1024px) 100vw, 560px"
+                      quality={92}
                       priority={current === 0}
                       className="object-cover transition-all duration-700 ease-out"
                       onError={() => {
@@ -452,6 +453,7 @@ function RodrigoStyleHome({
                   alt="Ambiente premium da Rodrigo Style"
                   fill
                   sizes="(max-width: 1024px) 100vw, 580px"
+                  quality={92}
                   priority
                   className="object-cover"
                 />
@@ -605,6 +607,7 @@ function RodrigoStyleHome({
                         alt={product.name}
                         fill
                         sizes="(max-width: 768px) 100vw, 240px"
+                        quality={90}
                         className="object-cover"
                       />
                     ) : (

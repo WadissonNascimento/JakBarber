@@ -285,6 +285,7 @@ function ProductDetailsModal({
                     fill
                     sizes="(max-width: 768px) 94vw, 45vw"
                     quality={95}
+                    unoptimized
                     className={
                       currentCarouselImage.fit === "contain"
                         ? "object-contain"

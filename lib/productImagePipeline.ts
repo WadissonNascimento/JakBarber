@@ -1,6 +1,6 @@
 import sharp from "sharp";
 
-const OUTPUT_IMAGE_SIZE = 1200;
+const OUTPUT_IMAGE_SIZE = 1600;
 const TARGET_PRODUCT_FILL = 0.94;
 const REMOVE_BG_ENDPOINT = "https://api.remove.bg/v1.0/removebg";
 
@@ -56,8 +56,8 @@ export async function processProductImageBuffer(
     outputFormat === "png"
       ? await canvas.png({ compressionLevel: 9 }).toBuffer()
       : outputFormat === "jpeg"
-        ? await canvas.jpeg({ quality: 94 }).toBuffer()
-        : await canvas.webp({ quality: 92 }).toBuffer();
+        ? await canvas.jpeg({ quality: 96 }).toBuffer()
+        : await canvas.webp({ quality: 94 }).toBuffer();
 
   return {
     buffer: outputBuffer,

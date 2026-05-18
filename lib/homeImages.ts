@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { prepareImageFileBuffer } from "@/lib/serverImageFiles";
 
 const MAX_HOME_IMAGE_SIZE = 8 * 1024 * 1024;
-const MAX_HOME_IMAGE_DIMENSION = 1800;
+const MAX_HOME_IMAGE_DIMENSION = 2200;
 
 function getStorageConfig() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -50,7 +50,7 @@ async function processHomeImageBuffer(buffer: Buffer) {
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp({ quality: 84 })
+    .webp({ quality: 90 })
     .toBuffer();
 }
 

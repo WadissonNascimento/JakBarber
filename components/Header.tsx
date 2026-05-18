@@ -196,10 +196,11 @@ export default function Header({
               <Image
                 src={logoPath}
                 alt={brandName}
-                width={120}
-                height={50}
+                width={640}
+                height={179}
                 className={logoClassName}
                 priority
+                unoptimized
               />
             ) : (
               <span className="max-w-[160px] truncate text-lg font-bold text-[var(--site-header-text)]">

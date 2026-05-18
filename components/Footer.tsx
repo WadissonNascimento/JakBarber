@@ -37,9 +37,10 @@ export default function Footer({
               <Image
                 src={logoPath}
                 alt={brandName}
-                width={50}
-                height={50}
+                width={640}
+                height={179}
                 className="object-contain"
+                unoptimized
               />
             ) : null}
 
