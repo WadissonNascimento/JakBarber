@@ -190,24 +190,39 @@ function ProductDetailsModal({
   onClose: () => void;
 }) {
   const mainImageUrl = normalizeProductImageUrl(product.imageUrl);
-  const secondaryImages = product.secondaryImages
-    .map((image) => ({
-      ...image,
-      url: normalizeProductImageUrl(image.url) || image.url,
-    }))
-    .filter((image) => image.url);
-  const currentSecondaryImage =
-    secondaryImages[secondaryIndex] || secondaryImages[0] || null;
+  const carouselImages = [
+    ...(mainImageUrl
+      ? [
+          {
+            id: "cover",
+            url: mainImageUrl,
+            alt: product.name,
+            fit: "contain" as const,
+          },
+        ]
+      : []),
+    ...product.secondaryImages
+      .map((image) => ({
+        id: image.id,
+        url: normalizeProductImageUrl(image.url) || image.url,
+        alt: `Foto de ${product.name}`,
+        fit: "cover" as const,
+      }))
+      .filter((image) => image.url),
+  ];
+  const currentCarouselImage =
+    carouselImages[secondaryIndex] || carouselImages[0] || null;
+  const hasCarouselControls = carouselImages.length > 1;
 
   function goToPreviousImage() {
     setSecondaryIndex(
-      secondaryIndex === 0 ? secondaryImages.length - 1 : secondaryIndex - 1
+      secondaryIndex === 0 ? carouselImages.length - 1 : secondaryIndex - 1
     );
   }
 
   function goToNextImage() {
     setSecondaryIndex(
-      secondaryIndex >= secondaryImages.length - 1 ? 0 : secondaryIndex + 1
+      secondaryIndex >= carouselImages.length - 1 ? 0 : secondaryIndex + 1
     );
   }
 
@@ -236,14 +251,18 @@ function ProductDetailsModal({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.85fr)]">
             <div className="p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:border-r md:border-white/10 md:p-5">
-              <div className="relative h-[30dvh] min-h-[180px] max-h-[270px] overflow-hidden rounded-[24px] bg-[#edf1f7] sm:aspect-square sm:h-auto sm:max-h-none">
-                {mainImageUrl ? (
+              <div className="relative h-[46dvh] min-h-[310px] max-h-[430px] overflow-hidden rounded-[24px] bg-[#edf1f7] sm:aspect-square sm:h-auto sm:max-h-none">
+                {currentCarouselImage ? (
                   <Image
-                    src={mainImageUrl}
-                    alt={product.name}
+                    src={currentCarouselImage.url}
+                    alt={currentCarouselImage.alt}
                     fill
                     sizes="(max-width: 768px) 94vw, 45vw"
-                    className="object-contain"
+                    className={
+                      currentCarouselImage.fit === "contain"
+                        ? "object-contain"
+                        : "object-cover"
+                    }
                     priority
                   />
                 ) : (
@@ -251,58 +270,44 @@ function ProductDetailsModal({
                     Sem imagem principal
                   </div>
                 )}
+
+                {hasCarouselControls ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={goToPreviousImage}
+                      className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white shadow-[0_10px_26px_rgba(0,0,0,0.35)]"
+                      aria-label="Imagem anterior"
+                    >
+                      {"<"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goToNextImage}
+                      className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white shadow-[0_10px_26px_rgba(0,0,0,0.35)]"
+                      aria-label="Proxima imagem"
+                    >
+                      {">"}
+                    </button>
+                  </>
+                ) : null}
               </div>
 
-              {secondaryImages.length > 0 && currentSecondaryImage ? (
-                <div className="mt-3">
-                  <div className="relative h-[18dvh] min-h-[120px] max-h-[190px] overflow-hidden rounded-[20px] border border-white/10 bg-black/25 sm:aspect-[4/3] sm:h-auto sm:max-h-none">
-                    <Image
-                      src={currentSecondaryImage.url}
-                      alt={`Foto secundaria de ${product.name}`}
-                      fill
-                      sizes="(max-width: 768px) 94vw, 45vw"
-                      className="object-cover"
+              {hasCarouselControls ? (
+                <div className="mt-2.5 flex justify-center gap-2">
+                  {carouselImages.map((image, index) => (
+                    <button
+                      key={image.id}
+                      type="button"
+                      onClick={() => setSecondaryIndex(index)}
+                      className={`h-2.5 rounded-full transition ${
+                        index === secondaryIndex
+                          ? "w-7 bg-[var(--brand)]"
+                          : "w-2.5 bg-white/30"
+                      }`}
+                      aria-label={`Ver foto ${index + 1}`}
                     />
-
-                    {secondaryImages.length > 1 ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={goToPreviousImage}
-                          className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white"
-                          aria-label="Imagem anterior"
-                        >
-                          {"<"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={goToNextImage}
-                          className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-lg font-bold text-white"
-                          aria-label="Proxima imagem"
-                        >
-                          {">"}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-
-                  {secondaryImages.length > 1 ? (
-                    <div className="mt-2.5 flex justify-center gap-2">
-                      {secondaryImages.map((image, index) => (
-                        <button
-                          key={image.id}
-                          type="button"
-                          onClick={() => setSecondaryIndex(index)}
-                          className={`h-2.5 rounded-full transition ${
-                            index === secondaryIndex
-                              ? "w-7 bg-[var(--brand)]"
-                              : "w-2.5 bg-white/30"
-                          }`}
-                          aria-label={`Ver foto ${index + 1}`}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -322,12 +327,6 @@ function ProductDetailsModal({
                     "Entre em contato com a barbearia para receber mais detalhes sobre este produto."}
                 </p>
               </div>
-
-              {secondaryImages.length > 0 ? (
-                <p className="mt-3 text-xs leading-5 text-zinc-500">
-                  {secondaryImages.length} foto(s) secundaria(s) disponivel(is).
-                </p>
-              ) : null}
             </div>
           </div>
         </div>
