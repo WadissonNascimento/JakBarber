@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -27,9 +28,11 @@ export function ProductGrid({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [secondaryIndex, setSecondaryIndex] = useState(0);
   const [currentUrl, setCurrentUrl] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
@@ -49,7 +52,10 @@ export function ProductGrid({
       top: bodyStyle.top,
       width: bodyStyle.width,
     };
-    const previousOverscrollBehavior = htmlStyle.overscrollBehavior;
+    const previousHtmlStyles = {
+      overflow: htmlStyle.overflow,
+      overscrollBehavior: htmlStyle.overscrollBehavior,
+    };
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -58,6 +64,7 @@ export function ProductGrid({
     }
 
     document.addEventListener("keydown", handleKeyDown);
+    htmlStyle.overflow = "hidden";
     htmlStyle.overscrollBehavior = "none";
     bodyStyle.left = "0";
     bodyStyle.overflow = "hidden";
@@ -68,7 +75,8 @@ export function ProductGrid({
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      htmlStyle.overscrollBehavior = previousOverscrollBehavior;
+      htmlStyle.overflow = previousHtmlStyles.overflow;
+      htmlStyle.overscrollBehavior = previousHtmlStyles.overscrollBehavior;
       bodyStyle.left = previousBodyStyles.left;
       bodyStyle.overflow = previousBodyStyles.overflow;
       bodyStyle.position = previousBodyStyles.position;
@@ -152,15 +160,18 @@ export function ProductGrid({
         ))}
       </div>
 
-      {selectedProduct ? (
-        <ProductDetailsModal
-          product={selectedProduct}
-          secondaryIndex={secondaryIndex}
-          setSecondaryIndex={setSecondaryIndex}
-          whatsappHref={whatsappHref}
-          onClose={() => setSelectedProduct(null)}
-        />
-      ) : null}
+      {selectedProduct && isMounted
+        ? createPortal(
+            <ProductDetailsModal
+              product={selectedProduct}
+              secondaryIndex={secondaryIndex}
+              setSecondaryIndex={setSecondaryIndex}
+              whatsappHref={whatsappHref}
+              onClose={() => setSelectedProduct(null)}
+            />,
+            document.body
+          )
+        : null}
     </div>
   );
 }
@@ -202,7 +213,7 @@ function ProductDetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[10000] flex items-stretch justify-center overflow-hidden overscroll-none bg-black/80 p-0 backdrop-blur-md sm:items-center sm:px-4 sm:py-6"
+      className="fixed inset-0 z-[10000] flex items-stretch justify-center overflow-hidden overscroll-none bg-black/85 backdrop-blur-md sm:items-center sm:px-4 sm:py-6"
       role="dialog"
       aria-modal="true"
       aria-label={`Detalhes de ${product.name}`}
@@ -212,20 +223,20 @@ function ProductDetailsModal({
         }
       }}
     >
-      <div className="relative flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-white/10 bg-[#080a0f] shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px] sm:border">
+      <div className="relative flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-[#070a10] shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px] sm:border sm:border-white/10">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-lg font-bold text-white sm:top-3 sm:h-11 sm:w-11 sm:text-xl"
+          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-lg font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:top-3 sm:h-11 sm:w-11"
           aria-label="Fechar detalhes do produto"
         >
           X
         </button>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)]">
-            <div className="border-b border-white/10 p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:border-b-0 md:border-r md:p-5">
-              <div className="relative h-[34dvh] min-h-[220px] max-h-[320px] overflow-hidden rounded-[22px] bg-[#edf1f7] sm:aspect-square sm:h-auto sm:max-h-none">
+          <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.85fr)]">
+            <div className="p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:border-r md:border-white/10 md:p-5">
+              <div className="relative h-[30dvh] min-h-[180px] max-h-[270px] overflow-hidden rounded-[24px] bg-[#edf1f7] sm:aspect-square sm:h-auto sm:max-h-none">
                 {mainImageUrl ? (
                   <Image
                     src={mainImageUrl}
@@ -244,7 +255,7 @@ function ProductDetailsModal({
 
               {secondaryImages.length > 0 && currentSecondaryImage ? (
                 <div className="mt-3">
-                  <div className="relative h-[24dvh] min-h-[150px] max-h-[240px] overflow-hidden rounded-[20px] border border-white/10 bg-black/25 sm:aspect-[4/3] sm:h-auto sm:max-h-none">
+                  <div className="relative h-[18dvh] min-h-[120px] max-h-[190px] overflow-hidden rounded-[20px] border border-white/10 bg-black/25 sm:aspect-[4/3] sm:h-auto sm:max-h-none">
                     <Image
                       src={currentSecondaryImage.url}
                       alt={`Foto secundaria de ${product.name}`}
@@ -296,11 +307,11 @@ function ProductDetailsModal({
               ) : null}
             </div>
 
-            <div className="flex flex-col p-4 pt-3 sm:p-6">
+            <div className="px-4 pb-4 pt-2 sm:p-6 md:pt-6">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
                 Detalhes do produto
               </p>
-              <h3 className="mt-1.5 text-2xl font-black leading-tight text-white sm:text-3xl">
+              <h3 className="mt-1.5 text-[1.75rem] font-black leading-tight text-white sm:text-3xl">
                 {product.name}
               </h3>
 
@@ -321,7 +332,7 @@ function ProductDetailsModal({
           </div>
         </div>
 
-        <div className="grid shrink-0 gap-2 border-t border-white/10 bg-[#080a0f]/95 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-16px_40px_rgba(0,0,0,0.35)] backdrop-blur-md sm:grid-cols-[1fr_auto] sm:p-4">
+        <div className="shrink-0 border-t border-white/10 bg-[#070a10]/95 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-16px_40px_rgba(0,0,0,0.4)] backdrop-blur-md sm:grid sm:grid-cols-[1fr_auto] sm:gap-2 sm:p-4">
           {whatsappHref ? (
             <a
               href={whatsappHref}
@@ -339,12 +350,12 @@ function ProductDetailsModal({
           <button
             type="button"
             onClick={onClose}
-            className="btn-secondary w-full sm:w-auto"
-        >
-          Fechar
-        </button>
+            className="btn-secondary hidden w-full sm:inline-flex sm:w-auto"
+          >
+            Fechar
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
