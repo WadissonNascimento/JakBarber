@@ -16,19 +16,8 @@ export async function processProductImageBuffer(
   mimeType: string,
   options?: {
     outputFormat?: "webp" | "jpeg" | "png";
-    passthroughPrepared?: boolean;
   }
 ) {
-  if (options?.passthroughPrepared && mimeType === "image/webp") {
-    return {
-      buffer: inputBuffer,
-      mimeType: "image/webp",
-      extension: "webp",
-      size: null,
-      backgroundRemoved: false,
-    };
-  }
-
   const outputFormat = options?.outputFormat ?? "webp";
   const backgroundRemoved = await removeBackgroundIfConfigured(
     inputBuffer,
@@ -84,16 +73,6 @@ export async function processProductImageBuffer(
   };
 }
 
-export function isClientPreparedProductImage(file: File) {
-  const name = String(file.name || "").trim().toLowerCase();
-  const type = String(file.type || "").trim().toLowerCase();
-
-  return (
-    (name === "image.webp" || name === "prepared-product-image.webp") &&
-    (!type || type === "image/webp" || type === "application/octet-stream")
-  );
-}
-
 async function removeBackgroundIfConfigured(
   inputBuffer: Buffer,
   mimeType: string
@@ -108,8 +87,49 @@ async function removeBackgroundIfConfigured(
     };
   }
 
+  const requestedSize = process.env.REMOVE_BG_SIZE?.trim() || "full";
+  const sizesToTry =
+    requestedSize === "full" ? ["full", "auto"] : [requestedSize, "auto"];
+  let lastError: Error | null = null;
+
+  for (const size of [...new Set(sizesToTry)]) {
+    try {
+      return await requestRemoveBackground({
+        apiKey,
+        inputBuffer,
+        mimeType,
+        size,
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (size !== "auto") {
+        console.warn(
+          `[product-image] remove.bg size=${size} falhou, tentando auto.`,
+          lastError
+        );
+        continue;
+      }
+      throw lastError;
+    }
+  }
+
+  throw lastError || new Error("remove.bg falhou.");
+}
+
+async function requestRemoveBackground({
+  apiKey,
+  inputBuffer,
+  mimeType,
+  size,
+}: {
+  apiKey: string;
+  inputBuffer: Buffer;
+  mimeType: string;
+  size: string;
+}) {
   const formData = new FormData();
-  formData.append("size", "auto");
+  formData.append("size", size);
+  formData.append("type", "product");
   formData.append("crop", "true");
   formData.append("format", "png");
   const bodyBytes = new Uint8Array(inputBuffer);

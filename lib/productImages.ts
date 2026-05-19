@@ -2,10 +2,7 @@ import "server-only";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
-import {
-  isClientPreparedProductImage,
-  processProductImageBuffer,
-} from "@/lib/productImagePipeline";
+import { processProductImageBuffer } from "@/lib/productImagePipeline";
 import {
   getImageFileExtension,
   prepareImageFileBuffer,
@@ -100,9 +97,7 @@ export async function uploadProductImage({
   try {
     const { buffer, mimeType } = await getValidatedImageBuffer(file);
     stage = "processamento";
-    const processed = await processProductImageBuffer(buffer, mimeType, {
-      passthroughPrepared: isClientPreparedProductImage(file),
-    });
+    const processed = await processProductImageBuffer(buffer, mimeType);
     const extension = processed.extension;
     const imagePath = `products/${normalizeStorageSegment(shopId)}/${productId}/${randomUUID()}.${extension}`;
     const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${encodeStoragePath(
