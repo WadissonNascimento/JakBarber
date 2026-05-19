@@ -14,6 +14,7 @@ const ADMIN_AGENDA_PAGE_LIMIT = 250;
 type SearchParams = {
   dateFrom?: string;
   dateTo?: string;
+  barberId?: string;
 };
 
 function getValidDateFilter(value: string | undefined) {
@@ -30,17 +31,20 @@ function getInitialAgendaFilters(searchParams: SearchParams) {
   const today = getCurrentScheduleDateValue();
   const dateFrom = getValidDateFilter(searchParams.dateFrom) || today;
   const dateTo = getValidDateFilter(searchParams.dateTo) || dateFrom;
+  const barberId = searchParams.barberId?.trim() || "";
 
   if (dateFrom > dateTo) {
     return {
       dateFrom: dateTo,
       dateTo: dateFrom,
+      barberId,
     };
   }
 
   return {
     dateFrom,
     dateTo,
+    barberId,
   };
 }
 
@@ -60,15 +64,23 @@ export default async function AdminAgendaPage({
     redirect("/painel");
   }
 
+  if (!session.user.shopId) {
+    redirect("/logout");
+  }
+
   const initialFilters = getInitialAgendaFilters(resolvedSearchParams);
+  const shopId = session.user.shopId;
 
   const [report, barbers, services, extras] = await Promise.all([
     getAdminAgendaReport({
+      shopId,
+      barberId: initialFilters.barberId || undefined,
       dateFrom: initialFilters.dateFrom,
       dateTo: initialFilters.dateTo,
     }, { limit: ADMIN_AGENDA_PAGE_LIMIT }),
     prisma.user.findMany({
       where: {
+        shopId,
         role: "BARBER",
         isActive: true,
       },
@@ -76,6 +88,7 @@ export default async function AdminAgendaPage({
         id: true,
         name: true,
         email: true,
+        image: true,
       },
       orderBy: {
         name: "asc",
@@ -83,6 +96,7 @@ export default async function AdminAgendaPage({
     }),
     prisma.service.findMany({
       where: {
+        shopId,
         isActive: true,
       },
       select: {
@@ -98,6 +112,7 @@ export default async function AdminAgendaPage({
     }),
     prisma.extraProduct.findMany({
       where: {
+        shopId,
         isActive: true,
       },
       select: {

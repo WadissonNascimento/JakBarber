@@ -6,12 +6,25 @@ import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
 import StatusBadge from "@/components/ui/StatusBadge";
+import {
+  getAppointmentDisplayName,
+  getAppointmentGrandTotal,
+  getAppointmentTotalBarberPayout,
+} from "@/lib/appointmentServices";
+import { appointmentForAdminSelect } from "@/lib/appointmentSelects";
 import { getFinanceDashboardData } from "@/lib/financeReports";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
+import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
+import { prisma } from "@/lib/prisma";
 import FinancePeriodFilters from "./FinancePeriodFilters";
 import FinanceHistoryFilters from "./FinanceHistoryFilters";
 import GeneratePayoutsButton from "./GeneratePayoutsButton";
 import PayoutActionPanel from "./PayoutActionPanel";
+import FinanceAppointmentCard, {
+  type FinanceAppointmentCardData,
+  type FinanceEditExtraOption,
+  type FinanceEditServiceOption,
+} from "@/app/barber/financeiro/FinanceAppointmentCard";
 
 function formatCurrency(value: MoneyValue) {
   return toMoneyNumber(value).toLocaleString("pt-BR", {
@@ -24,6 +37,174 @@ function formatDate(value: string | Date) {
   return new Date(value instanceof Date ? value : `${value}T00:00:00`).toLocaleDateString(
     "pt-BR"
   );
+}
+
+async function getAdminFinanceAppointments({
+  shopId,
+  start,
+  end,
+}: {
+  shopId: string;
+  start: string;
+  end: string;
+}) {
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T23:59:59.999`);
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      shopId,
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+      status: {
+        in: ["COMPLETED", "DONE"],
+      },
+    },
+    select: appointmentForAdminSelect,
+    orderBy: {
+      date: "desc",
+    },
+    take: 180,
+  });
+
+  const currentServiceIds = Array.from(
+    new Set(
+      appointments.flatMap((appointment) =>
+        appointment.services.map((service) => service.serviceId)
+      )
+    )
+  );
+  const currentExtraIds = Array.from(
+    new Set(
+      appointments.flatMap((appointment) =>
+        appointment.items.map((item) => item.extraProductId)
+      )
+    )
+  );
+  const [services, extras] = await Promise.all([
+    prisma.service.findMany({
+      where: {
+        shopId,
+        OR: [
+          { isActive: true },
+          ...(currentServiceIds.length ? [{ id: { in: currentServiceIds } }] : []),
+        ],
+      },
+      orderBy: [
+        {
+          barberId: "desc",
+        },
+        {
+          name: "asc",
+        },
+      ],
+      select: {
+        id: true,
+        barberId: true,
+        name: true,
+        price: true,
+        duration: true,
+      },
+    }),
+    prisma.extraProduct.findMany({
+      where: {
+        shopId,
+        OR: [
+          {
+            isActive: true,
+            stock: {
+              gt: 0,
+            },
+          },
+          ...(currentExtraIds.length ? [{ id: { in: currentExtraIds } }] : []),
+        ],
+      },
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+      },
+    }),
+  ]);
+  const normalizedAppointments: FinanceAppointmentCardData[] = appointments.map(
+    (appointment) => {
+      const normalizedStatus = normalizeAppointmentStatus(appointment.status);
+      const deliveredItems = appointment.items.filter((item) => item.isDelivered);
+      const servicePayout = appointment.services.reduce(
+        (sum, service) => sum + toMoneyNumber(service.barberPayoutSnapshot),
+        0
+      );
+      const deliveredItemsPayout = deliveredItems.reduce(
+        (sum, item) => sum + toMoneyNumber(item.barberPayoutSnapshot),
+        0
+      );
+      const payoutTotal = getAppointmentTotalBarberPayout(
+        appointment.services,
+        appointment.items
+      );
+      const grossTotal = getAppointmentGrandTotal(appointment.services, deliveredItems);
+
+      return {
+        id: appointment.id,
+        publicId: appointment.publicId,
+        date: appointment.date,
+        status: normalizedStatus,
+        customerName: appointment.customer.name || "Cliente",
+        barberId: appointment.barberId,
+        barberName: appointment.barber.name || "Barbeiro",
+        serviceName: getAppointmentDisplayName(appointment.services),
+        notes: appointment.notes,
+        services: appointment.services
+          .slice()
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((service) => ({
+            id: service.id,
+            serviceId: service.serviceId,
+            name: service.nameSnapshot,
+            price: toMoneyNumber(service.priceSnapshot),
+            payout: toMoneyNumber(service.barberPayoutSnapshot),
+          })),
+        items: appointment.items.map((item) => ({
+          id: item.id,
+          extraProductId: item.extraProductId,
+          name: item.productNameSnapshot,
+          quantity: item.quantity,
+          subtotal: toMoneyNumber(item.subtotal),
+          payout: toMoneyNumber(item.barberPayoutSnapshot),
+          isDelivered: item.isDelivered,
+        })),
+        servicePayout,
+        deliveredItemsPayout,
+        payoutTotal,
+        grossTotal,
+      };
+    }
+  );
+  const appointmentsByBarber = new Map<string, FinanceAppointmentCardData[]>();
+
+  for (const appointment of normalizedAppointments) {
+    if (!appointment.barberId) continue;
+    const current = appointmentsByBarber.get(appointment.barberId) || [];
+    current.push(appointment);
+    appointmentsByBarber.set(appointment.barberId, current);
+  }
+
+  return {
+    appointmentsByBarber,
+    services: services.map((service) => ({
+      ...service,
+      price: toMoneyNumber(service.price),
+    })) as Array<FinanceEditServiceOption & { barberId: string | null }>,
+    extras: extras.map((extra) => ({
+      ...extra,
+      price: toMoneyNumber(extra.price),
+    })) as FinanceEditExtraOption[],
+  };
 }
 
 export default async function AdminFinanceiroPage({
@@ -44,8 +225,10 @@ export default async function AdminFinanceiroPage({
 
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/painel");
+  if (!session.user.shopId) redirect("/logout");
 
   const data = await getFinanceDashboardData({
+    shopId: session.user.shopId,
     period: searchParams?.period,
     start: searchParams?.start,
     end: searchParams?.end,
@@ -54,6 +237,11 @@ export default async function AdminFinanceiroPage({
     compareMode: searchParams?.compareMode,
     compareStart: searchParams?.compareStart,
     compareEnd: searchParams?.compareEnd,
+  });
+  const financeAppointments = await getAdminFinanceAppointments({
+    shopId: session.user.shopId,
+    start: data.filters.start,
+    end: data.filters.end,
   });
   const maxDailyRevenue = Math.max(
     ...data.analytics.dailySeries.map((item) => item.grossRevenue),
@@ -394,6 +582,36 @@ export default async function AdminFinanceiroPage({
                           />
                         </div>
                       ) : null}
+
+                      <div className="mt-4 border-t border-white/10 pt-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                          Atendimentos do periodo
+                        </p>
+                        <div className="mt-2 space-y-2">
+                          {(financeAppointments.appointmentsByBarber.get(item.barberId) || [])
+                            .length === 0 ? (
+                            <p className="rounded-2xl border border-dashed border-white/10 p-3 text-sm text-zinc-400">
+                              Nenhum atendimento concluido para revisar.
+                            </p>
+                          ) : (
+                            (financeAppointments.appointmentsByBarber.get(item.barberId) || []).map(
+                              (appointment) => (
+                                <FinanceAppointmentCard
+                                  key={appointment.id}
+                                  appointment={appointment}
+                                  mode="admin"
+                                  services={financeAppointments.services.filter(
+                                    (service) =>
+                                      !service.barberId ||
+                                      service.barberId === appointment.barberId
+                                  )}
+                                  extras={financeAppointments.extras}
+                                />
+                              )
+                            )
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </ExclusiveDetails>
                 ))}

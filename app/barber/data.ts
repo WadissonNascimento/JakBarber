@@ -496,7 +496,7 @@ export async function getBarberAgendaData(
           },
         };
 
-  const [appointments, services, extras] = await Promise.all([
+  const [appointments, barber] = await Promise.all([
     prisma.appointment.findMany({
       where: {
         ...appointmentWhere,
@@ -511,10 +511,46 @@ export async function getBarberAgendaData(
         date: "asc",
       },
     }),
+    prisma.user.findUnique({
+      where: {
+        id: barberId,
+      },
+      select: {
+        shopId: true,
+      },
+    }),
+  ]);
+  const shopId = barber?.shopId || undefined;
+  const currentServiceIds = Array.from(
+    new Set(
+      appointments.flatMap((appointment) =>
+        appointment.services.map((service) => service.serviceId)
+      )
+    )
+  );
+  const currentExtraProductIds = Array.from(
+    new Set(
+      appointments.flatMap((appointment) =>
+        appointment.items.map((item) => item.extraProductId)
+      )
+    )
+  );
+
+  const [services, extras] = await Promise.all([
     prisma.service.findMany({
       where: {
+        ...(shopId ? { shopId } : {}),
         OR: [{ barberId }, { barberId: null }],
-        isActive: true,
+        AND: [
+          {
+            OR: [
+              { isActive: true },
+              ...(currentServiceIds.length
+                ? [{ id: { in: currentServiceIds } }]
+                : []),
+            ],
+          },
+        ],
       },
       orderBy: [
         {
@@ -527,10 +563,18 @@ export async function getBarberAgendaData(
     }),
     prisma.extraProduct.findMany({
       where: {
-        isActive: true,
-        stock: {
-          gt: 0,
-        },
+        ...(shopId ? { shopId } : {}),
+        OR: [
+          {
+            isActive: true,
+            stock: {
+              gt: 0,
+            },
+          },
+          ...(currentExtraProductIds.length
+            ? [{ id: { in: currentExtraProductIds } }]
+            : []),
+        ],
       },
       orderBy: {
         name: "asc",

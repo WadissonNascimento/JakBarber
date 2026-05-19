@@ -41,10 +41,14 @@ export async function getBarberTipsTotal({
   };
 }
 
-export async function getBarberTipsByBarber(range: TipRange) {
+export async function getBarberTipsByBarber(
+  range: TipRange,
+  shopId?: string | null
+) {
   const groupedTips = await prisma.barberTip.groupBy({
     by: ["barberId"],
     where: {
+      ...(shopId ? { shopId } : {}),
       createdAt: {
         gte: range.start,
         lte: range.end,

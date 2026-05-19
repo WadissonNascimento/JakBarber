@@ -10,6 +10,7 @@ import {
 import {
   AppointmentMutationError,
   createManualFitInAppointment,
+  editCompletedAppointmentFinancialItems,
   editOpenAppointmentForBarber,
   setAppointmentItemDeliveryStatus,
   updateAppointmentStatusForBarber,
@@ -71,12 +72,19 @@ function revalidateBarberViews() {
   revalidatePath("/admin/barbeiros");
 }
 
-function revalidateAppointmentStatusViews() {
+function revalidateAppointmentStatusViews(barberId?: string) {
   revalidatePath("/barber");
   revalidatePath("/barber/agenda");
+  revalidatePath("/barber/financeiro");
+  revalidatePath("/admin/financeiro");
   revalidatePath("/customer/agendamentos");
   revalidatePath("/meu-perfil");
   revalidatePath("/admin/agenda");
+
+  if (barberId) {
+    revalidatePath(`/admin/barbeiros/${barberId}/repasse-hoje`);
+    revalidatePath(`/admin/barbeiros/${barberId}/repasse-semana`);
+  }
 }
 
 function parseItemDeliveryDecisions(formData: FormData) {
@@ -266,7 +274,7 @@ export async function updateAppointmentStatusAction(
   }
 
   after(async () => {
-    revalidateAppointmentStatusViews();
+    revalidateAppointmentStatusViews(barber.id);
 
     if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
       await notifyCustomerAppointmentCompleted(appointmentId);
@@ -351,8 +359,55 @@ export async function editOpenBarberAppointmentAction(
       notes,
     });
 
-    revalidateAppointmentStatusViews();
+    revalidateAppointmentStatusViews(barber.id);
     return mutationSuccess("Agendamento atualizado.");
+  } catch (error) {
+    if (error instanceof AppointmentMutationError) {
+      return mutationError(error.message);
+    }
+
+    throw error;
+  }
+}
+
+export async function editCompletedBarberFinanceAppointmentAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const barber = await requireBarber();
+  const appointmentId = String(formData.get("appointmentId") || "").trim();
+  const serviceIds = formData
+    .getAll("serviceIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const extras = formData
+    .getAll("extraProductIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .map((extraProductId) => ({ extraProductId, quantity: 1 }));
+  const notes = String(formData.get("notes") || "").trim();
+
+  if (
+    !appointmentId ||
+    serviceIds.length === 0 ||
+    serviceIds.length > 8 ||
+    extras.length > 12 ||
+    notes.length > 400
+  ) {
+    return mutationError("Selecione servicos, extras e observacoes corretamente.");
+  }
+
+  try {
+    await editCompletedAppointmentFinancialItems({
+      appointmentId,
+      actor: "BARBER",
+      barberId: barber.id,
+      serviceIds,
+      extras,
+      notes,
+    });
+
+    revalidateAppointmentStatusViews(barber.id);
+    return mutationSuccess("Atendimento atualizado no financeiro.");
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
       return mutationError(error.message);

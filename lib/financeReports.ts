@@ -16,6 +16,7 @@ import { toMoneyNumber } from "@/lib/money";
 export type FinancePeriod = "week" | "month" | "custom";
 
 export type FinanceFilters = {
+  shopId?: string | null;
   period?: FinancePeriod;
   start?: string;
   end?: string;
@@ -81,6 +82,7 @@ function getPreviousRange(start: Date, end: Date) {
 
 export async function getFinanceDashboardData(filters: FinanceFilters) {
   const range = resolveFinanceRange(filters);
+  const shopWhere = filters.shopId ? { shopId: filters.shopId } : {};
   const autoPreviousRange = getPreviousRange(range.start, range.end);
   const compareMode = filters.compareMode === "custom" ? "custom" : "auto";
   const comparisonRange =
@@ -109,6 +111,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
   ] = await Promise.all([
     prisma.appointment.findMany({
       where: {
+        ...shopWhere,
         date: {
           gte: range.start,
           lte: range.end,
@@ -121,6 +124,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     }),
     prisma.appointment.findMany({
       where: {
+        ...shopWhere,
         date: {
           gte: comparisonRange.start,
           lte: comparisonRange.end,
@@ -130,6 +134,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     }),
     prisma.barberPayout.findMany({
       where: {
+        ...shopWhere,
         periodStart: range.start,
         periodEnd: range.end,
       },
@@ -142,6 +147,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     }),
     prisma.barberPayout.findMany({
       where: {
+        ...shopWhere,
         ...(historyStart || historyEnd
           ? {
               periodStart: historyStart ? { gte: historyStart } : undefined,
@@ -160,13 +166,14 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     getBarberTipsByBarber({
       start: range.start,
       end: range.end,
-    }),
+    }, filters.shopId),
     getBarberTipsByBarber({
       start: comparisonRange.start,
       end: comparisonRange.end,
-    }),
+    }, filters.shopId),
     prisma.barberTip.findMany({
       where: {
+        ...shopWhere,
         createdAt: {
           gte: range.start,
           lte: range.end,
@@ -181,6 +188,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     }),
     prisma.user.findMany({
       where: {
+        ...shopWhere,
         role: "BARBER",
         isActive: true,
       },

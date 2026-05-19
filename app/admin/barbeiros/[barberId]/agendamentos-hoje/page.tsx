@@ -40,9 +40,11 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
 
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/painel");
+  if (!session.user.shopId) redirect("/logout");
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId: session.user.shopId,
       id: barberId,
       role: "BARBER",
     },
@@ -54,6 +56,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
   const [appointments, barbers, services, extras] = await Promise.all([
     prisma.appointment.findMany({
       where: {
+        shopId: session.user.shopId,
         barberId: barber.id,
         date: {
           gte: start,
@@ -74,6 +77,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
     }),
     prisma.user.findMany({
       where: {
+        shopId: session.user.shopId,
         role: "BARBER",
         isActive: true,
       },
@@ -81,6 +85,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
         id: true,
         name: true,
         email: true,
+        image: true,
       },
       orderBy: {
         name: "asc",
@@ -88,6 +93,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
     }),
     prisma.service.findMany({
       where: {
+        shopId: session.user.shopId,
         isActive: true,
       },
       select: {
@@ -103,6 +109,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
     }),
     prisma.extraProduct.findMany({
       where: {
+        shopId: session.user.shopId,
         isActive: true,
       },
       select: {

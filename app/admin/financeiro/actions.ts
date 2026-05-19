@@ -9,6 +9,10 @@ import {
 } from "@/lib/mutationResult";
 import { prisma } from "@/lib/prisma";
 import {
+  AppointmentMutationError,
+  editCompletedAppointmentFinancialItems,
+} from "@/lib/appointmentMutations";
+import {
   getBarberPayoutSnapshot,
   getFinanceDashboardData,
   resolveFinanceRange,
@@ -24,10 +28,22 @@ async function requireAdmin() {
   return session.user;
 }
 
+function parseSelectedExtras(formData: FormData) {
+  return formData
+    .getAll("extraProductIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .map((extraProductId) => ({ extraProductId, quantity: 1 }));
+}
+
 export async function generateBarberPayoutsAction(
   formData: FormData
 ): Promise<MutationResult> {
   const admin = await requireAdmin();
+
+  if (!admin.shopId) {
+    return mutationError("Admin sem barbearia vinculada.");
+  }
 
   const range = resolveFinanceRange({
     period: String(formData.get("period") || "week") as "week" | "month" | "custom",
@@ -36,6 +52,7 @@ export async function generateBarberPayoutsAction(
   });
 
   const dashboard = await getFinanceDashboardData({
+    shopId: admin.shopId,
     period: range.period,
     start: range.start.toISOString().slice(0, 10),
     end: range.end.toISOString().slice(0, 10),
@@ -81,6 +98,61 @@ export async function generateBarberPayoutsAction(
   revalidatePath("/admin");
   revalidatePath("/admin/financeiro");
   return mutationSuccess("Repasses salvos com sucesso.");
+}
+
+export async function editCompletedAdminFinanceAppointmentAction(
+  formData: FormData
+): Promise<MutationResult> {
+  const admin = await requireAdmin();
+  const appointmentId = String(formData.get("appointmentId") || "").trim();
+  const notes = String(formData.get("notes") || "").trim();
+  const serviceIds = formData
+    .getAll("serviceIds")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const extras = parseSelectedExtras(formData);
+
+  if (!admin.shopId) {
+    return mutationError("Admin sem barbearia vinculada.");
+  }
+
+  if (
+    !appointmentId ||
+    serviceIds.length === 0 ||
+    serviceIds.length > 8 ||
+    extras.length > 12 ||
+    notes.length > 400
+  ) {
+    return mutationError("Selecione servicos, extras e observacoes corretamente.");
+  }
+
+  try {
+    const updatedAppointment = await editCompletedAppointmentFinancialItems({
+      appointmentId,
+      actor: "ADMIN",
+      shopId: admin.shopId,
+      serviceIds,
+      extras,
+      notes,
+    });
+
+    revalidatePath(`/admin/barbeiros/${updatedAppointment.barberId}/repasse-hoje`);
+    revalidatePath(`/admin/barbeiros/${updatedAppointment.barberId}/repasse-semana`);
+  } catch (error) {
+    if (error instanceof AppointmentMutationError) {
+      return mutationError(error.message);
+    }
+
+    throw error;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/financeiro");
+  revalidatePath("/admin/agenda");
+  revalidatePath("/barber");
+  revalidatePath("/barber/financeiro");
+
+  return mutationSuccess("Atendimento atualizado no financeiro.");
 }
 
 export async function markBarberPayoutAsPaidAction(

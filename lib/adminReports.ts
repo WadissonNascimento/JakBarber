@@ -20,6 +20,7 @@ import {
 } from "@/lib/scheduleTime";
 
 export type AdminAgendaFilters = {
+  shopId?: string;
   barberId?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -66,6 +67,7 @@ export function buildAgendaReportQuery(filters: AdminAgendaFilters) {
     : "";
 
   const where: Prisma.AppointmentWhereInput = {
+    ...(filters.shopId ? { shopId: filters.shopId } : {}),
     ...(filters.barberId ? { barberId: filters.barberId } : {}),
     ...(startDate || endDate
       ? {

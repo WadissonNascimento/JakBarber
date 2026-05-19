@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  editCompletedBarberFinanceAppointmentAction,
   editOpenBarberAppointmentAction,
   updateAppointmentStatusAction,
 } from "../actions";
@@ -65,6 +66,11 @@ export default function BarberAppointmentActions({
   const [isEditing, setIsEditing] = useState(false);
   const [, startTransition] = useTransition();
   const isPending = Boolean(pendingStatus);
+  const isCompletedEdit = ["COMPLETED", "DONE"].includes(status);
+  const canEditItems =
+    ["PENDING", "CONFIRMED", "COMPLETED", "DONE"].includes(status) &&
+    services.length > 0;
+  const canComplete = ["PENDING", "CONFIRMED"].includes(status);
 
   function submitStatus(nextStatus: string) {
     if (
@@ -110,31 +116,30 @@ export default function BarberAppointmentActions({
 
   return (
     <>
-      {["PENDING", "CONFIRMED"].includes(status) ? (
-        <>
-          {services.length > 0 ? (
-            <ActionButton
-              disabled={isPending}
-              pending={false}
-              variant="secondary"
-              onClick={() => setIsEditing(true)}
-            >
-              Editar
-            </ActionButton>
-          ) : null}
-          <ActionButton
-            disabled={isPending}
-            pending={pendingStatus === "COMPLETED"}
-            variant="primary"
-            onClick={() => submitStatus("COMPLETED")}
-          >
-            Concluir
-          </ActionButton>
-        </>
+      {canEditItems ? (
+        <ActionButton
+          disabled={isPending}
+          pending={false}
+          variant="secondary"
+          onClick={() => setIsEditing(true)}
+        >
+          Editar
+        </ActionButton>
+      ) : null}
+      {canComplete ? (
+        <ActionButton
+          disabled={isPending}
+          pending={pendingStatus === "COMPLETED"}
+          variant="primary"
+          onClick={() => submitStatus("COMPLETED")}
+        >
+          Concluir
+        </ActionButton>
       ) : null}
       {isEditing ? (
         <BarberEditAppointmentModal
           appointmentId={appointmentId}
+          isCompletedEdit={isCompletedEdit}
           services={services}
           extras={extras}
           currentServiceIds={currentServiceIds}
@@ -154,6 +159,7 @@ export default function BarberAppointmentActions({
 
 function BarberEditAppointmentModal({
   appointmentId,
+  isCompletedEdit,
   services,
   extras,
   currentServiceIds,
@@ -164,6 +170,7 @@ function BarberEditAppointmentModal({
   onFeedback,
 }: {
   appointmentId: string;
+  isCompletedEdit: boolean;
   services: NonNullable<BarberAppointmentActionsProps["services"]>;
   extras: NonNullable<BarberAppointmentActionsProps["extras"]>;
   currentServiceIds: string[];
@@ -210,7 +217,9 @@ function BarberEditAppointmentModal({
 
   function submitEdit(formData: FormData) {
     startTransition(async () => {
-      const result = await editOpenBarberAppointmentAction(formData);
+      const result = isCompletedEdit
+        ? await editCompletedBarberFinanceAppointmentAction(formData)
+        : await editOpenBarberAppointmentAction(formData);
       onFeedback({ message: result.message, tone: result.tone });
 
       if (result.ok) {
@@ -234,11 +243,15 @@ function BarberEditAppointmentModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-                Atendimento aberto
+                {isCompletedEdit ? "Financeiro" : "Atendimento aberto"}
               </p>
-              <h3 className="mt-2 text-xl font-bold">Editar itens</h3>
+              <h3 className="mt-2 text-xl font-bold">
+                {isCompletedEdit ? "Editar itens concluidos" : "Editar itens"}
+              </h3>
               <p className="mt-1 text-sm text-zinc-400">
-                Ajuste servicos, extras e observacoes antes de salvar.
+                {isCompletedEdit
+                  ? "Ajuste servicos, extras e observacoes sem reabrir o atendimento."
+                  : "Ajuste servicos, extras e observacoes antes de salvar."}
               </p>
             </div>
             <button

@@ -10,6 +10,7 @@ import {
 import {
   AppointmentMutationError,
   editAppointmentForAdmin,
+  editCompletedAppointmentFinancialItems,
   updateAppointmentStatusForAdmin,
 } from "@/lib/appointmentMutations";
 import {
@@ -35,13 +36,20 @@ async function requireAdmin() {
   return session.user;
 }
 
-function revalidateAgendaViews() {
+function revalidateAgendaViews(barberId?: string | null) {
   revalidatePath("/admin/agenda");
   revalidatePath("/admin");
+  revalidatePath("/admin/financeiro");
   revalidatePath("/barber");
   revalidatePath("/barber/agenda");
+  revalidatePath("/barber/financeiro");
   revalidatePath("/customer/agendamentos");
   revalidatePath("/meu-perfil");
+
+  if (barberId) {
+    revalidatePath(`/admin/barbeiros/${barberId}/repasse-hoje`);
+    revalidatePath(`/admin/barbeiros/${barberId}/repasse-semana`);
+  }
 }
 
 function parseSelectedExtras(formData: FormData) {
@@ -72,6 +80,7 @@ export async function updateAdminAppointmentStatusAction(
     where: { id: appointmentId },
     select: {
       status: true,
+      barberId: true,
     },
   });
   const previousStatus = currentAppointment
@@ -118,7 +127,7 @@ export async function updateAdminAppointmentStatusAction(
   });
 
   after(async () => {
-    revalidateAgendaViews();
+    revalidateAgendaViews(currentAppointment?.barberId);
 
     if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
       await notifyCustomerAppointmentCompleted(appointmentId);
@@ -153,27 +162,66 @@ export async function editAdminAppointmentAction(
 
   if (
     !appointmentId ||
-    !barberId ||
     serviceIds.length === 0 ||
     serviceIds.length > 8 ||
     extras.length > 12 ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-    !/^\d{2}:\d{2}$/.test(time) ||
     notes.length > 400
+  ) {
+    return mutationError("Selecione servicos, extras e observacoes corretamente.");
+  }
+
+  if (!admin.shopId) {
+    return mutationError("Admin sem barbearia vinculada.");
+  }
+
+  const currentAppointment = await prisma.appointment.findFirst({
+    where: {
+      id: appointmentId,
+      shopId: admin.shopId,
+    },
+    select: {
+      status: true,
+      barberId: true,
+    },
+  });
+
+  if (!currentAppointment) {
+    return mutationError("Agendamento nao encontrado.");
+  }
+
+  const currentStatus = normalizeAppointmentStatus(currentAppointment.status);
+  const isCompletedEdit = ["COMPLETED", "DONE"].includes(currentStatus);
+
+  if (
+    !isCompletedEdit &&
+    (!barberId ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      !/^\d{2}:\d{2}$/.test(time))
   ) {
     return mutationError("Preencha barbeiro, data, horario e servicos corretamente.");
   }
 
   try {
-    await editAppointmentForAdmin({
-      appointmentId,
-      barberId,
-      serviceIds,
-      extras,
-      date,
-      time,
-      notes,
-    });
+    if (isCompletedEdit) {
+      await editCompletedAppointmentFinancialItems({
+        appointmentId,
+        actor: "ADMIN",
+        shopId: admin.shopId,
+        serviceIds,
+        extras,
+        notes,
+      });
+    } else {
+      await editAppointmentForAdmin({
+        appointmentId,
+        barberId,
+        serviceIds,
+        extras,
+        date,
+        time,
+        notes,
+      });
+    }
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
       return mutationError(error.message);
@@ -190,9 +238,14 @@ export async function editAdminAppointmentAction(
     extraCount: extras.length,
     date,
     time,
+    mode: isCompletedEdit ? "completed_finance_items" : "operational",
   });
 
-  revalidateAgendaViews();
+  revalidateAgendaViews(isCompletedEdit ? currentAppointment.barberId : barberId);
 
-  return mutationSuccess("Agendamento editado pelo admin.");
+  return mutationSuccess(
+    isCompletedEdit
+      ? "Atendimento atualizado no financeiro."
+      : "Agendamento editado pelo admin."
+  );
 }

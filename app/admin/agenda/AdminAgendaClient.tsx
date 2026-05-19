@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock3,
   ClipboardList,
+  UsersRound,
   Scissors,
   UserRound,
   XCircle,
@@ -71,6 +72,7 @@ export type AdminAgendaBarber = {
   id: string;
   name: string | null;
   email: string | null;
+  image: string | null;
 };
 
 export type AdminAgendaService = {
@@ -91,6 +93,7 @@ export type AdminAgendaExtra = {
 type AdminAgendaFilters = {
   dateFrom: string;
   dateTo: string;
+  barberId?: string;
   q?: string;
 };
 
@@ -151,9 +154,21 @@ export default function AdminAgendaClient({
 
   function clearFilters() {
     const today = getCurrentScheduleDateValue();
-    setDraftFilters({ dateFrom: today, dateTo: today });
+    setDraftFilters({ dateFrom: today, dateTo: today, barberId: "" });
     startFilterTransition(() => {
       router.push("/admin/agenda", { scroll: false });
+    });
+  }
+
+  function applyBarberFilter(barberId: string) {
+    const nextFilters = normalizeAgendaDateFilters({
+      ...draftFilters,
+      barberId,
+    });
+
+    setDraftFilters(nextFilters);
+    startFilterTransition(() => {
+      router.push(buildAgendaUrl(nextFilters), { scroll: false });
     });
   }
 
@@ -260,6 +275,50 @@ export default function AdminAgendaClient({
               </div>
             </div>
           </form>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                Barbeiros
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Toque na foto para ver somente a agenda do profissional.
+              </p>
+            </div>
+            {draftFilters.barberId ? (
+              <button
+                type="button"
+                onClick={() => applyBarberFilter("")}
+                disabled={isFilterPending}
+                className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:bg-white/[0.06] disabled:opacity-60"
+              >
+                Todos
+              </button>
+            ) : null}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <BarberFilterButton
+              active={!draftFilters.barberId}
+              label="Todos"
+              image={null}
+              icon={<UsersRound />}
+              onClick={() => applyBarberFilter("")}
+              disabled={isFilterPending}
+            />
+            {barbers.map((barber) => (
+              <BarberFilterButton
+                key={barber.id}
+                active={draftFilters.barberId === barber.id}
+                label={barber.name || barber.email || "Barbeiro"}
+                image={barber.image}
+                onClick={() => applyBarberFilter(barber.id)}
+                disabled={isFilterPending}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -413,12 +472,14 @@ function buildAgendaUrl(filters: AdminAgendaFilters) {
 function normalizeAgendaDateFilters(filters: AdminAgendaFilters) {
   const dateFrom = filters.dateFrom.trim();
   const dateTo = filters.dateTo.trim();
+  const barberId = filters.barberId?.trim() || "";
 
   if (dateFrom && dateTo && dateFrom > dateTo) {
     return {
       ...filters,
       dateFrom: dateTo,
       dateTo: dateFrom,
+      barberId,
     };
   }
 
@@ -426,6 +487,7 @@ function normalizeAgendaDateFilters(filters: AdminAgendaFilters) {
     ...filters,
     dateFrom,
     dateTo,
+    barberId,
   };
 }
 
@@ -443,7 +505,60 @@ function matchesAgendaFilters(
     return false;
   }
 
+  if (filters.barberId && appointment.barber.id !== filters.barberId) {
+    return false;
+  }
+
   return true;
+}
+
+function BarberFilterButton({
+  active,
+  label,
+  image,
+  icon,
+  disabled,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  image: string | null;
+  icon?: ReactNode;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex min-w-[6rem] shrink-0 flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition disabled:opacity-60 ${
+        active
+          ? "border-[var(--brand)]/60 bg-[var(--brand-muted)] text-white"
+          : "border-white/10 bg-black/20 text-zinc-300 hover:border-white/20 hover:bg-white/[0.05]"
+      }`}
+    >
+      <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] text-lg font-black text-[var(--brand-strong)]">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={label}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
+        ) : icon ? (
+          <span className="[&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        ) : (
+          label.slice(0, 1).toUpperCase()
+        )}
+      </span>
+      <span className="line-clamp-2 max-w-24 text-xs font-bold leading-tight">
+        {label}
+      </span>
+    </button>
+  );
 }
 
 function AgendaMetric({
@@ -615,7 +730,8 @@ export function AdminAppointmentActions({
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const status = normalizeAppointmentStatus(appointment.status);
-  const isFinal = ["CANCELLED", "COMPLETED", "NO_SHOW"].includes(status);
+  const canEdit = !["CANCELLED", "NO_SHOW"].includes(status);
+  const canChangeStatus = !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(status);
 
   function runStatus(nextStatus: string) {
     const reason =
@@ -644,16 +760,19 @@ export function AdminAppointmentActions({
 
   return (
     <div className="grid min-w-[220px] grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-      {!isFinal ? (
+      {canEdit ? (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => setIsEditing(true)}
+          className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-100 transition hover:bg-white/[0.06] disabled:opacity-60"
+        >
+          Editar
+        </button>
+      ) : null}
+
+      {canChangeStatus ? (
         <>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => setIsEditing(true)}
-            className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-100 transition hover:bg-white/[0.06] disabled:opacity-60"
-          >
-            Editar
-          </button>
           <button
             type="button"
             disabled={isPending}
@@ -680,7 +799,7 @@ export function AdminAppointmentActions({
           </button>
         </>
       ) : (
-        <span className="text-xs font-semibold text-zinc-500">
+        <span className="self-center text-xs font-semibold text-zinc-500">
           Atendimento finalizado
         </span>
       )}
@@ -715,6 +834,8 @@ function AdminAppointmentEditModal({
   const [isPending, startTransition] = useTransition();
   const [selectedBarberId, setSelectedBarberId] = useState(appointment.barber.id);
   const date = new Date(appointment.date);
+  const status = normalizeAppointmentStatus(appointment.status);
+  const isCompletedEdit = ["COMPLETED", "DONE"].includes(status);
   const selectedServiceIds = new Set(
     appointment.services.map((service) => service.serviceId)
   );
@@ -749,7 +870,14 @@ function AdminAppointmentEditModal({
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
               Admin
             </p>
-            <h3 className="mt-2 text-xl font-bold">Editar agendamento</h3>
+            <h3 className="mt-2 text-xl font-bold">
+              {isCompletedEdit ? "Editar itens concluidos" : "Editar agendamento"}
+            </h3>
+            {isCompletedEdit ? (
+              <p className="mt-1 text-sm text-zinc-400">
+                Atendimento finalizado: ajuste somente servicos, extras e observacoes.
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -760,41 +888,49 @@ function AdminAppointmentEditModal({
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <label className="block text-sm font-semibold text-zinc-200">
-            Barbeiro
-            <select
-              name="barberId"
-              value={selectedBarberId}
-              onChange={(event) => setSelectedBarberId(event.target.value)}
-              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
-            >
-              {barbers.map((barber) => (
-                <option key={barber.id} value={barber.id}>
-                  {barber.name || barber.email || "Barbeiro"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm font-semibold text-zinc-200">
-            Data
-            <input
-              type="date"
-              name="date"
-              defaultValue={getScheduleDateValue(date)}
-              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
-            />
-          </label>
-          <label className="block text-sm font-semibold text-zinc-200">
-            Hora
-            <input
-              type="time"
-              name="time"
-              defaultValue={formatScheduleTime(date)}
-              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
-            />
-          </label>
-        </div>
+        {isCompletedEdit ? (
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <ReadOnlyEditTile label="Barbeiro" value={appointment.barber.name || "Barbeiro"} />
+            <ReadOnlyEditTile label="Data" value={formatScheduleDate(date)} />
+            <ReadOnlyEditTile label="Hora" value={formatScheduleTime(date)} />
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <label className="block text-sm font-semibold text-zinc-200">
+              Barbeiro
+              <select
+                name="barberId"
+                value={selectedBarberId}
+                onChange={(event) => setSelectedBarberId(event.target.value)}
+                className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
+              >
+                {barbers.map((barber) => (
+                  <option key={barber.id} value={barber.id}>
+                    {barber.name || barber.email || "Barbeiro"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-semibold text-zinc-200">
+              Data
+              <input
+                type="date"
+                name="date"
+                defaultValue={getScheduleDateValue(date)}
+                className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-zinc-200">
+              Hora
+              <input
+                type="time"
+                name="time"
+                defaultValue={formatScheduleTime(date)}
+                className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-white outline-none"
+              />
+            </label>
+          </div>
+        )}
 
         <div className="mt-5">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
@@ -873,6 +1009,17 @@ function AdminAppointmentEditModal({
           {isPending ? "Salvando..." : "Salvar alterações"}
         </button>
       </form>
+    </div>
+  );
+}
+
+function ReadOnlyEditTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-white">{value}</p>
     </div>
   );
 }

@@ -27,6 +27,14 @@ export async function GET(request: Request) {
     return new Response("Nao autorizado.", { status: 403 });
   }
 
+  if (!session.user.shopId) {
+    logSecurityEvent("access_denied", {
+      route: "/admin/agenda/export",
+      reason: "missing_shop",
+    });
+    return new Response("Barbearia nao vinculada.", { status: 403 });
+  }
+
   const rateLimit = await enforceRateLimit({
     scope: "admin:agenda_export",
     identifier: session.user.id,
@@ -43,6 +51,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const filters: AdminAgendaFilters = {
+    shopId: session.user.shopId,
     barberId: searchParams.get("barberId") || "",
     dateFrom: searchParams.get("dateFrom") || "",
     dateTo: searchParams.get("dateTo") || "",

@@ -36,7 +36,7 @@ export default async function BarberFinancePage({
 }) {
   const filters = (await searchParams) || {};
   const { barber } = await requireActiveBarber();
-  const data = await getBarberFinanceData(barber.id, filters);
+  const data = await getBarberFinanceData(barber.id, barber.shopId, filters);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
@@ -129,6 +129,8 @@ export default async function BarberFinancePage({
               <FinanceAppointmentCard
                 key={appointment.id}
                 appointment={appointment}
+                services={data.editServices}
+                extras={data.editExtras}
               />
             ))
           )}
@@ -195,11 +197,16 @@ export default async function BarberFinancePage({
   );
 }
 
-async function getBarberFinanceData(barberId: string, searchParams: SearchParams) {
+async function getBarberFinanceData(
+  barberId: string,
+  shopId: string,
+  searchParams: SearchParams
+) {
   const range = resolveFinanceRange(searchParams);
   const [appointments, tipsSummary, tips] = await Promise.all([
     prisma.appointment.findMany({
       where: {
+        shopId,
         barberId,
         date: {
           gte: range.startDate,
@@ -229,6 +236,76 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
     }),
   ]);
 
+  const currentServiceIds = Array.from(
+    new Set(
+      appointments.flatMap((appointment) =>
+        appointment.services.map((service) => service.serviceId)
+      )
+    )
+  );
+  const currentExtraIds = Array.from(
+    new Set(
+      appointments.flatMap((appointment) =>
+        appointment.items.map((item) => item.extraProductId)
+      )
+    )
+  );
+  const [editServices, editExtras] = await Promise.all([
+    prisma.service.findMany({
+      where: {
+        shopId,
+        AND: [
+          {
+            OR: [{ barberId }, { barberId: null }],
+          },
+          {
+            OR: [
+              { isActive: true },
+              ...(currentServiceIds.length ? [{ id: { in: currentServiceIds } }] : []),
+            ],
+          },
+        ],
+      },
+      orderBy: [
+        {
+          barberId: "desc",
+        },
+        {
+          name: "asc",
+        },
+      ],
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        duration: true,
+      },
+    }),
+    prisma.extraProduct.findMany({
+      where: {
+        shopId,
+        OR: [
+          {
+            isActive: true,
+            stock: {
+              gt: 0,
+            },
+          },
+          ...(currentExtraIds.length ? [{ id: { in: currentExtraIds } }] : []),
+        ],
+      },
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+      },
+    }),
+  ]);
+
   const normalizedAppointments = appointments.map((appointment) => {
     const normalizedStatus = normalizeAppointmentStatus(appointment.status);
     const deliveredItems = appointment.items.filter((item) => item.isDelivered);
@@ -252,18 +329,22 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
       date: appointment.date,
       status: normalizedStatus,
       customerName: appointment.customer.name || "Cliente",
+      barberId: appointment.barberId,
       serviceName: getAppointmentDisplayName(appointment.services),
+      notes: appointment.notes,
       services: appointment.services
         .slice()
         .sort((a, b) => a.orderIndex - b.orderIndex)
         .map((service) => ({
           id: service.id,
+          serviceId: service.serviceId,
           name: service.nameSnapshot,
           price: toMoneyNumber(service.priceSnapshot),
           payout: toMoneyNumber(service.barberPayoutSnapshot),
         })),
       items: appointment.items.map((item) => ({
         id: item.id,
+        extraProductId: item.extraProductId,
         name: item.productNameSnapshot,
         quantity: item.quantity,
         subtotal: toMoneyNumber(item.subtotal),
@@ -307,6 +388,14 @@ async function getBarberFinanceData(barberId: string, searchParams: SearchParams
       completedCount: completedAppointments.length,
     },
     appointments: normalizedAppointments,
+    editServices: editServices.map((service) => ({
+      ...service,
+      price: toMoneyNumber(service.price),
+    })),
+    editExtras: editExtras.map((extra) => ({
+      ...extra,
+      price: toMoneyNumber(extra.price),
+    })),
     tips,
   };
 }

@@ -58,8 +58,10 @@ export default async function FinanceComparePage({
 
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/painel");
+  if (!session.user.shopId) redirect("/logout");
 
   const data = await getFinanceDashboardData({
+    shopId: session.user.shopId,
     period: searchParams?.period,
     start: searchParams?.start,
     end: searchParams?.end,

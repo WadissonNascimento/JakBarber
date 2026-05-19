@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, DollarSign, Scissors, ShoppingBag } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, DollarSign, Pencil, Scissors, ShoppingBag } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { editCompletedAdminFinanceAppointmentAction } from "@/app/admin/financeiro/actions";
+import { editCompletedBarberFinanceAppointmentAction } from "@/app/barber/actions";
 import {
   appointmentStatusLabel,
   appointmentStatusVariant,
@@ -17,15 +21,20 @@ export type FinanceAppointmentCardData = {
   date: Date;
   status: string;
   customerName: string;
+  barberId?: string;
+  barberName?: string;
   serviceName: string;
+  notes: string | null;
   services: Array<{
     id: string;
+    serviceId: string;
     name: string;
     price: number;
     payout: number;
   }>;
   items: Array<{
     id: string;
+    extraProductId: string;
     name: string;
     quantity: number;
     subtotal: number;
@@ -38,12 +47,33 @@ export type FinanceAppointmentCardData = {
   grossTotal: number;
 };
 
+export type FinanceEditServiceOption = {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+};
+
+export type FinanceEditExtraOption = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+};
+
 export default function FinanceAppointmentCard({
   appointment,
+  services,
+  extras,
+  mode = "barber",
 }: {
   appointment: FinanceAppointmentCardData;
+  services: FinanceEditServiceOption[];
+  extras: FinanceEditExtraOption[];
+  mode?: "admin" | "barber";
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const muted = ["CANCELLED", "NO_SHOW"].includes(appointment.status);
 
   return (
@@ -80,6 +110,11 @@ export default function FinanceAppointmentCard({
           <p className="mt-2 truncate text-base font-bold text-white">
             {appointment.customerName}
           </p>
+          {appointment.barberName ? (
+            <p className="mt-1 truncate text-xs font-semibold text-zinc-500">
+              Barbeiro: {appointment.barberName}
+            </p>
+          ) : null}
           <p className="mt-1 line-clamp-2 text-sm text-zinc-400">
             {appointment.serviceName || "Atendimento"}
           </p>
@@ -166,9 +201,271 @@ export default function FinanceAppointmentCard({
               </div>
             </div>
           ) : null}
+
+          {services.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[var(--brand)]/40 bg-[var(--brand-muted)] px-4 py-2 text-sm font-black text-white transition hover:border-[var(--brand)]/70 hover:brightness-110 sm:w-auto"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar itens do atendimento
+            </button>
+          ) : null}
         </div>
       ) : null}
+
+      {isEditing ? (
+        <FinanceEditAppointmentModal
+          appointment={appointment}
+          services={services}
+          extras={extras}
+          mode={mode}
+          onClose={() => setIsEditing(false)}
+        />
+      ) : null}
     </article>
+  );
+}
+
+function FinanceEditAppointmentModal({
+  appointment,
+  services,
+  extras,
+  mode,
+  onClose,
+}: {
+  appointment: FinanceAppointmentCardData;
+  services: FinanceEditServiceOption[];
+  extras: FinanceEditExtraOption[];
+  mode: "admin" | "barber";
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedServiceIds, setSelectedServiceIds] = useState(
+    appointment.services.map((service) => service.serviceId)
+  );
+  const [selectedExtraIds, setSelectedExtraIds] = useState(
+    appointment.items.map((item) => item.extraProductId)
+  );
+  const total = useMemo(() => {
+    const serviceTotal = services
+      .filter((service) => selectedServiceIds.includes(service.id))
+      .reduce((sum, service) => sum + service.price, 0);
+    const extrasTotal = extras
+      .filter((extra) => selectedExtraIds.includes(extra.id))
+      .reduce((sum, extra) => sum + extra.price, 0);
+
+    return serviceTotal + extrasTotal;
+  }, [extras, selectedExtraIds, selectedServiceIds, services]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  function toggleService(serviceId: string) {
+    setSelectedServiceIds((current) =>
+      current.includes(serviceId)
+        ? current.filter((id) => id !== serviceId)
+        : [...current, serviceId]
+    );
+  }
+
+  function toggleExtra(extraId: string) {
+    setSelectedExtraIds((current) =>
+      current.includes(extraId)
+        ? current.filter((id) => id !== extraId)
+        : [...current, extraId]
+    );
+  }
+
+  function submitEdit(formData: FormData) {
+    startTransition(async () => {
+      const result =
+        mode === "admin"
+          ? await editCompletedAdminFinanceAppointmentAction(formData)
+          : await editCompletedBarberFinanceAppointmentAction(formData);
+      window.alert(result.message);
+
+      if (result.ok) {
+        onClose();
+        router.refresh();
+      }
+    });
+  }
+
+  if (!isMounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[280] flex items-center justify-center overflow-hidden overscroll-none bg-black/75 px-3 py-4 backdrop-blur-md sm:px-4 sm:py-6"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <form
+        action={submitEdit}
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] text-white shadow-[0_28px_90px_rgba(0,0,0,0.55)]"
+      >
+        <input type="hidden" name="appointmentId" value={appointment.id} />
+
+        <div className="border-b border-white/10 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+                Financeiro
+              </p>
+              <h3 className="mt-2 text-xl font-bold">Editar itens concluidos</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                Ajuste servicos e extras que entram no repasse.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="min-h-10 rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.06] disabled:opacity-60"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+              Total atualizado
+            </p>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-white">
+              {formatCurrency(total)}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+              Servicos
+            </p>
+            <div className="mt-2 grid gap-2">
+              {services.map((service) => {
+                const checked = selectedServiceIds.includes(service.id);
+
+                return (
+                  <label
+                    key={service.id}
+                    className={`flex min-h-16 items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition ${
+                      checked
+                        ? "border-[var(--brand)]/70 bg-[var(--brand-muted)]"
+                        : "border-white/10 bg-white/[0.035]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="serviceIds"
+                      value={service.id}
+                      checked={checked}
+                      onChange={() => toggleService(service.id)}
+                      className="h-5 w-5 shrink-0 accent-[var(--brand)]"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-white">
+                        {service.name}
+                      </span>
+                      <span className="text-xs text-zinc-400">
+                        {service.duration} min - {formatCurrency(service.price)}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+              Extras
+            </p>
+            <div className="mt-2 grid gap-2">
+              {extras.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-400">
+                  Nenhum extra disponivel para ajuste.
+                </p>
+              ) : (
+                extras.map((extra) => {
+                  const checked = selectedExtraIds.includes(extra.id);
+
+                  return (
+                    <label
+                      key={extra.id}
+                      className={`flex min-h-16 items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition ${
+                        checked
+                          ? "border-[var(--brand)]/70 bg-[var(--brand-muted)]"
+                          : "border-white/10 bg-white/[0.035]"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        name="extraProductIds"
+                        value={extra.id}
+                        checked={checked}
+                        onChange={() => toggleExtra(extra.id)}
+                        className="h-5 w-5 shrink-0 accent-[var(--brand)]"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-white">
+                          {extra.name}
+                        </span>
+                        <span className="text-xs text-zinc-400">
+                          {formatCurrency(extra.price)} - estoque {extra.stock}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <label className="block text-sm font-semibold text-zinc-200">
+            Observacoes
+            <textarea
+              name="notes"
+              rows={4}
+              maxLength={400}
+              defaultValue={appointment.notes || ""}
+              className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/25 px-3 py-3 text-white outline-none transition focus:border-[var(--brand)]/70"
+            />
+          </label>
+        </div>
+
+        <div className="border-t border-white/10 bg-black/20 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+            <span className="text-zinc-400">Total</span>
+            <strong className="text-lg tabular-nums text-white">
+              {formatCurrency(total)}
+            </strong>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="min-h-12 rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.06] disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="min-h-12 rounded-2xl bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>,
+    document.body
   );
 }
 
