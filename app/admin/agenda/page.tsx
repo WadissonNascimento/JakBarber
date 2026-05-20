@@ -7,6 +7,7 @@ import {
   getCurrentScheduleDateValue,
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
+import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
 import AdminAgendaClient from "./AdminAgendaClient";
 
 const ADMIN_AGENDA_PAGE_LIMIT = 250;
@@ -137,7 +138,16 @@ export default async function AdminAgendaPage({
         paymentMethod: appointment.paymentMethod,
         notes: appointment.notes,
         barber: appointment.barber,
-        customer: appointment.customer,
+        customer: appointment.isManualFitIn
+          ? {
+              ...appointment.customer,
+              name:
+                getManualFitInCustomerSnapshot(appointment.notes).name ||
+                "Cliente sem cadastro",
+              phone: getManualFitInCustomerSnapshot(appointment.notes).phone || null,
+              email: null,
+            }
+          : appointment.customer,
         services: appointment.services.map((service) => ({
           serviceId: service.serviceId,
           nameSnapshot: service.nameSnapshot,

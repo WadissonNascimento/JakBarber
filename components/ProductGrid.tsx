@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
+import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 type Product = {
@@ -158,13 +159,16 @@ export function ProductGrid({
                 <h3 className="line-clamp-2 min-h-[3rem] text-[15px] font-semibold leading-6 text-white sm:text-lg">
                   {product.name}
                 </h3>
+                <p className="mt-1 text-xl font-black leading-tight text-white">
+                  {formatCurrency(product.price)}
+                </p>
 
                 {product.description ? (
-                  <p className="mt-2 line-clamp-3 min-h-[3.75rem] text-xs leading-5 text-zinc-400 sm:text-sm">
+                  <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-zinc-400 sm:text-sm">
                     {product.description}
                   </p>
                 ) : (
-                  <div className="mt-2 min-h-[3.75rem]" aria-hidden="true" />
+                  <div className="mt-2 min-h-[2.5rem]" aria-hidden="true" />
                 )}
 
                 {productWhatsappHref ? (
@@ -348,6 +352,9 @@ function ProductDetailsModal({
               <h3 className="mt-1.5 text-[1.75rem] font-black leading-tight text-white sm:text-3xl">
                 {product.name}
               </h3>
+              <p className="mt-1 text-2xl font-black text-white">
+                {formatCurrency(product.price)}
+              </p>
 
               <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:mt-5 sm:p-4">
                 <p className="text-sm font-bold text-white">Descricao</p>

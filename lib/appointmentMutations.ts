@@ -871,7 +871,9 @@ async function rescheduleCustomerAppointmentInTransaction(
 
   if (
     !currentAppointment ||
-    (actor === "CUSTOMER" && currentAppointment.customerId !== customerId)
+    (actor === "CUSTOMER" &&
+      (currentAppointment.customerId !== customerId ||
+        currentAppointment.isManualFitIn))
   ) {
     throw new AppointmentMutationError("Agendamento nao encontrado para sua conta.");
   }
@@ -1827,12 +1829,17 @@ export async function cancelAppointmentByCustomer(
         select: {
           id: true,
           customerId: true,
+          isManualFitIn: true,
           status: true,
           date: true,
         },
       });
 
-      if (!appointment || appointment.customerId !== customerId) {
+      if (
+        !appointment ||
+        appointment.customerId !== customerId ||
+        appointment.isManualFitIn
+      ) {
         throw new AppointmentMutationError("Agendamento nao encontrado para sua conta.");
       }
 

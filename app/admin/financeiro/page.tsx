@@ -11,6 +11,7 @@ import {
   getAppointmentGrandTotal,
   getAppointmentTotalBarberPayout,
 } from "@/lib/appointmentServices";
+import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
 import { appointmentForAdminSelect } from "@/lib/appointmentSelects";
 import { getFinanceDashboardData } from "@/lib/financeReports";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
@@ -187,7 +188,10 @@ async function getAdminFinanceAppointments({
         date: appointment.date,
         status: normalizedStatus,
         paymentMethod: appointment.paymentMethod,
-        customerName: appointment.customer.name || "Cliente",
+        customerName: appointment.isManualFitIn
+          ? getManualFitInCustomerSnapshot(appointment.notes).name ||
+            "Cliente sem cadastro"
+          : appointment.customer.name || "Cliente",
         barberId: appointment.barberId,
         barberName: appointment.barber.name || "Barbeiro",
         serviceName: getAppointmentDisplayName(appointment.services),

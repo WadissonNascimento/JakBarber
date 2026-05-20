@@ -169,6 +169,10 @@ export default async function AgendarPage({
       redirect("/customer/agendamentos");
     }
 
+    if (appointment.isManualFitIn) {
+      redirect("/customer/agendamentos");
+    }
+
     if (
       ["CANCELLED", "COMPLETED", "NO_SHOW"].includes(
         normalizeAppointmentStatus(appointment.status)

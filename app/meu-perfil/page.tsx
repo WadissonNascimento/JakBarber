@@ -82,6 +82,7 @@ export default async function MeuPerfilPage() {
     prisma.appointment.findMany({
       where: {
         customerId: session.user.id,
+        isManualFitIn: false,
       },
       select: {
         id: true,
@@ -100,6 +101,7 @@ export default async function MeuPerfilPage() {
     prisma.appointment.findMany({
       where: {
         customerId: session.user.id,
+        isManualFitIn: false,
       },
       select: {
         id: true,

@@ -24,6 +24,7 @@ import {
 } from "@/lib/mutationResult";
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { getActiveBarberForSession } from "@/lib/barberAccess";
+import { formatManualFitInNotes } from "@/lib/manualFitIn";
 import { sanitizeEmailInput } from "@/lib/inputSanitization";
 import { prisma } from "@/lib/prisma";
 import { normalizePaymentMethod } from "@/lib/paymentMethods";
@@ -86,6 +87,37 @@ function revalidateAppointmentStatusViews(barberId?: string) {
     revalidatePath(`/admin/barbeiros/${barberId}/repasse-hoje`);
     revalidatePath(`/admin/barbeiros/${barberId}/repasse-semana`);
   }
+}
+
+async function getOrCreateWalkInCustomer(shopId: string) {
+  const existing = await prisma.user.findFirst({
+    where: {
+      shopId,
+      role: "CUSTOMER",
+      email: null,
+      phone: null,
+      name: "Encaixe manual",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return prisma.user.create({
+    data: {
+      shopId,
+      name: "Encaixe manual",
+      role: "CUSTOMER",
+      isActive: true,
+    },
+    select: {
+      id: true,
+    },
+  });
 }
 
 function parseItemDeliveryDecisions(formData: FormData) {
@@ -473,6 +505,7 @@ export async function createWalkInAppointmentAction(
 
   const services = await prisma.service.findMany({
     where: {
+      shopId: barber.shopId,
       id: {
         in: selectedServiceIds,
       },
@@ -492,15 +525,14 @@ export async function createWalkInAppointmentAction(
     ? await prisma.user.findFirst({
         where: {
           id: customerId,
+          shopId: barber.shopId,
           role: "CUSTOMER",
-          customerAppointments: {
-            some: {
-              barberId: barber.id,
-            },
-          },
+          isActive: true,
         },
         select: {
           id: true,
+          name: true,
+          phone: true,
         },
       })
     : null;
@@ -509,42 +541,24 @@ export async function createWalkInAppointmentAction(
     return mutationError("Cliente selecionado nao pertence a sua base.");
   }
 
-  const existingCustomer = !selectedCustomer && customerPhone
-    ? await prisma.user.findFirst({
-        where: {
-          phone: customerPhone,
-          role: "CUSTOMER",
-        },
-        select: {
-          id: true,
-        },
-      })
-    : null;
-
-  const customer =
-    selectedCustomer ||
-    existingCustomer ||
-    (await prisma.user.create({
-      data: {
-        name: customerName,
-        phone: customerPhone || null,
-        role: "CUSTOMER",
-        isActive: true,
-      },
-      select: {
-        id: true,
-      },
-  }));
+  const walkInCustomer = await getOrCreateWalkInCustomer(barber.shopId);
+  const displayCustomerName =
+    customerName || selectedCustomer?.name || "Cliente sem cadastro";
+  const displayCustomerPhone = customerPhone || selectedCustomer?.phone || "";
 
   try {
     await createManualFitInAppointment({
-      customerId: customer.id,
+      customerId: walkInCustomer.id,
       barberId: barber.id,
       serviceIds: selectedServiceIds,
       extras: selectedExtras,
       date,
       time: startTime,
-      notes: `Encaixe Manual${extraNotes ? ` - ${extraNotes}` : ""}`,
+      notes: formatManualFitInNotes({
+        customerName: displayCustomerName,
+        customerPhone: displayCustomerPhone,
+        notes: extraNotes,
+      }),
       conflictMode: "SAME_START_ONLY",
     });
   } catch (error) {

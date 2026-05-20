@@ -5,6 +5,7 @@ import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getBarberTipRows } from "@/lib/barberTips";
+import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -114,7 +115,10 @@ export default async function PayoutReport({
         id: service.id,
         appointmentId: appointment.id,
         time: formatScheduleTime(appointment.date),
-        customerName: appointment.customer.name || "Cliente",
+        customerName: appointment.isManualFitIn
+          ? getManualFitInCustomerSnapshot(appointment.notes).name ||
+            "Cliente sem cadastro"
+          : appointment.customer.name || "Cliente",
         name: service.nameSnapshot,
         gross: toMoneyNumber(service.priceSnapshot),
         commission: formatCommission(
@@ -133,7 +137,10 @@ export default async function PayoutReport({
         id: item.id,
         appointmentId: appointment.id,
         time: formatScheduleTime(appointment.date),
-        customerName: appointment.customer.name || "Cliente",
+        customerName: appointment.isManualFitIn
+          ? getManualFitInCustomerSnapshot(appointment.notes).name ||
+            "Cliente sem cadastro"
+          : appointment.customer.name || "Cliente",
         name: `${item.productNameSnapshot} x${item.quantity}`,
         gross: toMoneyNumber(item.subtotal),
         commission: formatCommission(item.commissionTypeSnapshot, item.commissionValueSnapshot),

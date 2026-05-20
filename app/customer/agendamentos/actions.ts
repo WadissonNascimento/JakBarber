@@ -43,12 +43,17 @@ export async function cancelCustomerAppointmentAction(
     },
     select: {
       customerId: true,
+      isManualFitIn: true,
       status: true,
       date: true,
     },
   });
 
-  if (!appointment || appointment.customerId !== session.user.id) {
+  if (
+    !appointment ||
+    appointment.customerId !== session.user.id ||
+    appointment.isManualFitIn
+  ) {
     logSecurityEvent("idor_blocked", {
       action: "cancelCustomerAppointmentAction",
       userId: session.user.id,
@@ -129,11 +134,16 @@ export async function submitAppointmentReviewAction(
       id: true,
       customerId: true,
       barberId: true,
+      isManualFitIn: true,
       status: true,
     },
   });
 
-  if (!appointment || appointment.customerId !== session.user.id) {
+  if (
+    !appointment ||
+    appointment.customerId !== session.user.id ||
+    appointment.isManualFitIn
+  ) {
     logSecurityEvent("idor_blocked", {
       action: "submitAppointmentReviewAction",
       userId: session.user.id,

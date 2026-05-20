@@ -13,6 +13,7 @@ import {
 } from "@/lib/appointmentServices";
 import { appointmentForBarberSelect } from "@/lib/appointmentSelects";
 import { getBarberTipRows, getBarberTipsTotal } from "@/lib/barberTips";
+import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -329,7 +330,10 @@ async function getBarberFinanceData(
       date: appointment.date,
       status: normalizedStatus,
       paymentMethod: appointment.paymentMethod,
-      customerName: appointment.customer.name || "Cliente",
+      customerName: appointment.isManualFitIn
+        ? getManualFitInCustomerSnapshot(appointment.notes).name ||
+          "Cliente sem cadastro"
+        : appointment.customer.name || "Cliente",
       barberId: appointment.barberId,
       serviceName: getAppointmentDisplayName(appointment.services),
       notes: appointment.notes,

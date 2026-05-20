@@ -45,6 +45,7 @@ export default async function CustomerAppointmentsPage() {
   const appointments = await prisma.appointment.findMany({
     where: {
       customerId: session.user.id,
+      isManualFitIn: false,
     },
     select: {
       id: true,

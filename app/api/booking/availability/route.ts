@@ -58,12 +58,17 @@ export async function POST(request: Request) {
         },
         select: {
           customerId: true,
+          isManualFitIn: true,
           status: true,
           date: true,
         },
       });
 
-      if (!appointment || appointment.customerId !== session.user.id) {
+      if (
+        !appointment ||
+        appointment.customerId !== session.user.id ||
+        appointment.isManualFitIn
+      ) {
         logSecurityEvent("idor_blocked", {
           route: "/api/booking/availability",
           userId: session.user.id,

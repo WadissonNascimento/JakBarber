@@ -11,6 +11,7 @@ import {
 } from "@/lib/appointmentStatus";
 import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
+import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
 import {
   getAppointmentDisplayName,
   getAppointmentGrandTotal,
@@ -150,6 +151,10 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
         <div className="space-y-3">
           {appointments.map((appointment) => {
             const status = normalizeAppointmentStatus(appointment.status);
+            const manualCustomer = getManualFitInCustomerSnapshot(appointment.notes);
+            const customerName = appointment.isManualFitIn
+              ? manualCustomer.name || "Cliente sem cadastro"
+              : appointment.customer.name || "Cliente";
             const payoutPreviewItems = appointment.items.map((item) => ({
               ...item,
               isDelivered: true,
@@ -166,8 +171,8 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
                 name: barber.name,
               },
               customer: {
-                name: appointment.customer.name,
-                email: appointment.customer.email,
+                name: customerName,
+                email: appointment.isManualFitIn ? null : appointment.customer.email,
               },
               services: appointment.services.map((service) => ({
                 serviceId: service.serviceId,
@@ -194,7 +199,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
                       {formatScheduleTime(appointment.date)}
                     </p>
                     <p className="mt-2 truncate font-semibold text-white">
-                      {appointment.customer.name || "Cliente"}
+                      {customerName}
                     </p>
                     <p className="mt-1 text-sm text-zinc-400">
                       {getAppointmentDisplayName(appointment.services) || "Serviço"}
