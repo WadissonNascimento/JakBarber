@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { readFile } from "fs/promises";
 import { Prisma } from "@prisma/client";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import {
@@ -42,6 +43,7 @@ export type SendEmailMessageInput = {
 
 const DEFAULT_SHOP_NAME = "Barbearia";
 const DEFAULT_BRAND_COLOR = "#0ea5e9";
+const RESEND_EMAIL_API_URL = "https://api.resend.com/emails";
 
 function sanitizeEmailHeaderText(value: string | null | undefined) {
   return value?.replace(/[\r\n<>"]/g, "").trim() || "";
@@ -147,8 +149,22 @@ function getGlobalMailConfig() {
   };
 }
 
-function getMailConfig() {
-  return getGlobalMailConfig();
+function getEmailProvider() {
+  return (process.env.EMAIL_PROVIDER || "smtp").trim().toLowerCase();
+}
+
+function getResendMailConfig() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+
+  if (!apiKey || !from) {
+    throw new Error("Configuracao do Resend incompleta.");
+  }
+
+  return {
+    apiKey,
+    from,
+  };
 }
 
 function shouldUseConsoleMailFallback() {
@@ -156,6 +172,10 @@ function shouldUseConsoleMailFallback() {
 }
 
 export function isUsingDevelopmentMailFallback() {
+  if (getEmailProvider() === "resend") {
+    return shouldUseConsoleMailFallback() && (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM);
+  }
+
   const host = process.env.EMAIL_SERVER_HOST;
   const user = process.env.EMAIL_SERVER_USER;
   const pass = process.env.EMAIL_SERVER_PASS;
@@ -170,6 +190,51 @@ export function isValidEmailAddress(value: string) {
 
 function normalizeEmailError(error: unknown) {
   return error instanceof Error ? error.message.slice(0, 500) : "Erro desconhecido.";
+}
+
+async function buildResendAttachments(attachments?: SendEmailMessageInput["attachments"]) {
+  if (!attachments?.length) {
+    return undefined;
+  }
+
+  return Promise.all(
+    attachments.map(async (attachment) => ({
+      filename: attachment.filename,
+      content: (await readFile(attachment.path)).toString("base64"),
+      content_id: attachment.cid,
+    }))
+  );
+}
+
+function normalizeResendError(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const data = payload as {
+    message?: unknown;
+    error?: unknown;
+    name?: unknown;
+  };
+
+  if (typeof data.message === "string") {
+    return data.message;
+  }
+
+  if (typeof data.error === "string") {
+    return data.error;
+  }
+
+  if (data.error && typeof data.error === "object" && "message" in data.error) {
+    const message = (data.error as { message?: unknown }).message;
+    return typeof message === "string" ? message : null;
+  }
+
+  if (typeof data.name === "string") {
+    return data.name;
+  }
+
+  return null;
 }
 
 function getEmailLogWhere({
@@ -301,7 +366,20 @@ async function sendMailOnce({
   fromName?: string;
   replyTo?: string;
 }) {
-  const config = getMailConfig();
+  if (getEmailProvider() === "resend") {
+    await sendResendMailOnce({
+      to,
+      subject,
+      text,
+      html,
+      attachments,
+      fromName,
+      replyTo,
+    });
+    return;
+  }
+
+  const config = getGlobalMailConfig();
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -323,6 +401,62 @@ async function sendMailOnce({
     replyTo: safeReplyTo && isValidEmailAddress(safeReplyTo) ? safeReplyTo : undefined,
     attachments: attachments?.length ? attachments : undefined,
   });
+}
+
+async function sendResendMailOnce({
+  to,
+  subject,
+  text,
+  html,
+  attachments,
+  fromName,
+  replyTo,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: SendEmailMessageInput["attachments"];
+  fromName?: string;
+  replyTo?: string;
+}) {
+  const config = getResendMailConfig();
+  const safeReplyTo = replyTo?.trim();
+  const resendAttachments = await buildResendAttachments(attachments);
+  const response = await fetch(RESEND_EMAIL_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: formatFromAddress(config.from, fromName),
+      to: [to],
+      subject,
+      html,
+      text,
+      reply_to:
+        safeReplyTo && isValidEmailAddress(safeReplyTo) ? [safeReplyTo] : undefined,
+      attachments: resendAttachments,
+    }),
+  });
+
+  if (!response.ok) {
+    let details: unknown = null;
+
+    try {
+      details = await response.json();
+    } catch {
+      details = await response.text().catch(() => null);
+    }
+
+    const message = normalizeResendError(details);
+    throw new Error(
+      message
+        ? `Resend ${response.status}: ${message}`
+        : `Resend ${response.status}: nao foi possivel enviar o e-mail.`
+    );
+  }
 }
 
 export async function sendEmailMessage({
