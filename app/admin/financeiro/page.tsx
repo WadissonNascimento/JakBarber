@@ -37,13 +37,29 @@ function formatCurrency(value: MoneyValue) {
   });
 }
 
+function getPaymentBreakdownDetails(breakdown: PaymentBreakdown) {
+  const details = (["PIX", "CASH", "CARD"] as const).map((method) => ({
+    label: paymentMethodLabel(method),
+    value: formatCurrency(breakdown[method]),
+  }));
+
+  if (breakdown.UNKNOWN > 0) {
+    details.push({
+      label: "Nao informado",
+      value: formatCurrency(breakdown.UNKNOWN),
+    });
+  }
+
+  return details;
+}
+
 function formatPaymentBreakdown(breakdown: PaymentBreakdown) {
   const parts = (["PIX", "CASH", "CARD"] as const).map(
     (method) => `${paymentMethodLabel(method)}: ${formatCurrency(breakdown[method])}`
   );
 
   if (breakdown.UNKNOWN > 0) {
-    parts.push(`Sem forma: ${formatCurrency(breakdown.UNKNOWN)}`);
+    parts.push(`Nao informado: ${formatCurrency(breakdown.UNKNOWN)}`);
   }
 
   return parts.join(" · ");
@@ -227,7 +243,7 @@ async function getAdminFinanceAppointments({
 export default async function AdminFinanceiroPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     period?: "week" | "month" | "custom";
     start?: string;
     end?: string;
@@ -236,9 +252,10 @@ export default async function AdminFinanceiroPage({
     compareMode?: "auto" | "custom";
     compareStart?: string;
     compareEnd?: string;
-  };
+  }>;
 }) {
   const session = await auth();
+  const resolvedSearchParams = (await searchParams) || {};
 
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/painel");
@@ -246,14 +263,14 @@ export default async function AdminFinanceiroPage({
 
   const data = await getFinanceDashboardData({
     shopId: session.user.shopId,
-    period: searchParams?.period,
-    start: searchParams?.start,
-    end: searchParams?.end,
-    historyStart: searchParams?.historyStart,
-    historyEnd: searchParams?.historyEnd,
-    compareMode: searchParams?.compareMode,
-    compareStart: searchParams?.compareStart,
-    compareEnd: searchParams?.compareEnd,
+    period: resolvedSearchParams.period,
+    start: resolvedSearchParams.start,
+    end: resolvedSearchParams.end,
+    historyStart: resolvedSearchParams.historyStart,
+    historyEnd: resolvedSearchParams.historyEnd,
+    compareMode: resolvedSearchParams.compareMode,
+    compareStart: resolvedSearchParams.compareStart,
+    compareEnd: resolvedSearchParams.compareEnd,
   });
   const financeAppointments = await getAdminFinanceAppointments({
     shopId: session.user.shopId,
@@ -305,11 +322,13 @@ export default async function AdminFinanceiroPage({
         </section>
 
         <section className="border-b border-white/10 py-5">
-          <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-4">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <FinanceStat
               label="Entrou"
               value={formatCurrency(data.summary.grossRevenue)}
-              helper={formatPaymentBreakdown(data.summary.paymentBreakdown)}
+              helper="serviços, retiradas e caixinhas"
+              details={getPaymentBreakdownDetails(data.summary.paymentBreakdown)}
+              featured
             />
             <FinanceStat
               label="A pagar"
@@ -757,11 +776,15 @@ function FinanceStat({
   value,
   helper,
   tone = "neutral",
+  details = [],
+  featured = false,
 }: {
   label: string;
   value: string | number;
   helper: string;
   tone?: "neutral" | "success" | "warning";
+  details?: Array<{ label: string; value: string }>;
+  featured?: boolean;
 }) {
   const toneClass =
     tone === "success"
@@ -771,7 +794,11 @@ function FinanceStat({
       : "text-white";
 
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+    <div
+      className={`min-w-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 ${
+        featured ? "sm:col-span-2 xl:col-span-1" : ""
+      }`}
+    >
       <p className="truncate text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
         {label}
       </p>
@@ -781,6 +808,21 @@ function FinanceStat({
       <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-zinc-400">
         {helper}
       </p>
+      {details.length > 0 ? (
+        <div className="mt-3 space-y-2 border-t border-white/10 pt-2.5">
+          {details.map((detail) => (
+            <div
+              key={detail.label}
+              className="flex min-w-0 items-center justify-between gap-3 text-xs"
+            >
+              <span className="min-w-0 truncate text-zinc-300">{detail.label}</span>
+              <strong className="shrink-0 text-right font-black text-white tabular-nums">
+                {detail.value}
+              </strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

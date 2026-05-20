@@ -36,13 +36,29 @@ function getTodayRange() {
   return getScheduleDayRange(getCurrentScheduleDateValue())!;
 }
 
+function getPaymentBreakdownDetails(breakdown: PaymentBreakdown) {
+  const details = (["PIX", "CASH", "CARD"] as const).map((method) => ({
+    label: paymentMethodLabel(method),
+    value: formatCurrency(breakdown[method]),
+  }));
+
+  if (breakdown.UNKNOWN > 0) {
+    details.push({
+      label: "Nao informado",
+      value: formatCurrency(breakdown.UNKNOWN),
+    });
+  }
+
+  return details;
+}
+
 function formatPaymentBreakdown(breakdown: PaymentBreakdown) {
   const parts = (["PIX", "CASH", "CARD"] as const).map(
     (method) => `${paymentMethodLabel(method)}: ${formatCurrency(breakdown[method])}`
   );
 
   if (breakdown.UNKNOWN > 0) {
-    parts.push(`Sem forma: ${formatCurrency(breakdown.UNKNOWN)}`);
+    parts.push(`Nao informado: ${formatCurrency(breakdown.UNKNOWN)}`);
   }
 
   return parts.join(" · ");
@@ -286,7 +302,8 @@ export default async function AdminPage() {
               icon={<DollarSign />}
               label="Faturado hoje"
               value={formatCurrency(todayRevenue)}
-              helper={formatPaymentBreakdown(todayPaymentBreakdown)}
+              helper="atendimentos concluídos"
+              details={getPaymentBreakdownDetails(todayPaymentBreakdown)}
             />
           </div>
         </section>
@@ -334,11 +351,13 @@ function AdminMetric({
   label,
   value,
   helper,
+  details = [],
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   helper: string;
+  details?: Array<{ label: string; value: string }>;
 }) {
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
@@ -358,6 +377,21 @@ function AdminMetric({
       <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-400">
         {helper}
       </p>
+      {details.length > 0 ? (
+        <div className="mt-4 space-y-2 border-t border-white/10 pt-3">
+          {details.map((detail) => (
+            <div
+              key={detail.label}
+              className="flex min-w-0 items-center justify-between gap-3 text-sm"
+            >
+              <span className="min-w-0 truncate text-zinc-300">{detail.label}</span>
+              <strong className="shrink-0 text-right font-black text-white tabular-nums">
+                {detail.value}
+              </strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -130,13 +130,24 @@ export default async function AdminAgendaPage({
   return (
     <AdminAgendaClient
       appointments={report.appointments.map((appointment) => ({
-        ...appointment,
+        id: appointment.id,
+        publicId: appointment.publicId,
+        date: appointment.date,
+        status: appointment.status,
+        paymentMethod: appointment.paymentMethod,
+        notes: appointment.notes,
+        barber: appointment.barber,
+        customer: appointment.customer,
         services: appointment.services.map((service) => ({
-          ...service,
+          serviceId: service.serviceId,
+          nameSnapshot: service.nameSnapshot,
+          orderIndex: service.orderIndex,
           priceSnapshot: toMoneyNumber(service.priceSnapshot),
         })),
         items: appointment.items.map((item) => ({
-          ...item,
+          extraProductId: item.extraProductId,
+          productNameSnapshot: item.productNameSnapshot,
+          quantity: item.quantity,
           subtotal: toMoneyNumber(item.subtotal),
         })),
       }))}

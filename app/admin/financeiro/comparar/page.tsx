@@ -43,7 +43,7 @@ function getDeltaTone(current: number, previous: number) {
 export default async function FinanceComparePage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     period?: "week" | "month" | "custom";
     start?: string;
     end?: string;
@@ -52,9 +52,10 @@ export default async function FinanceComparePage({
     compareMode?: "auto" | "custom";
     compareStart?: string;
     compareEnd?: string;
-  };
+  }>;
 }) {
   const session = await auth();
+  const resolvedSearchParams = (await searchParams) || {};
 
   if (!session?.user) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/painel");
@@ -62,14 +63,14 @@ export default async function FinanceComparePage({
 
   const data = await getFinanceDashboardData({
     shopId: session.user.shopId,
-    period: searchParams?.period,
-    start: searchParams?.start,
-    end: searchParams?.end,
-    historyStart: searchParams?.historyStart,
-    historyEnd: searchParams?.historyEnd,
-    compareMode: searchParams?.compareMode,
-    compareStart: searchParams?.compareStart,
-    compareEnd: searchParams?.compareEnd,
+    period: resolvedSearchParams.period,
+    start: resolvedSearchParams.start,
+    end: resolvedSearchParams.end,
+    historyStart: resolvedSearchParams.historyStart,
+    historyEnd: resolvedSearchParams.historyEnd,
+    compareMode: resolvedSearchParams.compareMode,
+    compareStart: resolvedSearchParams.compareStart,
+    compareEnd: resolvedSearchParams.compareEnd,
   });
   const previousRangeLabel = `${formatDate(data.comparison.previousRange.start)} ate ${formatDate(
     data.comparison.previousRange.end

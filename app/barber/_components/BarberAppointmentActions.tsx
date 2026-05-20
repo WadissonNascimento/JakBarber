@@ -209,6 +209,16 @@ function PaymentMethodPrompt({
 
   useEffect(() => {
     setIsMounted(true);
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
   }, []);
 
   if (!isMounted) {
@@ -217,12 +227,15 @@ function PaymentMethodPrompt({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-5 backdrop-blur-md"
+      className="fixed inset-0 z-[300] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-5 backdrop-blur-md"
       onClick={onClose}
+      onWheel={(event) => event.preventDefault()}
+      onTouchMove={(event) => event.preventDefault()}
     >
       <div
         className="w-full max-w-sm rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.55)]"
         onClick={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
       >
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
           Pagamento
