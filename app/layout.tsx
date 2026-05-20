@@ -4,12 +4,22 @@ import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
 import RequiredCustomerPhoneModal from "@/components/RequiredCustomerPhoneModal";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
+import {
+  JAKBARBER_APP_NAME,
+  JAKBARBER_APPLE_TOUCH_ICON_PATH,
+  JAKBARBER_BACKGROUND_COLOR,
+  JAKBARBER_FAVICON_32_PATH,
+  JAKBARBER_FAVICON_48_PATH,
+  JAKBARBER_ICON_192_PATH,
+  JAKBARBER_STARTUP_IMAGES,
+  JAKBARBER_THEME_COLOR,
+} from "@/lib/pwaAssets";
 import {
   WR_TECH_LOGO_PATH,
   WR_TECH_SITE_URL,
@@ -34,11 +44,29 @@ export async function generateMetadata(): Promise<Metadata> {
 
     return {
       metadataBase: new URL(WR_TECH_SITE_URL),
+      applicationName: "WR Tech Solutions",
+      manifest: "/manifest.webmanifest",
       title: {
         default: title,
         template: "%s",
       },
       description,
+      icons: {
+        icon: [
+          {
+            url: WR_TECH_LOGO_PATH,
+            sizes: "512x512",
+            type: "image/png",
+          },
+        ],
+        apple: [
+          {
+            url: WR_TECH_LOGO_PATH,
+            sizes: "180x180",
+            type: "image/png",
+          },
+        ],
+      },
       openGraph: {
         title,
         description,
@@ -60,20 +88,59 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const shop = await getCurrentShop();
   const brandName = shop.name || "Barbearia";
+  const isJakBarber = shop.id === DEFAULT_SHOP_ID;
+  const appName = isJakBarber ? JAKBARBER_APP_NAME : brandName;
   const description =
     shop.metadataDescription ||
     "Agende seu horario, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
-  const faviconPath = shop.faviconPath || "";
+  const faviconPath = isJakBarber
+    ? JAKBARBER_FAVICON_32_PATH
+    : shop.faviconPath || "";
   const title = shop.metadataTitle || brandName;
 
   return {
     metadataBase: new URL(getConfiguredAppUrl()),
+    applicationName: appName,
+    manifest: "/manifest.webmanifest",
     title: {
       default: title,
       template: "%s",
     },
     description,
-    icons: faviconPath
+    icons: isJakBarber
+      ? {
+          icon: [
+            {
+              url: JAKBARBER_FAVICON_32_PATH,
+              sizes: "32x32",
+              type: "image/png",
+            },
+            {
+              url: JAKBARBER_FAVICON_48_PATH,
+              sizes: "48x48",
+              type: "image/png",
+            },
+            {
+              url: JAKBARBER_ICON_192_PATH,
+              sizes: "192x192",
+              type: "image/png",
+            },
+          ],
+          shortcut: [
+            {
+              url: JAKBARBER_FAVICON_32_PATH,
+              type: "image/png",
+            },
+          ],
+          apple: [
+            {
+              url: JAKBARBER_APPLE_TOUCH_ICON_PATH,
+              sizes: "180x180",
+              type: "image/png",
+            },
+          ],
+        }
+      : faviconPath
       ? {
           icon: [
             {
@@ -97,6 +164,16 @@ export async function generateMetadata(): Promise<Metadata> {
           ],
         }
       : undefined,
+    appleWebApp: {
+      capable: true,
+      title: appName,
+      statusBarStyle: isJakBarber ? "black-translucent" : "default",
+      startupImage: isJakBarber ? JAKBARBER_STARTUP_IMAGES : undefined,
+    },
+    other: {
+      "mobile-web-app-capable": "yes",
+      "apple-mobile-web-app-title": appName,
+    },
     openGraph: {
       title: brandName,
       description,
@@ -115,6 +192,31 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: "pt_BR",
       type: "website",
     },
+  };
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  if (await isWrTechInstitutionalRequest()) {
+    return {
+      width: "device-width",
+      initialScale: 1,
+      viewportFit: "cover",
+      themeColor: "#05070b",
+      colorScheme: "dark",
+    };
+  }
+
+  const shop = await getCurrentShop();
+  const isJakBarber = shop.id === DEFAULT_SHOP_ID;
+
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: isJakBarber
+      ? JAKBARBER_THEME_COLOR
+      : shop.brandColor || "#05070b",
+    colorScheme: isJakBarber ? "dark" : "light dark",
   };
 }
 
