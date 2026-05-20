@@ -49,6 +49,7 @@ const appointmentBaseSelect = {
   barberId: true,
   date: true,
   status: true,
+  paymentMethod: true,
   notes: true,
   isManualFitIn: true,
   createdAt: true,

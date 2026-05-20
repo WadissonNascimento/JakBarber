@@ -8,7 +8,7 @@ import {
   prepareImageFileBuffer,
 } from "@/lib/serverImageFiles";
 
-const MAX_PRODUCT_IMAGE_SIZE = 8 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE_SIZE = 20 * 1024 * 1024;
 const SECONDARY_IMAGE_SIZE = 1600;
 const VALID_IMAGE_MESSAGE =
   "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
@@ -61,7 +61,7 @@ function logProductImageFailure(stage: string, file: File, error: unknown) {
 async function getValidatedImageBuffer(file: File) {
   return prepareImageFileBuffer(file, {
     maxSizeBytes: MAX_PRODUCT_IMAGE_SIZE,
-    maxSizeLabel: "8MB",
+    maxSizeLabel: "20MB",
   });
 }
 

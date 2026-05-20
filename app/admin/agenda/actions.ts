@@ -24,6 +24,7 @@ import {
   type MutationResult,
 } from "@/lib/mutationResult";
 import { prisma } from "@/lib/prisma";
+import { normalizePaymentMethod } from "@/lib/paymentMethods";
 import { logSecurityEvent } from "@/lib/security";
 
 async function requireAdmin() {
@@ -66,6 +67,7 @@ export async function updateAdminAppointmentStatusAction(
   const admin = await requireAdmin();
   const appointmentId = String(formData.get("appointmentId") || "").trim();
   const status = normalizeAppointmentStatus(String(formData.get("status") || ""));
+  const paymentMethod = normalizePaymentMethod(formData.get("paymentMethod"));
   const cancellationReason = String(formData.get("cancellationReason") || "").trim();
 
   if (!appointmentId || !APPOINTMENT_STATUSES.includes(status as never)) {
@@ -108,6 +110,7 @@ export async function updateAdminAppointmentStatusAction(
     await updateAppointmentStatusForAdmin({
       appointmentId,
       status,
+      paymentMethod,
       cancellationReason,
       itemDeliveryDecisions,
     });

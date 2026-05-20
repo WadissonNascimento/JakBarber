@@ -46,7 +46,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     short_name: appName,
     description:
       shop.metadataDescription ||
-      "Agende horarios, acompanhe seus atendimentos e veja produtos da barbearia.",
+      "Agende horarios, acompanhe seus atendimentos e veja maquinas da barbearia.",
     id: shop.primaryDomain ? `https://${shop.primaryDomain}/` : "/",
     start_url: "/",
     scope: "/",

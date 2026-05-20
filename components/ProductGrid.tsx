@@ -120,7 +120,7 @@ export function ProductGrid({
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {products.map((product) => {
+        {products.map((product, index) => {
           const productWhatsappHref = buildWhatsAppUrl(
             whatsappNumber,
             buildProductInterestMessage(product.name, currentUrl)
@@ -144,6 +144,7 @@ export function ProductGrid({
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1280px) 50vw, 33vw"
                     quality={90}
+                    priority={index < 2}
                     className="object-contain transition duration-300 group-hover:scale-[1.02]"
                   />
                 ) : (
@@ -269,7 +270,7 @@ function ProductDetailsModal({
           type="button"
           onClick={onClose}
           className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-lg font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:top-3 sm:h-11 sm:w-11"
-          aria-label="Fechar detalhes do produto"
+          aria-label="Fechar detalhes da maquina"
         >
           X
         </button>
@@ -342,7 +343,7 @@ function ProductDetailsModal({
 
             <div className="px-4 pb-4 pt-2 sm:p-6 md:pt-6">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
-                Detalhes do produto
+                Detalhes da maquina
               </p>
               <h3 className="mt-1.5 text-[1.75rem] font-black leading-tight text-white sm:text-3xl">
                 {product.name}
@@ -352,7 +353,7 @@ function ProductDetailsModal({
                 <p className="text-sm font-bold text-white">Descricao</p>
                 <p className="mt-1.5 text-sm leading-6 text-zinc-300">
                   {product.description ||
-                    "Entre em contato com a barbearia para receber mais detalhes sobre este produto."}
+                    "Entre em contato com a barbearia para receber mais detalhes sobre esta maquina."}
                 </p>
               </div>
             </div>

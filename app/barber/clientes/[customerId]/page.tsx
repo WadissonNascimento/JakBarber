@@ -26,7 +26,9 @@ import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import {
   appointmentStatusLabel,
   appointmentStatusVariant,
+  normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { formatBrazilianPhone } from "@/lib/phone";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -201,9 +203,16 @@ export default async function BarberClientProfilePage({
                           </p>
                         </div>
 
-                        <StatusBadge variant={appointmentStatusVariant(appointment.status)}>
-                          {appointmentStatusLabel(appointment.status)}
-                        </StatusBadge>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <StatusBadge variant={appointmentStatusVariant(appointment.status)}>
+                            {appointmentStatusLabel(appointment.status)}
+                          </StatusBadge>
+                          {normalizeAppointmentStatus(appointment.status) === "COMPLETED" ? (
+                            <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+                              {paymentMethodLabel(appointment.paymentMethod)}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-2">

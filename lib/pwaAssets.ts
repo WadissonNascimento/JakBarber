@@ -1,4 +1,4 @@
-export const JAKBARBER_PWA_VERSION = "20260520-zoom1";
+export const JAKBARBER_PWA_VERSION = "20260520-logo2";
 export const JAKBARBER_APP_NAME = "JakBarberCompany";
 export const JAKBARBER_THEME_COLOR = "#02050d";
 export const JAKBARBER_BACKGROUND_COLOR = "#02050d";

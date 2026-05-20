@@ -5,7 +5,9 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import {
   appointmentStatusLabel,
   appointmentStatusVariant,
+  normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 
@@ -23,6 +25,7 @@ export type BarberAppointmentCardData = {
   publicId: number;
   date: Date;
   status: string;
+  paymentMethod?: string | null;
   isManualFitIn: boolean;
   notes: string | null;
   customer: {
@@ -150,6 +153,11 @@ export default function BarberAppointmentCard({
       >
         {appointmentStatusLabel(appointment.status)}
       </StatusBadge>
+      {normalizeAppointmentStatus(appointment.status) === "COMPLETED" ? (
+        <span className="absolute right-4 top-12 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+          {paymentMethodLabel(appointment.paymentMethod)}
+        </span>
+      ) : null}
 
       <div className="min-w-0 pr-28">
         <div className="min-w-0">

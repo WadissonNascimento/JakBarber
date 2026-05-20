@@ -15,6 +15,11 @@ import {
   updateAppointmentStatusAction,
 } from "../actions";
 import { formatCurrency } from "@/lib/utils";
+import {
+  APPOINTMENT_PAYMENT_METHODS,
+  paymentMethodLabel,
+  type AppointmentPaymentMethod,
+} from "@/lib/paymentMethods";
 import type { BarberAppointmentItemDeliveryDecision } from "./BarberAppointmentCard";
 
 type Feedback = {
@@ -64,6 +69,7 @@ export default function BarberAppointmentActions({
   const router = useRouter();
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isPaymentPromptOpen, setIsPaymentPromptOpen] = useState(false);
   const [, startTransition] = useTransition();
   const isPending = Boolean(pendingStatus);
   const isCompletedEdit = ["COMPLETED", "DONE"].includes(status);
@@ -72,9 +78,8 @@ export default function BarberAppointmentActions({
     services.length > 0;
   const canComplete = ["PENDING", "CONFIRMED"].includes(status);
 
-  function submitStatus(nextStatus: string) {
+  function validateCompletion() {
     if (
-      nextStatus === "COMPLETED" &&
       hasPickupItems &&
       !allPickupItemsReviewed
     ) {
@@ -82,11 +87,36 @@ export default function BarberAppointmentActions({
         message: "Marque todas as retiradas antes de concluir.",
         tone: "error",
       });
+      return false;
+    }
+
+    return true;
+  }
+
+  function requestCompletion() {
+    if (!validateCompletion()) {
+      return;
+    }
+
+    setIsPaymentPromptOpen(true);
+  }
+
+  function submitStatus(
+    nextStatus: string,
+    paymentMethod?: AppointmentPaymentMethod
+  ) {
+    if (nextStatus === "COMPLETED" && !validateCompletion()) {
+      return;
+    }
+
+    if (nextStatus === "COMPLETED" && !paymentMethod) {
+      setIsPaymentPromptOpen(true);
       return;
     }
 
     setPendingStatus(nextStatus);
     onStatusUpdated?.(appointmentId, nextStatus);
+    setIsPaymentPromptOpen(false);
 
     startTransition(async () => {
       const formData = new FormData();
@@ -94,6 +124,8 @@ export default function BarberAppointmentActions({
       formData.set("status", nextStatus);
 
       if (nextStatus === "COMPLETED") {
+        formData.set("paymentMethod", paymentMethod || "");
+
         for (const decision of itemDeliveryDecisions) {
           formData.append(
             "itemDeliveryDecision",
@@ -131,10 +163,17 @@ export default function BarberAppointmentActions({
           disabled={isPending}
           pending={pendingStatus === "COMPLETED"}
           variant="primary"
-          onClick={() => submitStatus("COMPLETED")}
+          onClick={requestCompletion}
         >
           Concluir
         </ActionButton>
+      ) : null}
+      {isPaymentPromptOpen ? (
+        <PaymentMethodPrompt
+          isPending={isPending}
+          onClose={() => setIsPaymentPromptOpen(false)}
+          onSelect={(paymentMethod) => submitStatus("COMPLETED", paymentMethod)}
+        />
       ) : null}
       {isEditing ? (
         <BarberEditAppointmentModal
@@ -154,6 +193,70 @@ export default function BarberAppointmentActions({
         />
       ) : null}
     </>
+  );
+}
+
+function PaymentMethodPrompt({
+  isPending,
+  onClose,
+  onSelect,
+}: {
+  isPending: boolean;
+  onClose: () => void;
+  onSelect: (paymentMethod: AppointmentPaymentMethod) => void;
+}) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-5 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.55)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+          Pagamento
+        </p>
+        <h3 className="mt-2 text-2xl font-black">Como o cliente pagou?</h3>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          Essa forma fica marcada no atendimento concluido e entra no resumo financeiro.
+        </p>
+
+        <div className="mt-5 grid gap-2">
+          {APPOINTMENT_PAYMENT_METHODS.map((paymentMethod) => (
+            <button
+              key={paymentMethod}
+              type="button"
+              disabled={isPending}
+              onClick={() => onSelect(paymentMethod)}
+              className="min-h-14 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-base font-black text-white transition hover:border-[var(--brand)]/60 hover:bg-[var(--brand-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {paymentMethodLabel(paymentMethod)}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={onClose}
+          className="mt-3 min-h-12 w-full rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.06] disabled:opacity-60"
+        >
+          Voltar
+        </button>
+      </div>
+    </div>,
+    document.body
   );
 }
 

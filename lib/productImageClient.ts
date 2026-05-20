@@ -1,7 +1,7 @@
 "use client";
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
-const MAX_SOURCE_IMAGE_SIZE = 8 * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE = 20 * 1024 * 1024;
 const OUTPUT_IMAGE_SIZE = 1600;
 const TARGET_PRODUCT_FILL = 0.94;
 const EDGE_ALPHA_THRESHOLD = 18;
@@ -58,7 +58,7 @@ function isHeicImage(file: File) {
 
 function validateSourceSize(file: File) {
   if (file.size > MAX_SOURCE_IMAGE_SIZE) {
-    throw new Error("A imagem deve ter no maximo 8MB.");
+    throw new Error("A imagem deve ter no maximo 20MB.");
   }
 }
 
@@ -368,55 +368,9 @@ export async function prepareSecondaryProductImageUpload(file: File) {
   validateProductImage(file);
   validateSourceSize(file);
 
-  let bitmap: ImageBitmap;
-
-  try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    if (isHeicImage(file)) {
-      return {
-        file,
-        previewUrl: URL.createObjectURL(file),
-      };
-    }
-
-    throw new Error(INVALID_IMAGE_MESSAGE);
-  }
-  const canvas = document.createElement("canvas");
-  const maxSize = OUTPUT_IMAGE_SIZE;
-  const scale = Math.min(maxSize / bitmap.width, maxSize / bitmap.height, 1);
-
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    bitmap.close();
-    return {
-      file,
-      previewUrl: URL.createObjectURL(file),
-    };
-  }
-
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = "high";
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-
-  const blob = await compressCanvasToProductBlob(canvas);
-  const uploadFile =
-    blob && blob.size <= MAX_IMAGE_SIZE
-      ? new File([blob], "prepared-product-image.webp", { type: "image/webp" })
-      : file;
-
-  if (uploadFile.size > MAX_IMAGE_SIZE) {
-    throw new Error("A imagem comprimida ainda ficou acima de 2MB.");
-  }
-
   return {
-    file: uploadFile,
-    previewUrl: URL.createObjectURL(uploadFile),
+    file,
+    previewUrl: URL.createObjectURL(file),
   };
 }
 

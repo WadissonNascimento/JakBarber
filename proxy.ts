@@ -21,6 +21,15 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  if (
+    pathname === "/admin/produtos" ||
+    pathname.startsWith("/admin/produtos/")
+  ) {
+    const nextUrl = req.nextUrl.clone();
+    nextUrl.pathname = pathname.replace("/admin/produtos", "/admin/maquinas");
+    return NextResponse.redirect(nextUrl);
+  }
+
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/login/submit" ||

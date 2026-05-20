@@ -4,7 +4,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import FeedbackMessage from "@/components/FeedbackMessage";
-import { createProductFromForm } from "@/app/actions/productActions";
+import {
+  addProductSecondaryImageFromForm,
+  createProductFromForm,
+} from "@/app/actions/productActions";
 import {
   prepareProductImageUpload,
   prepareSecondaryProductImageUpload,
@@ -25,6 +28,7 @@ export default function NewProductForm() {
   }>({ message: null, tone: "success" });
   const [imageUpload, setImageUpload] = useState<PreparedImageUpload | null>(null);
   const [secondaryUploads, setSecondaryUploads] = useState<PreparedImageUpload[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -63,24 +67,32 @@ export default function NewProductForm() {
               formData.set("image", imageUpload.file);
             }
             formData.delete("secondaryImages");
+            const product = await createProductFromForm(formData);
 
-            for (const upload of secondaryUploads) {
-              formData.append("secondaryImages", upload.file);
+            for (const [index, upload] of secondaryUploads.entries()) {
+              setUploadProgress(
+                `Enviando foto secundaria ${index + 1}/${secondaryUploads.length}...`
+              );
+              const imageFormData = new FormData();
+              imageFormData.set("productId", product.id);
+              imageFormData.set("secondaryImage", upload.file);
+              await addProductSecondaryImageFromForm(imageFormData);
             }
 
-            await createProductFromForm(formData);
+            setUploadProgress(null);
             setFeedback({
-              message: "Produto criado com sucesso. Abrindo a lista...",
+              message: "Maquina criada com sucesso. Abrindo a lista...",
               tone: "success",
             });
-            router.push("/admin/produtos");
+            router.push("/admin/maquinas");
             router.refresh();
           } catch (error) {
+            setUploadProgress(null);
             setFeedback({
               message:
                 error instanceof Error
                   ? error.message
-                  : "Não foi possível criar o produto.",
+                  : "Não foi possível criar a maquina.",
               tone: "error",
             });
           }
@@ -88,6 +100,7 @@ export default function NewProductForm() {
       }}
     >
       <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+      <FeedbackMessage message={uploadProgress} tone="info" />
 
       <input type="hidden" name="category" value="SHELF" />
 
@@ -116,7 +129,7 @@ export default function NewProductForm() {
           className="service-edit-control min-h-24 resize-y"
         />
         <p className="mt-1.5 text-xs text-zinc-500">
-          Texto curto para aparecer no catalogo e no detalhe do produto.
+          Texto curto para aparecer no catalogo e no detalhe da maquina.
         </p>
       </label>
 
@@ -190,7 +203,7 @@ export default function NewProductForm() {
               src={imageUpload.previewUrl}
               loading="lazy"
               decoding="async"
-              alt="Preview do produto"
+              alt="Preview da maquina"
               className="h-full w-full object-contain"
             />
           </div>
@@ -204,7 +217,7 @@ export default function NewProductForm() {
               Fotos secundarias
             </p>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Ate 5 fotos reais do produto. Elas nao passam por remocao de fundo.
+              Ate 5 fotos reais da maquina, com ate 20MB cada. Elas nao passam por remocao de fundo.
             </p>
           </div>
           <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-bold text-zinc-300">
@@ -289,7 +302,7 @@ export default function NewProductForm() {
         disabled={isPending}
         className="btn-primary w-full"
       >
-        {isPending ? "Salvando..." : "Salvar"}
+        {isPending ? uploadProgress || "Salvando..." : "Salvar"}
       </button>
     </form>
   );

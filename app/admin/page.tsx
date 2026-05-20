@@ -23,11 +23,29 @@ import {
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
 import { ensureAdminBarberProfile } from "@/lib/barberAccess";
-import { toMoneyNumber } from "@/lib/money";
 import { formatCurrency } from "@/lib/utils";
+import { getAppointmentGrandTotal } from "@/lib/appointmentServices";
+import {
+  addToPaymentBreakdown,
+  createEmptyPaymentBreakdown,
+  paymentMethodLabel,
+  type PaymentBreakdown,
+} from "@/lib/paymentMethods";
 
 function getTodayRange() {
   return getScheduleDayRange(getCurrentScheduleDateValue())!;
+}
+
+function formatPaymentBreakdown(breakdown: PaymentBreakdown) {
+  const parts = (["PIX", "CASH", "CARD"] as const).map(
+    (method) => `${paymentMethodLabel(method)}: ${formatCurrency(breakdown[method])}`
+  );
+
+  if (breakdown.UNKNOWN > 0) {
+    parts.push(`Sem forma: ${formatCurrency(breakdown.UNKNOWN)}`);
+  }
+
+  return parts.join(" · ");
 }
 
 export default async function AdminPage() {
@@ -41,7 +59,12 @@ export default async function AdminPage() {
     redirect("/painel");
   }
 
+  if (!session.user.shopId) {
+    redirect("/logout");
+  }
+
   await ensureAdminBarberProfile(session.user.shopId);
+  const shopId = session.user.shopId;
   const adminProfile = await prisma.user.findUnique({
     where: {
       id: session.user.id,
@@ -67,17 +90,20 @@ export default async function AdminPage() {
   ] = await Promise.all([
     prisma.user.count({
       where: {
+        shopId,
         role: "BARBER",
         isActive: true,
       },
     }),
     prisma.product.count({
       where: {
+        shopId,
         isActive: true,
       },
     }),
     prisma.barberPayout.count({
       where: {
+        shopId,
         status: {
           in: ["OPEN", "CLOSED"],
         },
@@ -85,6 +111,7 @@ export default async function AdminPage() {
     }),
     prisma.pendingRegistration.count({
       where: {
+        shopId,
         role: "BARBER",
         expiresAt: {
           gt: now,
@@ -93,11 +120,13 @@ export default async function AdminPage() {
     }),
     prisma.review.count({
       where: {
+        shopId,
         isVisible: true,
       },
     }),
     prisma.appointment.count({
       where: {
+        shopId,
         date: {
           gte: todayStart,
           lte: todayEnd,
@@ -106,6 +135,7 @@ export default async function AdminPage() {
     }),
     prisma.appointment.count({
       where: {
+        shopId,
         date: {
           gte: todayStart,
           lte: todayEnd,
@@ -117,6 +147,7 @@ export default async function AdminPage() {
     }),
     prisma.appointment.findMany({
       where: {
+        shopId,
         date: {
           gte: todayStart,
           lte: todayEnd,
@@ -126,21 +157,33 @@ export default async function AdminPage() {
         },
       },
       select: {
+        paymentMethod: true,
         services: {
           select: {
             priceSnapshot: true,
           },
         },
+        items: {
+          select: {
+            subtotal: true,
+            isDelivered: true,
+          },
+        },
       },
     }),
   ]);
+  const todayPaymentBreakdown = createEmptyPaymentBreakdown();
   const todayRevenue = completedTodayAppointments.reduce(
-    (sum, appointment) =>
-      sum +
-      appointment.services.reduce(
-        (servicesSum, service) => servicesSum + toMoneyNumber(service.priceSnapshot),
-        0
-      ),
+    (sum, appointment) => {
+      const total = getAppointmentGrandTotal(
+        appointment.services,
+        appointment.items.filter((item) => item.isDelivered)
+      );
+
+      addToPaymentBreakdown(todayPaymentBreakdown, appointment.paymentMethod, total);
+
+      return sum + total;
+    },
     0
   );
   const entries = [
@@ -170,10 +213,10 @@ export default async function AdminPage() {
       description: "Preços, duração e repasse dos serviços.",
     },
     {
-      href: "/admin/produtos",
+      href: "/admin/maquinas",
       icon: PackageSearch,
-      title: "Produtos",
-      description: "Catálogo visual e itens ativos do Arsenal.",
+      title: "Maquinas",
+      description: "Catálogo visual e maquinas ativas.",
       badge: activeProducts ? `${activeProducts}` : undefined,
     },
     {
@@ -243,7 +286,7 @@ export default async function AdminPage() {
               icon={<DollarSign />}
               label="Faturado hoje"
               value={formatCurrency(todayRevenue)}
-              helper="atendimentos concluídos"
+              helper={formatPaymentBreakdown(todayPaymentBreakdown)}
             />
           </div>
         </section>
@@ -312,7 +355,9 @@ function AdminMetric({
       >
         {value}
       </p>
-      <p className="mt-1 truncate text-xs leading-4 text-zinc-400">{helper}</p>
+      <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-400">
+        {helper}
+      </p>
     </div>
   );
 }

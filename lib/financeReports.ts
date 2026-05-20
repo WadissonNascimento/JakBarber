@@ -12,6 +12,10 @@ import {
 } from "@/lib/appointmentSelects";
 import { getBarberTipsByBarber, getBarberTipsTotal } from "@/lib/barberTips";
 import { toMoneyNumber } from "@/lib/money";
+import {
+  addToPaymentBreakdown,
+  createEmptyPaymentBreakdown,
+} from "@/lib/paymentMethods";
 
 export type FinancePeriod = "week" | "month" | "custom";
 
@@ -205,6 +209,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
   const previousCompletedAppointments = previousAppointments.filter(
     (appointment) => normalizeAppointmentStatus(appointment.status) === "COMPLETED"
   );
+  const paymentBreakdown = createEmptyPaymentBreakdown();
 
   const barberMap = new Map<
     string,
@@ -232,6 +237,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
     const deliveredItems = getDeliveredItems(appointment.items);
     const serviceRevenue = getAppointmentGrandTotal(appointment.services, []);
     const extrasRevenue = getAppointmentGrandTotal([], deliveredItems);
+    const grossRevenue = serviceRevenue + extrasRevenue;
     const current = barberMap.get(appointment.barberId) || {
       barberId: appointment.barberId,
       barberName: appointment.barber.name || "Barbeiro",
@@ -250,7 +256,8 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
 
     current.serviceRevenue += serviceRevenue;
     current.extrasRevenue += extrasRevenue;
-    current.grossRevenue += serviceRevenue + extrasRevenue;
+    current.grossRevenue += grossRevenue;
+    addToPaymentBreakdown(paymentBreakdown, appointment.paymentMethod, grossRevenue);
     current.commissionTotal += getAppointmentTotalBarberPayout(
       appointment.services,
       appointment.items
@@ -608,6 +615,7 @@ export async function getFinanceDashboardData(filters: FinanceFilters) {
       barbersCount: barberPayouts.length,
       appointmentsCount: totalAppointments,
       averageTicket,
+      paymentBreakdown,
       payoutRate:
         totalGrossRevenue > 0
           ? Number(((totalCommission / totalGrossRevenue) * 100).toFixed(1))

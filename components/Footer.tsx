@@ -1,17 +1,14 @@
-import Image from "next/image";
 import Link from "next/link";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export default function Footer({
   brandName,
-  logoPath,
   whatsappNumber,
   instagramUrl,
   locationUrl,
   businessHours,
 }: {
   brandName: string;
-  logoPath: string;
   whatsappNumber: string;
   instagramUrl: string;
   addressLine: string;
@@ -33,17 +30,6 @@ export default function Footer({
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-6 border-b border-white/10 pb-8 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="flex items-center gap-3">
-            {logoPath ? (
-              <Image
-                src={logoPath}
-                alt={brandName}
-                width={640}
-                height={179}
-                className="object-contain"
-                unoptimized
-              />
-            ) : null}
-
             <div>
               <p className="text-lg font-bold">{brandName}</p>
               <p className="text-xs text-zinc-400">Atendimento com hora marcada</p>
@@ -140,10 +126,10 @@ export default function Footer({
             </Link>
             <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
             <Link
-              href="/produtos"
+              href="/maquinas"
               className="text-zinc-400 transition hover:text-[var(--brand-strong)]"
             >
-              Arsenal
+              Maquinas
             </Link>
             <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
             <p className="text-zinc-500">Cuidado em cada detalhe</p>

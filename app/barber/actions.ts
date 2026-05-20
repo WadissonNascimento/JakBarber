@@ -26,6 +26,7 @@ import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { getActiveBarberForSession } from "@/lib/barberAccess";
 import { sanitizeEmailInput } from "@/lib/inputSanitization";
 import { prisma } from "@/lib/prisma";
+import { normalizePaymentMethod } from "@/lib/paymentMethods";
 import {
   BRAZILIAN_PHONE_EXAMPLE,
   isValidBrazilianPhone,
@@ -233,6 +234,7 @@ export async function updateAppointmentStatusAction(
   const cancellationReason = String(
     formData.get("cancellationReason") || ""
   ).trim();
+  const paymentMethod = normalizePaymentMethod(formData.get("paymentMethod"));
   const itemDeliveryDecisions =
     status === "COMPLETED" ? parseItemDeliveryDecisions(formData) : [];
 
@@ -262,6 +264,7 @@ export async function updateAppointmentStatusAction(
       appointmentId,
       barberId: barber.id,
       status,
+      paymentMethod,
       cancellationReason,
       itemDeliveryDecisions,
     });

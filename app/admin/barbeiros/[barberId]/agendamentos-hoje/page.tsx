@@ -9,6 +9,7 @@ import {
   appointmentStatusVariant,
   normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
 import {
   getAppointmentDisplayName,
@@ -158,6 +159,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
               publicId: appointment.publicId,
               date: appointment.date,
               status: appointment.status,
+              paymentMethod: appointment.paymentMethod,
               notes: appointment.notes,
               barber: {
                 id: barber.id,
@@ -198,9 +200,16 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
                       {getAppointmentDisplayName(appointment.services) || "Serviço"}
                     </p>
                   </div>
-                  <StatusBadge variant={appointmentStatusVariant(status)}>
-                    {appointmentStatusLabel(status)}
-                  </StatusBadge>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <StatusBadge variant={appointmentStatusVariant(status)}>
+                      {appointmentStatusLabel(status)}
+                    </StatusBadge>
+                    {status === "COMPLETED" ? (
+                      <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+                        {paymentMethodLabel(appointment.paymentMethod)}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">

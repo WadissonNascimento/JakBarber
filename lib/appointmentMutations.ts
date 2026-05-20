@@ -4,6 +4,10 @@ import {
   normalizeAppointmentStatus,
   type AppointmentStatus,
 } from "@/lib/appointmentStatus";
+import {
+  normalizePaymentMethod,
+  type AppointmentPaymentMethod,
+} from "@/lib/paymentMethods";
 import { registerExtraStockMovement } from "@/lib/extraInventory";
 import {
   getAppointmentServicesOccupiedDuration,
@@ -1668,18 +1672,24 @@ export async function updateAppointmentStatusForBarber(
     appointmentId,
     barberId,
     status,
+    paymentMethod,
     cancellationReason,
     itemDeliveryDecisions,
   }: {
     appointmentId: string;
     barberId: string;
     status: string;
+    paymentMethod?: string | null;
     cancellationReason?: string | null;
     itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
   },
   db: AppointmentPrismaClient = prisma
 ) {
   const normalizedStatus = normalizeAppointmentStatus(status) as AppointmentStatus;
+  const normalizedPaymentMethod =
+    normalizedStatus === "COMPLETED"
+      ? normalizePaymentMethod(paymentMethod)
+      : null;
 
   if (!appointmentId || !APPOINTMENT_STATUSES.includes(normalizedStatus)) {
     throw new AppointmentMutationError("Status de agendamento invalido.");
@@ -1688,6 +1698,12 @@ export async function updateAppointmentStatusForBarber(
   if (normalizedStatus === "CANCELLED") {
     throw new AppointmentMutationError(
       "Somente o admin pode cancelar agendamentos."
+    );
+  }
+
+  if (normalizedStatus === "COMPLETED" && !normalizedPaymentMethod) {
+    throw new AppointmentMutationError(
+      "Escolha Pix, dinheiro ou cartao antes de concluir."
     );
   }
 
@@ -1707,6 +1723,7 @@ export async function updateAppointmentStatusForBarber(
         {
           appointmentId,
           nextStatus: normalizedStatus,
+          paymentMethod: normalizedPaymentMethod,
           cancellationReason: undefined,
           itemDeliveryDecisions:
             normalizedStatus === "COMPLETED"
@@ -1733,20 +1750,32 @@ export async function updateAppointmentStatusForAdmin(
   {
     appointmentId,
     status,
+    paymentMethod,
     cancellationReason,
     itemDeliveryDecisions,
   }: {
     appointmentId: string;
     status: string;
+    paymentMethod?: string | null;
     cancellationReason?: string | null;
     itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
   },
   db: AppointmentPrismaClient = prisma
 ) {
   const normalizedStatus = normalizeAppointmentStatus(status) as AppointmentStatus;
+  const normalizedPaymentMethod =
+    normalizedStatus === "COMPLETED"
+      ? normalizePaymentMethod(paymentMethod)
+      : null;
 
   if (!appointmentId || !APPOINTMENT_STATUSES.includes(normalizedStatus)) {
     throw new AppointmentMutationError("Status de agendamento invalido.");
+  }
+
+  if (normalizedStatus === "COMPLETED" && !normalizedPaymentMethod) {
+    throw new AppointmentMutationError(
+      "Escolha Pix, dinheiro ou cartao antes de concluir."
+    );
   }
 
   const updatedAppointment = await db.$transaction(
@@ -1755,6 +1784,7 @@ export async function updateAppointmentStatusForAdmin(
         {
           appointmentId,
           nextStatus: normalizedStatus,
+          paymentMethod: normalizedPaymentMethod,
           cancellationReason:
             normalizedStatus === "CANCELLED"
               ? cancellationReason?.trim() || "Cancelado pelo admin."
@@ -1898,11 +1928,13 @@ async function updateAppointmentStatusWithSideEffects(
   {
     appointmentId,
     nextStatus,
+    paymentMethod,
     cancellationReason,
     itemDeliveryDecisions,
   }: {
     appointmentId: string;
     nextStatus: AppointmentStatus;
+    paymentMethod?: AppointmentPaymentMethod | null;
     cancellationReason?: string;
     itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
   },
@@ -1988,6 +2020,12 @@ async function updateAppointmentStatusWithSideEffects(
   }
 
   if (nextStatus === "COMPLETED") {
+    if (!paymentMethod) {
+      throw new AppointmentMutationError(
+        "Informe a forma de pagamento para concluir o atendimento."
+      );
+    }
+
     await assertNoLockedPayoutForAppointmentPeriod(db, {
       shopId: appointment.shopId,
       barberId: appointment.barberId,
@@ -2056,6 +2094,8 @@ async function updateAppointmentStatusWithSideEffects(
     where: { id: appointmentId },
     data: {
       status: nextStatus,
+      paymentMethod:
+        nextStatus === "COMPLETED" ? paymentMethod : appointment.paymentMethod,
       notes:
         nextStatus === "CANCELLED" && cancellationReason
           ? [appointment.notes, cancellationReason].filter(Boolean).join(" | ")

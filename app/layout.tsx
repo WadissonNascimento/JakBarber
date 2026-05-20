@@ -92,7 +92,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const appName = isJakBarber ? JAKBARBER_APP_NAME : brandName;
   const description =
     shop.metadataDescription ||
-    "Agende seu horario, acompanhe seus atendimentos e encontre produtos para manter o cuidado em dia.";
+    "Agende seu horario, acompanhe seus atendimentos e encontre maquinas para manter o cuidado em dia.";
   const faviconPath = isJakBarber
     ? JAKBARBER_FAVICON_32_PATH
     : shop.faviconPath || "";

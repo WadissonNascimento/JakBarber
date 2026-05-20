@@ -13,6 +13,7 @@ import {
   prepareSecondaryProductImageUpload,
 } from "@/lib/productImageClient";
 import {
+  addProductSecondaryImageFromForm,
   deleteProduct,
   deleteProductSecondaryImage,
   toggleProduct,
@@ -63,6 +64,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
     message: string | null;
     tone: "success" | "error" | "info";
   }>({ message: null, tone: "success" });
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -128,10 +130,11 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
       } catch (error) {
         setFeedback({
           message:
-            error instanceof Error ? error.message : "Nao foi possivel atualizar o produto.",
+            error instanceof Error ? error.message : "Nao foi possivel atualizar a maquina.",
           tone: "error",
         });
       } finally {
+        setUploadProgress(null);
         setPendingKey(null);
       }
     });
@@ -249,6 +252,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
       {isOpen ? (
         <div className="border-t border-white/10 px-3.5 pb-3.5 pt-3.5">
           <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+          <FeedbackMessage message={uploadProgress} tone="info" />
 
           {isEditing ? (
             <div className="mt-3 space-y-3">
@@ -270,14 +274,36 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                     formData.set("image", imageUpload.file);
                   }
 
-                  for (const upload of secondaryUploads) {
-                    formData.append("secondaryImages", upload.file);
-                  }
-
                   runAction(
                     "details",
-                    () => updateProductFromForm(formData),
-                    "Produto atualizado com sucesso.",
+                    async () => {
+                      await updateProductFromForm(formData);
+
+                      const nextImages: SecondaryProductImage[] = [];
+
+                      for (const [index, upload] of secondaryUploads.entries()) {
+                        setUploadProgress(
+                          `Enviando foto secundaria ${index + 1}/${secondaryUploads.length}...`
+                        );
+                        const imageFormData = new FormData();
+                        imageFormData.set("productId", product.id);
+                        imageFormData.set("secondaryImage", upload.file);
+                        const result =
+                          await addProductSecondaryImageFromForm(imageFormData);
+
+                        if (result.image) {
+                          nextImages.push(result.image);
+                        }
+                      }
+
+                      if (nextImages.length > 0) {
+                        setSecondaryImages((current) => [
+                          ...current,
+                          ...nextImages,
+                        ]);
+                      }
+                    },
+                    "Maquina atualizada com sucesso.",
                     () => {
                       setIsEditing(false);
                       clearSecondaryUploads();
@@ -366,7 +392,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                         Fotos secundarias
                       </p>
                       <p className="mt-1 text-xs leading-5 text-zinc-500">
-                        Fotos reais do produto, sem remocao de fundo.
+                        Fotos reais da maquina, ate 20MB cada, sem remocao de fundo.
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-bold text-zinc-300">
@@ -481,7 +507,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                         const updatedProduct = await toggleProduct(product.id);
                         setIsActive(updatedProduct.isActive);
                       },
-                      () => (isActive ? "Produto ocultado." : "Produto ativado.")
+                      () => (isActive ? "Maquina ocultada." : "Maquina ativada.")
                     )
                   }
                   className={isActive ? "btn-warning-soft" : "btn-secondary"}
@@ -499,7 +525,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                   onClick={() => {
                     if (
                       !window.confirm(
-                        "Excluir produto do catalogo? Esta acao remove o item definitivamente."
+                        "Excluir maquina do catalogo? Esta acao remove o item definitivamente."
                       )
                     ) {
                       return;
@@ -508,7 +534,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                     runAction(
                       "delete",
                       () => deleteProduct(product.id),
-                      "Produto excluido com sucesso."
+                      "Maquina excluida com sucesso."
                     );
                   }}
                   className="btn-danger"

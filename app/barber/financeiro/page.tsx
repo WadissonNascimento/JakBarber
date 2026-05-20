@@ -328,6 +328,7 @@ async function getBarberFinanceData(
       publicId: appointment.publicId,
       date: appointment.date,
       status: normalizedStatus,
+      paymentMethod: appointment.paymentMethod,
       customerName: appointment.customer.name || "Cliente",
       barberId: appointment.barberId,
       serviceName: getAppointmentDisplayName(appointment.services),

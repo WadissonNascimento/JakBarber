@@ -10,7 +10,9 @@ import { editCompletedBarberFinanceAppointmentAction } from "@/app/barber/action
 import {
   appointmentStatusLabel,
   appointmentStatusVariant,
+  normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
@@ -20,6 +22,7 @@ export type FinanceAppointmentCardData = {
   publicId: number;
   date: Date;
   status: string;
+  paymentMethod?: string | null;
   customerName: string;
   barberId?: string;
   barberName?: string;
@@ -127,6 +130,11 @@ export default function FinanceAppointmentCard({
           >
             {appointmentStatusLabel(appointment.status)}
           </StatusBadge>
+          {normalizeAppointmentStatus(appointment.status) === "COMPLETED" ? (
+            <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+              {paymentMethodLabel(appointment.paymentMethod)}
+            </span>
+          ) : null}
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-emerald-300/70" />
             <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200/80">

@@ -22,6 +22,7 @@ import {
   appointmentStatusLabel,
   appointmentStatusVariant,
 } from "@/lib/appointmentStatus";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import type { MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
@@ -40,6 +41,7 @@ type ProfileAppointment = {
   publicId: number;
   date: Date;
   status: string;
+  paymentMethod: string | null;
   notes: string | null;
   barber: {
     name: string | null;
@@ -104,6 +106,7 @@ export default async function MeuPerfilPage() {
         publicId: true,
         date: true,
         status: true,
+        paymentMethod: true,
         notes: true,
         barber: {
           select: {
@@ -341,6 +344,11 @@ function AppointmentHistoryCard({
         >
           {appointmentStatusLabel(appointment.status)}
         </StatusBadge>
+        {canReview ? (
+          <span className="absolute right-4 top-12 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+            {paymentMethodLabel(appointment.paymentMethod)}
+          </span>
+        ) : null}
 
         <div className="min-w-0 pr-28">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">

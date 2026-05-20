@@ -14,6 +14,10 @@ import {
 import { appointmentForAdminSelect } from "@/lib/appointmentSelects";
 import { getFinanceDashboardData } from "@/lib/financeReports";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
+import {
+  paymentMethodLabel,
+  type PaymentBreakdown,
+} from "@/lib/paymentMethods";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { prisma } from "@/lib/prisma";
 import FinancePeriodFilters from "./FinancePeriodFilters";
@@ -31,6 +35,18 @@ function formatCurrency(value: MoneyValue) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function formatPaymentBreakdown(breakdown: PaymentBreakdown) {
+  const parts = (["PIX", "CASH", "CARD"] as const).map(
+    (method) => `${paymentMethodLabel(method)}: ${formatCurrency(breakdown[method])}`
+  );
+
+  if (breakdown.UNKNOWN > 0) {
+    parts.push(`Sem forma: ${formatCurrency(breakdown.UNKNOWN)}`);
+  }
+
+  return parts.join(" · ");
 }
 
 function formatDate(value: string | Date) {
@@ -154,6 +170,7 @@ async function getAdminFinanceAppointments({
         publicId: appointment.publicId,
         date: appointment.date,
         status: normalizedStatus,
+        paymentMethod: appointment.paymentMethod,
         customerName: appointment.customer.name || "Cliente",
         barberId: appointment.barberId,
         barberName: appointment.barber.name || "Barbeiro",
@@ -292,7 +309,7 @@ export default async function AdminFinanceiroPage({
             <FinanceStat
               label="Entrou"
               value={formatCurrency(data.summary.grossRevenue)}
-              helper="serviços"
+              helper={formatPaymentBreakdown(data.summary.paymentBreakdown)}
             />
             <FinanceStat
               label="A pagar"
@@ -761,7 +778,9 @@ function FinanceStat({
       <p className={`mt-1 truncate text-lg font-bold leading-tight ${toneClass}`}>
         {value}
       </p>
-      <p className="mt-0.5 truncate text-[11px] text-zinc-400">{helper}</p>
+      <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-zinc-400">
+        {helper}
+      </p>
     </div>
   );
 }

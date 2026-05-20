@@ -295,6 +295,7 @@ model Appointment {
   barberId       String
   date           DateTime
   status         String    @default("PENDING")
+  paymentMethod  String?
   notes          String?
   isManualFitIn  Boolean   @default(false)
   reminderSentAt DateTime?

@@ -27,8 +27,11 @@ async function ensureProductAccess() {
 }
 
 function revalidateProductViews() {
+  revalidatePath("/maquinas");
   revalidatePath("/produtos");
   revalidatePath("/admin");
+  revalidatePath("/admin/maquinas");
+  revalidatePath("/admin/maquinas/novo");
   revalidatePath("/admin/produtos");
   revalidatePath("/admin/produtos/novo");
   revalidatePath("/agendar");
@@ -59,7 +62,7 @@ function getSecondaryImageFiles(formData: FormData) {
     .filter((file): file is File => file instanceof File && file.size > 0);
 
   if (files.length > MAX_SECONDARY_PRODUCT_IMAGES) {
-    throw new Error("Cada produto pode ter no maximo 5 imagens secundarias.");
+    throw new Error("Cada maquina pode ter no maximo 5 imagens secundarias.");
   }
 
   return files;
@@ -86,7 +89,7 @@ async function addSecondaryProductImages({
   });
 
   if (currentCount + files.length > MAX_SECONDARY_PRODUCT_IMAGES) {
-    throw new Error("Cada produto pode ter no maximo 5 imagens secundarias.");
+    throw new Error("Cada maquina pode ter no maximo 5 imagens secundarias.");
   }
 
   const orderInfo = await prisma.productImage.aggregate({
@@ -99,7 +102,7 @@ async function addSecondaryProductImages({
     },
   });
   const firstOrder = (orderInfo._max.order ?? -1) + 1;
-  const createdImages: { id: string; imagePath: string | null }[] = [];
+  const createdImages: { id: string; url: string; imagePath: string | null }[] = [];
   const uploadedImages: { imageUrl: string; imagePath: string }[] = [];
 
   try {
@@ -122,6 +125,7 @@ async function addSecondaryProductImages({
         },
         select: {
           id: true,
+          url: true,
           imagePath: true,
         },
       });
@@ -179,11 +183,52 @@ export async function createProduct(data: {
     productId: product.id,
     type: "IN",
     quantity: stock,
-    reason: "Cadastro inicial do produto",
+    reason: "Cadastro inicial da maquina",
   });
 
   revalidateProductViews();
   return product;
+}
+
+export async function addProductSecondaryImageFromForm(formData: FormData) {
+  await ensureProductAccess();
+
+  const productId = String(formData.get("productId") || "").trim();
+  const imageFile = formData.get("secondaryImage");
+
+  if (!productId || !(imageFile instanceof File) || imageFile.size === 0) {
+    throw new Error("Selecione uma imagem secundaria para enviar.");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      shopId: true,
+    },
+  });
+
+  if (!product) {
+    throw new Error("Maquina nao encontrada.");
+  }
+
+  const [createdImage] = await addSecondaryProductImages({
+    productId: product.id,
+    shopId: product.shopId,
+    files: [imageFile],
+  });
+
+  revalidateProductViews();
+
+  return {
+    message: "Imagem secundaria adicionada.",
+    image: createdImage
+      ? {
+          id: createdImage.id,
+          url: normalizeProductImageUrl(createdImage.url) || createdImage.url,
+        }
+      : null,
+  };
 }
 
 export async function createProductFromForm(formData: FormData) {
@@ -249,7 +294,7 @@ export async function createProductFromForm(formData: FormData) {
         productId: product.id,
         type: "IN",
         quantity: stock,
-        reason: "Cadastro inicial do produto",
+        reason: "Cadastro inicial da maquina",
       });
     }
   } catch (error) {
@@ -262,7 +307,9 @@ export async function createProductFromForm(formData: FormData) {
   }
 
   revalidateProductViews();
-  return product;
+  return {
+    id: product.id,
+  };
 }
 
 export async function updateProduct(
@@ -284,7 +331,7 @@ export async function updateProduct(
   });
 
   if (!currentProduct) {
-    throw new Error("Produto nao encontrado.");
+    throw new Error("Maquina nao encontrada.");
   }
 
   if (
@@ -293,7 +340,7 @@ export async function updateProduct(
     (typeof data.stock === "number" &&
       (!Number.isInteger(data.stock) || data.stock < 0))
   ) {
-    throw new Error("Dados de produto invalidos.");
+    throw new Error("Dados de maquina invalidos.");
   }
 
   const product = await prisma.product.update({
@@ -354,7 +401,7 @@ export async function updateProductFromForm(formData: FormData) {
   });
 
   if (!currentProduct) {
-    throw new Error("Produto nao encontrado.");
+    throw new Error("Maquina nao encontrada.");
   }
 
   const image =
@@ -403,7 +450,7 @@ export async function updateProductFromForm(formData: FormData) {
   revalidateProductViews();
 
   return {
-    message: "Produto atualizado com sucesso.",
+    message: "Maquina atualizada com sucesso.",
     imageUrl: image?.imageUrl,
   };
 }
@@ -427,7 +474,7 @@ export async function updateProductImage(formData: FormData) {
   });
 
   if (!currentProduct) {
-    throw new Error("Produto nao encontrado.");
+    throw new Error("Maquina nao encontrada.");
   }
 
   const image = await uploadProductImage({
@@ -512,7 +559,7 @@ export async function deleteProduct(id: string) {
   });
 
   if (!product) {
-    throw new Error("Produto nao encontrado.");
+    throw new Error("Maquina nao encontrada.");
   }
 
   if (product._count.stockMovements > 0) {
@@ -536,8 +583,8 @@ export async function deleteProduct(id: string) {
     return {
       deleted: false,
       message: product.isActive
-        ? "Produto ocultado para preservar historico de estoque."
-        : "Produto ja estava oculto. Historico de estoque preservado.",
+        ? "Maquina ocultada para preservar historico de estoque."
+        : "Maquina ja estava oculta. Historico de estoque preservado.",
     };
   }
 
@@ -552,7 +599,7 @@ export async function deleteProduct(id: string) {
   revalidateProductViews();
   return {
     deleted: true,
-    message: "Produto excluido com sucesso.",
+    message: "Maquina excluida com sucesso.",
   };
 }
 
@@ -562,7 +609,7 @@ export async function toggleProduct(id: string) {
   const product = await prisma.product.findUnique({ where: { id } });
 
   if (!product) {
-    throw new Error("Produto nao encontrado.");
+    throw new Error("Maquina nao encontrada.");
   }
 
   const updatedProduct = await prisma.product.update({

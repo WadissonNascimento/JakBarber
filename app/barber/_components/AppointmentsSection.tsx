@@ -273,6 +273,7 @@ export function AppointmentsSection({
               publicId: appointment.publicId,
               date: appointment.date,
               status: appointment.status,
+              paymentMethod: appointment.paymentMethod,
               isManualFitIn: appointment.isManualFitIn,
               notes: appointment.notes,
               customer: {

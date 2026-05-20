@@ -56,7 +56,6 @@ export default function AppChrome({
       {hideFooter ? null : (
         <Footer
           brandName={brandName}
-          logoPath={logoPath}
           whatsappNumber={whatsappNumber}
           instagramUrl={instagramUrl}
           addressLine={addressLine}

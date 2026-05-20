@@ -211,10 +211,10 @@ function DefaultHomeClient({
               </Link>
 
               <Link
-                href="/produtos"
+                href="/maquinas"
                 className="rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-center text-white transition hover:bg-white/[0.08] active:scale-[0.98]"
               >
-                Arsenal do barbeiro
+                Maquinas
               </Link>
             </div>
 
@@ -586,11 +586,11 @@ function RodrigoStyleHome({
       </section>
 
       {products.length > 0 ? (
-        <section id="produtos" className="px-4 py-8 sm:px-6 lg:px-8">
+        <section id="maquinas" className="px-4 py-8 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <SectionTitle
               eyebrow="Catalogo"
-              title="Produtos para manter o acabamento."
+              title="Maquinas para manter o acabamento."
               description="Itens disponiveis no catalogo desta unidade."
             />
 

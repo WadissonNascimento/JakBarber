@@ -396,6 +396,7 @@ export async function getBarberDashboardData(
         publicId: appointment.publicId,
         date: appointment.date,
         status: appointment.status,
+        paymentMethod: appointment.paymentMethod,
         isManualFitIn: appointment.isManualFitIn,
         notes: appointment.notes,
         customer: {
@@ -423,6 +424,7 @@ export async function getBarberDashboardData(
         publicId: appointment.publicId,
         date: appointment.date,
         status: normalizeAppointmentStatus(appointment.status),
+        paymentMethod: appointment.paymentMethod,
         isManualFitIn: appointment.isManualFitIn,
         notes: appointment.notes,
         customer: {
@@ -740,6 +742,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
         publicId: appointment.publicId,
         date: appointment.date,
         status: appointment.status,
+        paymentMethod: appointment.paymentMethod,
         isManualFitIn: appointment.isManualFitIn,
         notes: appointment.notes,
         customer: {

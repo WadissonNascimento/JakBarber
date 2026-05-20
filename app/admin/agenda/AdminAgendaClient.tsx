@@ -29,6 +29,11 @@ import {
   normalizeAppointmentStatus,
 } from "@/lib/appointmentStatus";
 import {
+  APPOINTMENT_PAYMENT_METHODS,
+  paymentMethodLabel,
+  type AppointmentPaymentMethod,
+} from "@/lib/paymentMethods";
+import {
   editAdminAppointmentAction,
   updateAdminAppointmentStatusAction,
 } from "./actions";
@@ -45,6 +50,7 @@ export type AdminAgendaAppointment = {
   publicId: number;
   date: Date;
   status: string;
+  paymentMethod: string | null;
   notes: string | null;
   barber: {
     id: string;
@@ -429,6 +435,12 @@ export default function AdminAgendaClient({
                           >
                             {appointmentStatusLabel(appointment.status)}
                           </StatusBadge>
+                          {normalizeAppointmentStatus(appointment.status) ===
+                          "COMPLETED" ? (
+                            <p className="mt-1 text-[11px] font-bold text-emerald-200">
+                              {paymentMethodLabel(appointment.paymentMethod)}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="max-w-xs truncate text-zinc-400">
                           {appointment.notes || "-"}
@@ -663,6 +675,12 @@ function AppointmentMobileCard({
         </StatusBadge>
       </div>
 
+      {normalizeAppointmentStatus(appointment.status) === "COMPLETED" ? (
+        <div className="mt-3 inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
+          {paymentMethodLabel(appointment.paymentMethod)}
+        </div>
+      ) : null}
+
       <div className="mt-4 grid min-w-0 grid-cols-2 gap-2">
         <InfoTile icon={<CalendarDays />} label="Data" value={formatScheduleDate(date)} />
         <InfoTile icon={<Clock3 />} label="Hora" value={formatScheduleTime(date)} />
@@ -729,11 +747,20 @@ export function AdminAppointmentActions({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
+  const [isPaymentPromptOpen, setIsPaymentPromptOpen] = useState(false);
   const status = normalizeAppointmentStatus(appointment.status);
   const canEdit = !["CANCELLED", "NO_SHOW"].includes(status);
   const canChangeStatus = !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(status);
 
-  function runStatus(nextStatus: string) {
+  function runStatus(
+    nextStatus: string,
+    paymentMethod?: AppointmentPaymentMethod
+  ) {
+    if (nextStatus === "COMPLETED" && !paymentMethod) {
+      setIsPaymentPromptOpen(true);
+      return;
+    }
+
     const reason =
       nextStatus === "CANCELLED"
         ? window.prompt("Motivo do cancelamento:")?.trim()
@@ -743,10 +770,16 @@ export function AdminAppointmentActions({
       return;
     }
 
+    setIsPaymentPromptOpen(false);
+
     startTransition(async () => {
       const formData = new FormData();
       formData.set("appointmentId", appointment.id);
       formData.set("status", nextStatus);
+
+      if (paymentMethod) {
+        formData.set("paymentMethod", paymentMethod);
+      }
 
       if (reason) {
         formData.set("cancellationReason", reason);
@@ -813,6 +846,66 @@ export function AdminAppointmentActions({
           onClose={() => setIsEditing(false)}
         />
       ) : null}
+      {isPaymentPromptOpen ? (
+        <AdminPaymentMethodPrompt
+          isPending={isPending}
+          onClose={() => setIsPaymentPromptOpen(false)}
+          onSelect={(paymentMethod) => runStatus("COMPLETED", paymentMethod)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function AdminPaymentMethodPrompt({
+  isPending,
+  onClose,
+  onSelect,
+}: {
+  isPending: boolean;
+  onClose: () => void;
+  onSelect: (paymentMethod: AppointmentPaymentMethod) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-5 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.55)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+          Pagamento
+        </p>
+        <h3 className="mt-2 text-2xl font-black">Como o cliente pagou?</h3>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          A forma escolhida ficara marcada nos cards e no financeiro.
+        </p>
+
+        <div className="mt-5 grid gap-2">
+          {APPOINTMENT_PAYMENT_METHODS.map((paymentMethod) => (
+            <button
+              key={paymentMethod}
+              type="button"
+              disabled={isPending}
+              onClick={() => onSelect(paymentMethod)}
+              className="min-h-14 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-base font-black text-white transition hover:border-[var(--brand)]/60 hover:bg-[var(--brand-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {paymentMethodLabel(paymentMethod)}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={onClose}
+          className="mt-3 min-h-12 w-full rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.06] disabled:opacity-60"
+        >
+          Voltar
+        </button>
+      </div>
     </div>
   );
 }

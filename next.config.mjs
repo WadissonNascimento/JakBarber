@@ -74,7 +74,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: "4mb",
+      bodySizeLimit: "25mb",
       allowedOrigins: [
         ...productionOrigins,
         ...(isProduction ? [] : developmentOrigins),

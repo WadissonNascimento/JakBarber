@@ -23,6 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useId, useRef } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
+import { JAKBARBER_PWA_VERSION } from "@/lib/pwaAssets";
 
 type HeaderRole = "ADMIN" | "BARBER" | "CUSTOMER" | null;
 
@@ -49,7 +50,7 @@ function getHeaderLinks(role: HeaderRole): {
       ],
       secondary: [
         { href: "/admin/servicos", label: "Serviços" },
-        { href: "/admin/produtos", label: "Produtos" },
+        { href: "/admin/maquinas", label: "Maquinas" },
         { href: "/admin/extras", label: "Extras" },
         { href: "/admin/configuracoes", label: "Configuracoes" },
         { href: "/admin/avaliacoes", label: "Avaliações" },
@@ -78,7 +79,7 @@ function getHeaderLinks(role: HeaderRole): {
       primary: [
         { href: "/agendar", label: "Agendar" },
         { href: "/customer/agendamentos", label: "Meus horários" },
-        { href: "/produtos", label: "Arsenal" },
+        { href: "/maquinas", label: "Maquinas" },
       ],
       secondary: [{ href: "/meu-perfil", label: "Meu perfil" }],
     };
@@ -90,7 +91,7 @@ function getHeaderLinks(role: HeaderRole): {
     primary: [
       { href: "/agendar", label: "Agendar" },
       { href: "/servicos", label: "Serviços" },
-      { href: "/produtos", label: "Arsenal" },
+      { href: "/maquinas", label: "Maquinas" },
       { href: "/login", label: "Entrar" },
     ],
     secondary: [{ href: "/register", label: "Criar conta" }],
@@ -114,7 +115,7 @@ const navIcons: Record<string, LucideIcon> = {
   "/admin/configuracoes": Settings,
   "/admin/extras": ShoppingBag,
   "/admin/financeiro": WalletCards,
-  "/admin/produtos": Boxes,
+  "/admin/maquinas": Boxes,
   "/admin/servicos": Scissors,
   "/agendar": CalendarDays,
   "/barber": Clock,
@@ -125,7 +126,7 @@ const navIcons: Record<string, LucideIcon> = {
   "/customer/agendamentos": CalendarDays,
   "/login": LogIn,
   "/meu-perfil": UserRound,
-  "/produtos": ShoppingBag,
+  "/maquinas": ShoppingBag,
   "/register": UserPlus,
   "/servicos": Scissors,
 };
@@ -161,8 +162,14 @@ export default function Header({
     ? "mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-6 sm:py-6"
     : "mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6";
   const logoClassName = isJakBarber
-    ? "h-auto w-[136px] object-contain sm:w-[152px]"
+    ? "h-auto w-[132px] object-contain sm:w-[148px]"
     : "h-auto w-[108px] object-contain sm:w-[120px]";
+  const logoSrc =
+    isJakBarber && logoPath === "/logo.png"
+      ? `${logoPath}?v=${JAKBARBER_PWA_VERSION}`
+      : logoPath;
+  const logoWidth = isJakBarber ? 960 : 640;
+  const logoHeight = isJakBarber ? 540 : 179;
   const menuButtonClassName = `group fixed right-4 ${
     isJakBarber ? "top-5 h-14 w-14 rounded-[1.35rem]" : "top-3 h-12 w-12 rounded-2xl"
   } z-[130] flex cursor-pointer items-center justify-center border border-[var(--site-header-control-border)] bg-[var(--site-header-control-bg)] text-[var(--site-header-control-text)] transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] active:scale-95 md:relative md:right-auto md:top-auto md:z-auto`;
@@ -192,12 +199,12 @@ export default function Header({
       <header className="sticky top-0 z-[100] w-full max-w-full overflow-hidden border-b border-[var(--site-header-border)] bg-[var(--site-header-bg)] backdrop-blur-2xl">
         <div className={headerInnerClass}>
           <Link href={nav.homeHref} className="flex min-w-0 items-center gap-3">
-            {logoPath ? (
+            {logoSrc ? (
               <Image
-                src={logoPath}
+                src={logoSrc}
                 alt={brandName}
-                width={640}
-                height={179}
+                width={logoWidth}
+                height={logoHeight}
                 className={logoClassName}
                 priority
                 unoptimized
