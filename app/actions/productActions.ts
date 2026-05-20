@@ -191,44 +191,56 @@ export async function createProduct(data: {
 }
 
 export async function addProductSecondaryImageFromForm(formData: FormData) {
-  await ensureProductAccess();
+  try {
+    await ensureProductAccess();
 
-  const productId = String(formData.get("productId") || "").trim();
-  const imageFile = formData.get("secondaryImage");
+    const productId = String(formData.get("productId") || "").trim();
+    const imageFile = formData.get("secondaryImage");
 
-  if (!productId || !(imageFile instanceof File) || imageFile.size === 0) {
-    throw new Error("Selecione uma imagem secundaria para enviar.");
+    if (!productId || !(imageFile instanceof File) || imageFile.size === 0) {
+      throw new Error("Selecione uma imagem secundaria para enviar.");
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        shopId: true,
+      },
+    });
+
+    if (!product) {
+      throw new Error("Maquina nao encontrada.");
+    }
+
+    const [createdImage] = await addSecondaryProductImages({
+      productId: product.id,
+      shopId: product.shopId,
+      files: [imageFile],
+    });
+
+    revalidateProductViews();
+
+    return {
+      ok: true,
+      message: "Imagem secundaria adicionada.",
+      image: createdImage
+        ? {
+            id: createdImage.id,
+            url: normalizeProductImageUrl(createdImage.url) || createdImage.url,
+          }
+        : null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel adicionar a imagem secundaria.",
+      image: null,
+    };
   }
-
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: {
-      id: true,
-      shopId: true,
-    },
-  });
-
-  if (!product) {
-    throw new Error("Maquina nao encontrada.");
-  }
-
-  const [createdImage] = await addSecondaryProductImages({
-    productId: product.id,
-    shopId: product.shopId,
-    files: [imageFile],
-  });
-
-  revalidateProductViews();
-
-  return {
-    message: "Imagem secundaria adicionada.",
-    image: createdImage
-      ? {
-          id: createdImage.id,
-          url: normalizeProductImageUrl(createdImage.url) || createdImage.url,
-        }
-      : null,
-  };
 }
 
 export async function createProductFromForm(formData: FormData) {

@@ -17,6 +17,20 @@ const HEIC_IMAGE_EXTENSIONS = new Set(["heic", "heif"]);
 const IMAGE_TYPE_MESSAGE = "Envie uma imagem JPG, PNG, WEBP ou HEIC.";
 const INVALID_IMAGE_MESSAGE =
   "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
+const INVALID_HEIC_MESSAGE =
+  "Essa foto do iPhone nao chegou como HEIC valido. Envie como JPG/PNG ou tire uma captura e tente novamente.";
+const HEIC_BRANDS = [
+  "heic",
+  "heix",
+  "hevc",
+  "hevx",
+  "heim",
+  "heis",
+  "hevm",
+  "hevs",
+  "mif1",
+  "msf1",
+];
 
 function getExtension(fileName: string | undefined) {
   return String(fileName || "")
@@ -60,6 +74,67 @@ function validateSourceSize(file: File) {
   if (file.size > MAX_SOURCE_IMAGE_SIZE) {
     throw new Error("A imagem deve ter no maximo 20MB.");
   }
+}
+
+function bytesToAscii(bytes: Uint8Array) {
+  return Array.from(bytes)
+    .map((byte) => String.fromCharCode(byte))
+    .join("");
+}
+
+function hasSignature(bytes: Uint8Array, type: string) {
+  if (type === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (type === "image/png") {
+    const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+    return pngSignature.every((byte, index) => bytes[index] === byte);
+  }
+
+  if (type === "image/webp") {
+    return (
+      bytesToAscii(bytes.slice(0, 4)) === "RIFF" &&
+      bytesToAscii(bytes.slice(8, 12)) === "WEBP"
+    );
+  }
+
+  return false;
+}
+
+function isHeicHeader(bytes: Uint8Array) {
+  if (bytes.length < 16 || bytesToAscii(bytes.slice(4, 8)) !== "ftyp") {
+    return false;
+  }
+
+  const brandArea = bytesToAscii(bytes.slice(8, Math.min(bytes.length, 40)));
+
+  return HEIC_BRANDS.some((brand) => brandArea.includes(brand));
+}
+
+function inferAllowedImageTypeFromHeader(bytes: Uint8Array) {
+  if (hasSignature(bytes, "image/jpeg")) return "image/jpeg";
+  if (hasSignature(bytes, "image/png")) return "image/png";
+  if (hasSignature(bytes, "image/webp")) return "image/webp";
+  if (isHeicHeader(bytes)) return "image/heic";
+
+  return null;
+}
+
+async function validateImageContent(file: File) {
+  const header = new Uint8Array(await file.slice(0, 64).arrayBuffer());
+  const inferredType = inferAllowedImageTypeFromHeader(header);
+
+  if (isHeicImage(file) && inferredType !== "image/heic") {
+    throw new Error(INVALID_HEIC_MESSAGE);
+  }
+
+  if (!inferredType) {
+    throw new Error(INVALID_IMAGE_MESSAGE);
+  }
+
+  return inferredType;
 }
 
 async function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
@@ -311,6 +386,7 @@ function drawStandardizedProduct(
 export async function prepareProductImageUpload(file: File) {
   validateProductImage(file);
   validateSourceSize(file);
+  await validateImageContent(file);
 
   let bitmap: ImageBitmap;
 
@@ -367,6 +443,7 @@ export async function prepareProductImageUpload(file: File) {
 export async function prepareSecondaryProductImageUpload(file: File) {
   validateProductImage(file);
   validateSourceSize(file);
+  await validateImageContent(file);
 
   return {
     file,

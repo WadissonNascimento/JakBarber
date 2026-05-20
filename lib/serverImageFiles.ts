@@ -11,6 +11,8 @@ const heicConvert = require("heic-convert") as (options: {
 
 const VALID_IMAGE_MESSAGE =
   "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
+const INVALID_HEIC_MESSAGE =
+  "Essa foto do iPhone nao chegou como HEIC valido. Envie como JPG/PNG ou tire uma captura e tente novamente.";
 const TYPE_MESSAGE = "Envie uma imagem JPG, PNG, WEBP ou HEIC.";
 const HEIC_TYPES = new Set(["image/heic", "image/heif"]);
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -129,9 +131,13 @@ export async function prepareImageFileBuffer(
   const declaredType = normalizeMimeType(file.type);
   const buffer = Buffer.from(await file.arrayBuffer());
   const inferredType = inferAllowedImageType(buffer);
-  const shouldTryHeic = inferredType === "image/heic" || isHeicByNameOrType(file);
+  const declaredAsHeic = isHeicByNameOrType(file);
 
-  if (shouldTryHeic) {
+  if (declaredAsHeic && inferredType !== "image/heic") {
+    throw new Error(INVALID_HEIC_MESSAGE);
+  }
+
+  if (inferredType === "image/heic") {
     try {
       return {
         buffer: await convertHeicToJpeg(buffer),

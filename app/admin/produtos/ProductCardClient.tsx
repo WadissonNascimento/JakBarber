@@ -291,6 +291,10 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
                         const result =
                           await addProductSecondaryImageFromForm(imageFormData);
 
+                        if (!result.ok) {
+                          throw new Error(result.message);
+                        }
+
                         if (result.image) {
                           nextImages.push(result.image);
                         }

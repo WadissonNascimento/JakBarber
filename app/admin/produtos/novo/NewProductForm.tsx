@@ -76,7 +76,11 @@ export default function NewProductForm() {
               const imageFormData = new FormData();
               imageFormData.set("productId", product.id);
               imageFormData.set("secondaryImage", upload.file);
-              await addProductSecondaryImageFromForm(imageFormData);
+              const result = await addProductSecondaryImageFromForm(imageFormData);
+
+              if (!result.ok) {
+                throw new Error(result.message);
+              }
             }
 
             setUploadProgress(null);
