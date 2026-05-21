@@ -31,12 +31,14 @@ function formatTodayLabel() {
 
 export default function BarberTodayDashboard({
   barberName,
+  shopName,
   summary,
   walkInServices,
   walkInExtras,
   clients,
 }: {
   barberName: string;
+  shopName: string;
   summary: BarberTodayDashboardData["summary"];
   walkInServices: BarberTodayDashboardData["walkInServices"];
   walkInExtras: BarberTodayDashboardData["walkInExtras"];
@@ -168,6 +170,7 @@ export default function BarberTodayDashboard({
                 const contactHref = buildAppointmentContactWhatsAppUrl({
                   customerName: appointment.customer.name,
                   barberName,
+                  shopName,
                   serviceName: appointment.serviceName,
                   appointmentDate: appointment.date,
                   customerPhone: appointment.customer.phone,

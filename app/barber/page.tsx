@@ -13,6 +13,7 @@ export default async function BarberPage() {
   const { barber } = await requireActiveBarber();
   const dashboard = await getBarberTodayDashboardData(barber.id);
   const barberName = barber.name || "Barbeiro";
+  const shopName = barber.shop.name;
 
   return (
     <div className="min-h-screen">
@@ -49,6 +50,7 @@ export default async function BarberPage() {
 
         <BarberTodayDashboard
           barberName={barberName}
+          shopName={shopName}
           summary={dashboard.summary}
           walkInServices={dashboard.walkInServices}
           walkInExtras={dashboard.walkInExtras}

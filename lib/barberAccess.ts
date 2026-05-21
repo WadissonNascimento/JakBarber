@@ -28,6 +28,11 @@ const activeBarberSelect = {
   image: true,
   role: true,
   isActive: true,
+  shop: {
+    select: {
+      name: true,
+    },
+  },
 } as const;
 
 type SessionUserLike = {

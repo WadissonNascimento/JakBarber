@@ -26,6 +26,7 @@ type AppointmentsSectionProps = {
   extras: BarberDashboardData["walkInExtras"];
   filters: BarberDashboardData["filters"];
   barberName: string;
+  shopName: string;
 };
 
 function getTodayValue() {
@@ -74,6 +75,7 @@ export function AppointmentsSection({
   extras,
   filters,
   barberName,
+  shopName,
 }: AppointmentsSectionProps) {
   const router = useRouter();
   const pathname = usePathname() || "/barber/agenda";
@@ -314,6 +316,7 @@ export function AppointmentsSection({
             const contactHref = buildAppointmentContactWhatsAppUrl({
               customerName: cardAppointment.customer.name,
               barberName,
+              shopName,
               serviceName,
               appointmentDate: appointment.date,
               customerPhone: cardAppointment.customer.phone,

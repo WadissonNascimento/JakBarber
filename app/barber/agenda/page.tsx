@@ -26,6 +26,7 @@ export default async function BarberAgendaPage({
   const filters = await searchParams;
   const agenda = await getBarberAgendaData(barber.id, filters);
   const barberName = barber.name || "Barbeiro";
+  const shopName = barber.shop.name;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 text-white">
@@ -44,6 +45,7 @@ export default async function BarberAgendaPage({
           extras={agenda.extras}
           filters={agenda.filters}
           barberName={barberName}
+          shopName={shopName}
         />
       </div>
     </div>

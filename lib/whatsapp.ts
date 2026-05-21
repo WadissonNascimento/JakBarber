@@ -62,12 +62,14 @@ function formatAppointmentTime(value: Date) {
 export function buildAppointmentContactWhatsAppUrl({
   customerName,
   barberName,
+  shopName,
   serviceName,
   appointmentDate,
   customerPhone,
 }: {
   customerName: string;
   barberName: string;
+  shopName?: string | null;
   serviceName: string;
   appointmentDate: Date;
   customerPhone: string | null | undefined;
@@ -78,8 +80,9 @@ export function buildAppointmentContactWhatsAppUrl({
     return null;
   }
 
+  const contactShopName = shopName?.trim() || "barbearia";
   const message =
-    `Olá, ${customerName}! Aqui é o barbeiro ${barberName} da barbearia.\n\n` +
+    `Olá, ${customerName}! Aqui é o barbeiro ${barberName} da ${contactShopName}.\n\n` +
     "Estou entrando em contato sobre seu agendamento:\n\n" +
     `📅 Data: ${formatAppointmentDate(appointmentDate)}\n` +
     `⏰ Horário: ${formatAppointmentTime(appointmentDate)}\n` +
