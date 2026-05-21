@@ -3,6 +3,8 @@
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const MAX_SOURCE_IMAGE_SIZE = 20 * 1024 * 1024;
 const OUTPUT_IMAGE_SIZE = 1600;
+const SECONDARY_OUTPUT_IMAGE_SIZE = 1600;
+const MAX_SECONDARY_UPLOAD_SIZE = 8 * 1024 * 1024;
 const TARGET_PRODUCT_FILL = 0.94;
 const EDGE_ALPHA_THRESHOLD = 18;
 const EDGE_COLOR_THRESHOLD = 34;
@@ -155,6 +157,20 @@ async function compressCanvasToProductBlob(canvas: HTMLCanvasElement) {
   }
 
   return canvasToBlob(canvas, 0.64);
+}
+
+async function compressCanvasToSecondaryBlob(canvas: HTMLCanvasElement) {
+  const qualities = [0.92, 0.88, 0.82, 0.74];
+
+  for (const quality of qualities) {
+    const blob = await canvasToBlob(canvas, quality);
+
+    if (blob && blob.size <= MAX_SECONDARY_UPLOAD_SIZE) {
+      return blob;
+    }
+  }
+
+  return canvasToBlob(canvas, 0.68);
 }
 
 function getBackgroundReference(data: Uint8ClampedArray, width: number, height: number) {
@@ -445,9 +461,56 @@ export async function prepareSecondaryProductImageUpload(file: File) {
   validateSourceSize(file);
   await validateImageContent(file);
 
+  let bitmap: ImageBitmap;
+
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    if (isHeicImage(file)) {
+      throw new Error(INVALID_HEIC_MESSAGE);
+    }
+
+    throw new Error(INVALID_IMAGE_MESSAGE);
+  }
+
+  const scale = Math.min(
+    1,
+    SECONDARY_OUTPUT_IMAGE_SIZE / Math.max(bitmap.width, bitmap.height)
+  );
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    bitmap.close();
+    return {
+      file,
+      previewUrl: URL.createObjectURL(file),
+    };
+  }
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await compressCanvasToSecondaryBlob(canvas);
+
+  if (!blob) {
+    throw new Error("Nao foi possivel compactar a foto secundaria.");
+  }
+
+  const uploadFile = new File([blob], "secondary-product-image.webp", {
+    type: "image/webp",
+  });
+
   return {
-    file,
-    previewUrl: URL.createObjectURL(file),
+    file: uploadFile,
+    previewUrl: URL.createObjectURL(uploadFile),
   };
 }
 

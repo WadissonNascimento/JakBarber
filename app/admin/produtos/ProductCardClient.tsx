@@ -22,6 +22,17 @@ import {
 
 const MAX_SECONDARY_IMAGES = 5;
 
+function getProductActionErrorMessage(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : "Nao foi possivel atualizar a maquina.";
+
+  if (message.toLowerCase().includes("unexpected response")) {
+    return "Nao foi possivel salvar agora. Se estiver usando iPhone, aguarde a foto terminar de carregar no aparelho e tente enviar novamente.";
+  }
+
+  return message;
+}
+
 type PreparedImageUpload = {
   file: File;
   previewUrl: string;
@@ -129,8 +140,7 @@ export default function ProductCardClient({ product }: ProductCardClientProps) {
         router.refresh();
       } catch (error) {
         setFeedback({
-          message:
-            error instanceof Error ? error.message : "Nao foi possivel atualizar a maquina.",
+          message: getProductActionErrorMessage(error),
           tone: "error",
         });
       } finally {
