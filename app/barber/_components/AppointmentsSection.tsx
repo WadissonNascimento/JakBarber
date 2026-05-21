@@ -13,6 +13,7 @@ import {
 import { toMoneyNumber } from "@/lib/money";
 import { getCurrentScheduleDate } from "@/lib/scheduleTime";
 import { buildAppointmentContactWhatsAppUrl } from "@/lib/whatsapp";
+import { getManualFitInCustomerDisplay } from "@/lib/manualFitIn";
 import type { getBarberDashboardData } from "../data";
 import BarberAppointmentActions from "./BarberAppointmentActions";
 import BarberAppointmentCard from "./BarberAppointmentCard";
@@ -268,6 +269,16 @@ export function AppointmentsSection({
           visibleAppointments.map((appointment) => {
             const serviceName = getAppointmentDisplayName(appointment.services);
             const serviceMeta = getAppointmentServiceMetaLine(appointment.services);
+            const appointmentCustomer = appointment.isManualFitIn
+              ? getManualFitInCustomerDisplay({
+                  notes: appointment.notes,
+                  fallbackCustomer: appointment.customer,
+                })
+              : {
+                  name: appointment.customer.name || "Cliente",
+                  phone: appointment.customer.phone || null,
+                  email: appointment.customer.email || null,
+                };
             const cardAppointment = {
               id: appointment.id,
               publicId: appointment.publicId,
@@ -278,9 +289,9 @@ export function AppointmentsSection({
               notes: appointment.notes,
               customer: {
                 id: appointment.customer.id,
-                name: appointment.customer.name || "Cliente",
-                phone: appointment.customer.phone || null,
-                email: appointment.customer.email || null,
+                name: appointmentCustomer.name,
+                phone: appointmentCustomer.phone || null,
+                email: appointmentCustomer.email || null,
               },
               serviceName,
               serviceMeta,

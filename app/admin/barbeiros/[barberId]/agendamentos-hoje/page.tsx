@@ -12,7 +12,7 @@ import {
 import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
 import {
-  getManualFitInCustomerSnapshot,
+  getManualFitInCustomerDisplay,
   getManualFitInVisibleNotes,
 } from "@/lib/manualFitIn";
 import {
@@ -154,9 +154,12 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
         <div className="space-y-3">
           {appointments.map((appointment) => {
             const status = normalizeAppointmentStatus(appointment.status);
-            const manualCustomer = getManualFitInCustomerSnapshot(appointment.notes);
+            const manualCustomer = getManualFitInCustomerDisplay({
+              notes: appointment.notes,
+              fallbackCustomer: appointment.customer,
+            });
             const customerName = appointment.isManualFitIn
-              ? manualCustomer.name || "Cliente sem cadastro"
+              ? manualCustomer.name
               : appointment.customer.name || "Cliente";
             const payoutPreviewItems = appointment.items.map((item) => ({
               ...item,
@@ -177,7 +180,9 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
               },
               customer: {
                 name: customerName,
-                email: appointment.isManualFitIn ? null : appointment.customer.email,
+                email: appointment.isManualFitIn
+                  ? manualCustomer.email
+                  : appointment.customer.email,
               },
               services: appointment.services.map((service) => ({
                 serviceId: service.serviceId,

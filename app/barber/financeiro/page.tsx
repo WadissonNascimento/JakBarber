@@ -14,7 +14,7 @@ import {
 import { appointmentForBarberSelect } from "@/lib/appointmentSelects";
 import { getBarberTipRows, getBarberTipsTotal } from "@/lib/barberTips";
 import {
-  getManualFitInCustomerSnapshot,
+  getManualFitInCustomerDisplay,
   getManualFitInVisibleNotes,
 } from "@/lib/manualFitIn";
 import { toMoneyNumber } from "@/lib/money";
@@ -334,8 +334,10 @@ async function getBarberFinanceData(
       status: normalizedStatus,
       paymentMethod: appointment.paymentMethod,
       customerName: appointment.isManualFitIn
-        ? getManualFitInCustomerSnapshot(appointment.notes).name ||
-          "Cliente sem cadastro"
+        ? getManualFitInCustomerDisplay({
+            notes: appointment.notes,
+            fallbackCustomer: appointment.customer,
+          }).name
         : appointment.customer.name || "Cliente",
       barberId: appointment.barberId,
       serviceName: getAppointmentDisplayName(appointment.services),

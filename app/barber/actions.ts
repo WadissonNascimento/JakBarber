@@ -25,6 +25,10 @@ import {
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { getActiveBarberForSession } from "@/lib/barberAccess";
 import { formatManualFitInNotes } from "@/lib/manualFitIn";
+import {
+  BookingAvailabilityError,
+  getBookingAvailability,
+} from "@/lib/bookingAvailability";
 import { sanitizeEmailInput } from "@/lib/inputSanitization";
 import { prisma } from "@/lib/prisma";
 import { normalizePaymentMethod } from "@/lib/paymentMethods";
@@ -40,6 +44,45 @@ import {
   isValidCustomerFullName,
   normalizeCustomerName,
 } from "@/lib/customerRegistrationValidation";
+
+function flattenAvailableSlots(periodSlots: {
+  morning: string[];
+  afternoon: string[];
+  night: string[];
+}) {
+  return [
+    ...periodSlots.morning,
+    ...periodSlots.afternoon,
+    ...periodSlots.night,
+  ];
+}
+
+type WalkInPeriodSlots = {
+  morning: string[];
+  afternoon: string[];
+  night: string[];
+};
+
+type WalkInSlotsPayload = {
+  slots: string[];
+  periodSlots: WalkInPeriodSlots;
+};
+
+const emptyWalkInPeriodSlots = (): WalkInPeriodSlots => ({
+  morning: [],
+  afternoon: [],
+  night: [],
+});
+
+function walkInSlotsError(message: string): MutationResult<WalkInSlotsPayload> {
+  return {
+    ...mutationError(message),
+    data: {
+      slots: [],
+      periodSlots: emptyWalkInPeriodSlots(),
+    },
+  } as MutationResult<WalkInSlotsPayload>;
+}
 
 async function requireBarber() {
   const session = await auth();
@@ -460,6 +503,7 @@ export async function createWalkInAppointmentAction(
   const customerName = normalizeCustomerName(String(formData.get("customerName") || ""));
   const rawCustomerPhone = String(formData.get("customerPhone") || "");
   const customerPhone = normalizeBrazilianPhoneForSubmit(rawCustomerPhone);
+  const hasRawCustomerPhone = Boolean(rawCustomerPhone.trim());
   const serviceIds = formData
     .getAll("serviceIds")
     .map((value) => String(value).trim())
@@ -488,8 +532,8 @@ export async function createWalkInAppointmentAction(
 
   if (
     (!customerId && !isValidCustomerFullName(customerName)) ||
-    (!customerId && !isValidBrazilianPhone(rawCustomerPhone)) ||
-    (Boolean(rawCustomerPhone.trim()) && !customerPhone) ||
+    (!customerId && hasRawCustomerPhone && !isValidBrazilianPhone(rawCustomerPhone)) ||
+    (hasRawCustomerPhone && !customerPhone) ||
     customerName.length > 80 ||
     selectedServiceIds.length === 0 ||
     selectedServiceIds.length > 8 ||
@@ -499,7 +543,7 @@ export async function createWalkInAppointmentAction(
     extraNotes.length > 200
   ) {
     return mutationError(
-      "Preencha nome completo, telefone valido, servicos, data e horario corretamente."
+      "Preencha nome completo, telefone valido quando informado, servicos, data e horario corretamente."
     );
   }
 
@@ -519,6 +563,25 @@ export async function createWalkInAppointmentAction(
 
   if (services.length !== selectedServiceIds.length) {
     return mutationError("Um ou mais servicos estao indisponiveis para encaixe.");
+  }
+
+  try {
+    const availability = await getBookingAvailability({
+      barberId: barber.id,
+      serviceIds: selectedServiceIds,
+      date,
+    });
+    const availableSlots = flattenAvailableSlots(availability.periodSlots);
+
+    if (!availableSlots.includes(startTime)) {
+      return mutationError("Escolha um dos horarios disponiveis para esse encaixe.");
+    }
+  } catch (error) {
+    if (error instanceof BookingAvailabilityError) {
+      return mutationError(error.message);
+    }
+
+    throw error;
   }
 
   const selectedCustomer = customerId
@@ -559,7 +622,6 @@ export async function createWalkInAppointmentAction(
         customerPhone: displayCustomerPhone,
         notes: extraNotes,
       }),
-      conflictMode: "SAME_START_ONLY",
     });
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
@@ -571,6 +633,65 @@ export async function createWalkInAppointmentAction(
 
   revalidateBarberViews();
   return mutationSuccess("Encaixe criado com sucesso!");
+}
+
+export async function getWalkInAvailableSlotsAction({
+  date,
+  serviceIds,
+}: {
+  date: string;
+  serviceIds: string[];
+}): Promise<MutationResult<WalkInSlotsPayload>> {
+  const barber = await requireBarber();
+  const selectedDate = String(date || "").trim();
+  const selectedServiceIds = serviceIds
+    .map((serviceId) => String(serviceId || "").trim())
+    .filter(Boolean);
+
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ||
+    selectedServiceIds.length === 0 ||
+    selectedServiceIds.length > 8
+  ) {
+    return walkInSlotsError("Selecione servicos e data para carregar os horarios.");
+  }
+
+  const services = await prisma.service.findMany({
+    where: {
+      shopId: barber.shopId,
+      id: {
+        in: selectedServiceIds,
+      },
+      OR: [{ barberId: barber.id }, { barberId: null }],
+      isActive: true,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (services.length !== selectedServiceIds.length) {
+    return walkInSlotsError("Um ou mais servicos estao indisponiveis para encaixe.");
+  }
+
+  try {
+    const availability = await getBookingAvailability({
+      barberId: barber.id,
+      serviceIds: selectedServiceIds,
+      date: selectedDate,
+    });
+
+    return mutationSuccess("Horarios carregados.", {
+      slots: flattenAvailableSlots(availability.periodSlots),
+      periodSlots: availability.periodSlots,
+    });
+  } catch (error) {
+    if (error instanceof BookingAvailabilityError) {
+      return walkInSlotsError(error.message);
+    }
+
+    throw error;
+  }
 }
 
 export async function saveBarberAvailabilityAction(

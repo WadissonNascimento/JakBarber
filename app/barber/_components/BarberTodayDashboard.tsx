@@ -118,11 +118,6 @@ export default function BarberTodayDashboard({
             services={walkInServices}
             extras={walkInExtras}
             clients={clients}
-            activeAppointments={summary.todayAppointments.map((appointment) => ({
-              date: appointment.date,
-              status: appointment.status,
-              occupiedDuration: appointment.occupiedDuration,
-            }))}
           />
           <QuickLink href="/barber/financeiro" icon={<DollarSign />}>
             Meu financeiro

@@ -22,11 +22,13 @@ test("customer appointment flows send notification emails from backend actions",
   );
 
   const barberActions = read("app/barber/actions.ts");
+  const adminAgendaActions = read("app/admin/agenda/actions.ts");
 
   assert.match(barberActions, /previousStatus/);
   assert.match(barberActions, /notifyCustomerAppointmentCompleted\(appointmentId\)/);
+  assert.match(barberActions, /Somente o admin pode cancelar agendamentos/);
   assert.match(
-    barberActions,
+    adminAgendaActions,
     /notifyCustomerAppointmentCancelled\(appointmentId,\s*cancellationReason\)/
   );
 });

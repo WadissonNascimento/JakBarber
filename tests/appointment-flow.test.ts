@@ -209,6 +209,7 @@ test("customer can book and conclude an appointment", async () => {
         appointmentId: appointment.id,
         barberId: barber.id,
         status: "COMPLETED",
+        paymentMethod: "PIX",
       },
       db
     );
@@ -641,6 +642,7 @@ test("barber reviews extras before completing and payout uses delivered items on
             appointmentId: appointment.id,
             barberId: barber.id,
             status: "COMPLETED",
+            paymentMethod: "PIX",
           },
           db
         ),
@@ -661,6 +663,7 @@ test("barber reviews extras before completing and payout uses delivered items on
         appointmentId: appointment.id,
         barberId: barber.id,
         status: "COMPLETED",
+        paymentMethod: "PIX",
         itemDeliveryDecisions: [
           {
             appointmentItemId: deliveredItem.id,

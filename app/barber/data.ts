@@ -14,7 +14,7 @@ import {
 } from "@/lib/appointmentSelects";
 import { getBarberTipsTotal } from "@/lib/barberTips";
 import {
-  getManualFitInCustomerSnapshot,
+  getManualFitInCustomerDisplay,
   getManualFitInVisibleNotes,
 } from "@/lib/manualFitIn";
 import {
@@ -146,13 +146,16 @@ function getAppointmentCustomerForBarberCard(appointment: {
     };
   }
 
-  const snapshot = getManualFitInCustomerSnapshot(appointment.notes);
+  const snapshot = getManualFitInCustomerDisplay({
+    notes: appointment.notes,
+    fallbackCustomer: appointment.customer,
+  });
 
   return {
     id: appointment.customer.id,
-    name: snapshot.name || "Cliente sem cadastro",
+    name: snapshot.name,
     phone: snapshot.phone || null,
-    email: null,
+    email: snapshot.email,
   };
 }
 

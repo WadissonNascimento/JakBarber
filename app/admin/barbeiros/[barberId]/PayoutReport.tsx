@@ -5,7 +5,7 @@ import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getBarberTipRows } from "@/lib/barberTips";
-import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
+import { getManualFitInCustomerDisplay } from "@/lib/manualFitIn";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -18,6 +18,25 @@ import { formatCurrency } from "@/lib/utils";
 function formatCommission(type: string, value: MoneyValue) {
   const numericValue = toMoneyNumber(value);
   return type === "FIXED" ? formatCurrency(numericValue) : `${numericValue}%`;
+}
+
+function getPayoutCustomerName(appointment: {
+  isManualFitIn: boolean;
+  notes: string | null;
+  customer: {
+    name: string | null;
+    phone?: string | null;
+    email?: string | null;
+  };
+}) {
+  if (!appointment.isManualFitIn) {
+    return appointment.customer.name || "Cliente";
+  }
+
+  return getManualFitInCustomerDisplay({
+    notes: appointment.notes,
+    fallbackCustomer: appointment.customer,
+  }).name;
 }
 
 type PayoutRange = {
@@ -115,10 +134,7 @@ export default async function PayoutReport({
         id: service.id,
         appointmentId: appointment.id,
         time: formatScheduleTime(appointment.date),
-        customerName: appointment.isManualFitIn
-          ? getManualFitInCustomerSnapshot(appointment.notes).name ||
-            "Cliente sem cadastro"
-          : appointment.customer.name || "Cliente",
+        customerName: getPayoutCustomerName(appointment),
         name: service.nameSnapshot,
         gross: toMoneyNumber(service.priceSnapshot),
         commission: formatCommission(
@@ -137,10 +153,7 @@ export default async function PayoutReport({
         id: item.id,
         appointmentId: appointment.id,
         time: formatScheduleTime(appointment.date),
-        customerName: appointment.isManualFitIn
-          ? getManualFitInCustomerSnapshot(appointment.notes).name ||
-            "Cliente sem cadastro"
-          : appointment.customer.name || "Cliente",
+        customerName: getPayoutCustomerName(appointment),
         name: `${item.productNameSnapshot} x${item.quantity}`,
         gross: toMoneyNumber(item.subtotal),
         commission: formatCommission(item.commissionTypeSnapshot, item.commissionValueSnapshot),

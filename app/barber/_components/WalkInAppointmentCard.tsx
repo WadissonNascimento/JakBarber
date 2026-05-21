@@ -15,14 +15,8 @@ import FeedbackMessage from "@/components/FeedbackMessage";
 import OperationalFeedbackDialog, {
   type OperationalFeedbackState,
 } from "@/components/ui/OperationalFeedbackDialog";
-import { PremiumDatePicker, PremiumTimePicker } from "@/components/ui/PremiumFilters";
-import { isActiveAppointmentStatus, minutesToTime, toMinutes } from "@/lib/barberSchedule";
 import {
-  formatScheduleTime,
-  getCurrentScheduleDate,
   getCurrentScheduleDateValue,
-  getCurrentScheduleMinutes,
-  getScheduleMinutes,
 } from "@/lib/scheduleTime";
 import { formatBrazilianPhone, maskBrazilianPhone } from "@/lib/phone";
 import { isValidBrazilianPhone } from "@/lib/phone";
@@ -31,7 +25,10 @@ import {
   normalizeCustomerName,
 } from "@/lib/customerRegistrationValidation";
 import { formatCurrency } from "@/lib/utils";
-import { createWalkInAppointmentAction } from "../actions";
+import {
+  createWalkInAppointmentAction,
+  getWalkInAvailableSlotsAction,
+} from "../actions";
 import type { getBarberDashboardData } from "../data";
 
 type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
@@ -40,11 +37,6 @@ type WalkInAppointmentCardProps = {
   services: BarberDashboardData["walkInServices"];
   extras: BarberDashboardData["walkInExtras"];
   clients: BarberDashboardData["clients"];
-  activeAppointments: Array<{
-    date: Date;
-    status: string;
-    occupiedDuration: number;
-  }>;
 };
 
 type WalkInSuccessDetails = {
@@ -69,6 +61,27 @@ type WalkInDraft = {
   notes: string;
 };
 
+type WalkInStep = "customer" | "services" | "schedule" | "extras" | "summary";
+
+type WalkInPeriodSlots = {
+  morning: string[];
+  afternoon: string[];
+  night: string[];
+};
+
+type WalkInDateOption = {
+  value: string;
+  day: string;
+  weekday: string;
+  label: string;
+};
+
+const emptyWalkInPeriodSlots = (): WalkInPeriodSlots => ({
+  morning: [],
+  afternoon: [],
+  night: [],
+});
+
 function getWalkInDraftKey() {
   if (typeof window === "undefined") {
     return "jakbarber:walk-in-draft";
@@ -77,46 +90,6 @@ function getWalkInDraftKey() {
   return `jakbarber:walk-in-draft:${window.location.host}`;
 }
 
-function getRoundedStartTime() {
-  const currentMinutes = getCurrentScheduleMinutes();
-  const roundedMinutes = Math.ceil(currentMinutes / 5) * 5;
-
-  return minutesToTime(Math.min(roundedMinutes, 23 * 60 + 55));
-}
-
-function getSuggestedStartTime(
-  activeAppointments: WalkInAppointmentCardProps["activeAppointments"],
-  serviceDuration: number
-) {
-  let candidateMinutes = toMinutes(getRoundedStartTime());
-
-  const sortedAppointments = activeAppointments
-    .filter((appointment) => isActiveAppointmentStatus(appointment.status))
-    .map((appointment) => {
-      const startDate = new Date(appointment.date);
-      const startMinutes = getScheduleMinutes(startDate);
-
-      return {
-        startMinutes,
-        endMinutes: startMinutes + appointment.occupiedDuration,
-      };
-    })
-    .sort((a, b) => a.startMinutes - b.startMinutes);
-
-  for (const appointment of sortedAppointments) {
-    if (candidateMinutes >= appointment.endMinutes) {
-      continue;
-    }
-
-    if (candidateMinutes + serviceDuration <= appointment.startMinutes) {
-      break;
-    }
-
-    candidateMinutes = Math.max(candidateMinutes, appointment.endMinutes);
-  }
-
-  return minutesToTime(candidateMinutes);
-}
 
 function formatDateValue(value: string) {
   const [year, month, day] = value.split("-");
@@ -128,31 +101,42 @@ function formatDateValue(value: string) {
   return `${day}/${month}/${year}`;
 }
 
-function formatTime(date: Date) {
-  return formatScheduleTime(new Date(date));
+function addDaysToDateValue(value: string, daysToAdd: number) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day + daysToAdd);
+  const nextYear = date.getFullYear();
+  const nextMonth = String(date.getMonth() + 1).padStart(2, "0");
+  const nextDay = String(date.getDate()).padStart(2, "0");
+
+  return `${nextYear}-${nextMonth}-${nextDay}`;
 }
 
-function getGapLabel(nextAppointmentDate: Date | null) {
-  if (!nextAppointmentDate) {
-    return "Sem próximo atendimento hoje.";
-  }
+function getWalkInDateOptions(): WalkInDateOption[] {
+  const today = getCurrentScheduleDateValue();
 
-  const diffMinutes = Math.max(
-    0,
-    Math.floor(
-      (new Date(nextAppointmentDate).getTime() - getCurrentScheduleDate().getTime()) /
-        60000
-    )
-  );
+  return Array.from({ length: 14 }, (_, index) => {
+    const value = addDaysToDateValue(today, index);
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
 
-  return `${diffMinutes} min livres até ${formatTime(nextAppointmentDate)}.`;
+    return {
+      value,
+      day: String(day).padStart(2, "0"),
+      weekday: date
+        .toLocaleDateString("pt-BR", { weekday: "short" })
+        .replace(".", ""),
+      label: date.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+      }),
+    };
+  });
 }
 
 export default function WalkInAppointmentCard({
   services,
   extras,
   clients,
-  activeAppointments,
 }: WalkInAppointmentCardProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -216,10 +200,25 @@ export default function WalkInAppointmentCard({
       )
     );
   }, [clientSearch, clients]);
-  const [startTime, setStartTime] = useState(() =>
-    getSuggestedStartTime(activeAppointments, 30)
-  );
+  const [step, setStep] = useState<WalkInStep>("customer");
+  const dateOptions = useMemo(() => getWalkInDateOptions(), []);
+  const hasCustomerMinimum =
+    isValidCustomerFullName(customerName) &&
+    (!customerPhone.trim() || isValidBrazilianPhone(customerPhone));
+  const [startTime, setStartTime] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => getCurrentScheduleDateValue());
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availablePeriodSlots, setAvailablePeriodSlots] = useState<WalkInPeriodSlots>(
+    () => emptyWalkInPeriodSlots()
+  );
+  const [slotsFeedback, setSlotsFeedback] = useState<{
+    message: string;
+    tone: "info" | "error";
+  }>({
+    message: "Selecione os servicos para ver os horarios disponiveis.",
+    tone: "info",
+  });
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const isDisabled = services.length === 0;
   const isCreating = isPending || isSubmitLocked;
 
@@ -290,6 +289,93 @@ export default function WalkInAppointmentCard({
     startTime,
   ]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (!selectedDate || selectedServiceIds.length === 0) {
+      setAvailableSlots([]);
+      setAvailablePeriodSlots(emptyWalkInPeriodSlots());
+      setStartTime("");
+      setSlotsFeedback({
+        message: "Selecione os servicos para ver os horarios disponiveis.",
+        tone: "info",
+      });
+      setIsLoadingSlots(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    setIsLoadingSlots(true);
+    setSlotsFeedback({
+      message: "Carregando horarios disponiveis...",
+      tone: "info",
+    });
+
+    getWalkInAvailableSlotsAction({
+      date: selectedDate,
+      serviceIds: selectedServiceIds,
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (!result.ok) {
+          setAvailableSlots([]);
+          setAvailablePeriodSlots(emptyWalkInPeriodSlots());
+          setStartTime("");
+          setSlotsFeedback({
+            message: result.message,
+            tone: "error",
+          });
+          return;
+        }
+
+        const periodSlots = result.data?.periodSlots || emptyWalkInPeriodSlots();
+        const slots = result.data?.slots || [
+          ...periodSlots.morning,
+          ...periodSlots.afternoon,
+          ...periodSlots.night,
+        ];
+
+        setAvailableSlots(slots);
+        setAvailablePeriodSlots(periodSlots);
+        setStartTime((current) => (slots.includes(current) ? current : ""));
+        setSlotsFeedback({
+          message:
+            slots.length > 0
+              ? "Toque em um horario para reservar o encaixe."
+              : "Nenhum horario disponivel para essa data e duracao.",
+          tone: slots.length > 0 ? "info" : "error",
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setAvailableSlots([]);
+        setAvailablePeriodSlots(emptyWalkInPeriodSlots());
+        setStartTime("");
+        setSlotsFeedback({
+          message: "Nao foi possivel carregar os horarios. Tente novamente.",
+          tone: "error",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingSlots(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, selectedDate, selectedServiceIds]);
+
   function closeModal() {
     if (isCreating) {
       return;
@@ -336,14 +422,11 @@ export default function WalkInAppointmentCard({
     setHasExtras(draft ? draft.hasExtras : false);
     setSelectedExtraIds(draft ? draft.selectedExtraIds : []);
     setSelectedDate(draft ? draft.selectedDate : getCurrentScheduleDateValue());
-    setStartTime(
-      draft
-        ? draft.startTime
-        : getSuggestedStartTime(activeAppointments, 30)
-    );
+    setStartTime(draft ? draft.startTime : "");
     setNotes(draft ? draft.notes : "");
     setFeedback({ message: null, tone: "success" });
     setActionFeedback(null);
+    setStep("customer");
     setIsOpen(true);
   }
 
@@ -352,10 +435,8 @@ export default function WalkInAppointmentCard({
       const next = current.includes(serviceId)
         ? current.filter((id) => id !== serviceId)
         : [...current, serviceId];
-      const nextServices = services.filter((service) => next.includes(service.id));
-      const nextDuration = nextServices.reduce((sum, service) => sum + service.duration, 0);
 
-      setStartTime(getSuggestedStartTime(activeAppointments, nextDuration || 30));
+      setStartTime("");
       return next;
     });
   }
@@ -384,6 +465,56 @@ export default function WalkInAppointmentCard({
     setCustomerPhone(formatBrazilianPhone(customer.phone));
     setClientSearch("");
     setIsClientPickerOpen(false);
+  }
+
+  function showWalkInError(title: string, message: string) {
+    setFeedback({ message, tone: "error" });
+    setActionFeedback({ title, message, tone: "error" });
+  }
+
+  function goToServicesStep() {
+    const normalizedName = normalizeCustomerName(customerName);
+    const hasPhone = Boolean(customerPhone.trim());
+
+    setCustomerName(normalizedName);
+
+    if (!isValidCustomerFullName(normalizedName)) {
+      showWalkInError(
+        "Confira o cliente",
+        "Informe nome e sobrenome do cliente para criar o encaixe."
+      );
+      return;
+    }
+
+    if (hasPhone && !isValidBrazilianPhone(customerPhone)) {
+      showWalkInError(
+        "Confira o telefone",
+        "O telefone e opcional, mas precisa ser valido quando for informado."
+      );
+      return;
+    }
+
+    setFeedback({ message: null, tone: "success" });
+    setStep("services");
+  }
+
+  function goToScheduleStep() {
+    if (selectedServiceIds.length === 0) {
+      showWalkInError(
+        "Escolha o servico",
+        "Selecione pelo menos um servico para carregar os horarios disponiveis."
+      );
+      return;
+    }
+
+    setFeedback({ message: null, tone: "success" });
+    setStep("schedule");
+  }
+
+  function selectWalkInSlot(slot: string) {
+    setStartTime(slot);
+    setFeedback({ message: null, tone: "success" });
+    setStep("extras");
   }
 
   function confirmWalkInCreation() {
@@ -425,12 +556,8 @@ export default function WalkInAppointmentCard({
           setIsConfirmOpen(false);
           setIsOpen(false);
           setIsSuccessOpen(true);
-          setStartTime(
-            getSuggestedStartTime(
-              activeAppointments,
-              selectedDuration || 30
-            )
-          );
+          setStartTime("");
+          setStep("customer");
           router.refresh();
         } else {
           setIsConfirmOpen(false);
@@ -503,13 +630,18 @@ export default function WalkInAppointmentCard({
 
                   {services.length === 0 ? (
                     <p className="mt-4 rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-400">
-                      Cadastre um serviço ativo antes de criar encaixes.
+                      Cadastre um servico ativo antes de criar encaixes.
                     </p>
                   ) : (
                     <form
                       className="space-y-4"
                       onSubmit={(event) => {
                         event.preventDefault();
+
+                        if (step !== "summary") {
+                          return;
+                        }
+
                         const form = event.currentTarget;
                         const formData = new FormData(form);
                         const submittedCustomerName = normalizeCustomerName(
@@ -520,42 +652,40 @@ export default function WalkInAppointmentCard({
                         );
                         const submittedDate = String(formData.get("date") || "").trim();
                         const selectedStartTime = String(formData.get("startTime") || "").trim();
-                        const notes = String(formData.get("notes") || "").trim();
+                        const submittedNotes = String(formData.get("notes") || "").trim();
                         const serviceName =
                           selectedServices.map((service) => service.name).join(" + ") ||
-                          "Serviço";
-
+                          "Servico";
                         const extrasLabel =
                           hasExtras && selectedExtras.length > 0
                             ? selectedExtras.map((extra) => extra.name).join(" + ")
                             : "";
 
-                        if (!selectedCustomerId) {
-                          if (!isValidCustomerFullName(submittedCustomerName)) {
-                            setFeedback({
-                              message: "Informe nome e sobrenome do cliente.",
-                              tone: "error",
-                            });
-                            setActionFeedback({
-                              title: "Confira o cliente",
-                              message: "Informe nome e sobrenome do cliente antes de criar o encaixe.",
-                              tone: "error",
-                            });
-                            return;
-                          }
+                        if (!isValidCustomerFullName(submittedCustomerName)) {
+                          showWalkInError(
+                            "Confira o cliente",
+                            "Informe nome e sobrenome do cliente antes de criar o encaixe."
+                          );
+                          return;
+                        }
 
-                          if (!isValidBrazilianPhone(submittedCustomerPhone)) {
-                            setFeedback({
-                              message: "Informe um telefone valido.",
-                              tone: "error",
-                            });
-                            setActionFeedback({
-                              title: "Confira o telefone",
-                              message: "Informe um telefone valido antes de criar o encaixe.",
-                              tone: "error",
-                            });
-                            return;
-                          }
+                        if (
+                          submittedCustomerPhone.trim() &&
+                          !isValidBrazilianPhone(submittedCustomerPhone)
+                        ) {
+                          showWalkInError(
+                            "Confira o telefone",
+                            "O telefone e opcional, mas precisa ser valido quando for informado."
+                          );
+                          return;
+                        }
+
+                        if (!availableSlots.includes(selectedStartTime)) {
+                          showWalkInError(
+                            "Escolha o horario",
+                            "Selecione um horario disponivel na lista antes de criar o encaixe."
+                          );
+                          return;
                         }
 
                         setPendingFormData(formData);
@@ -566,11 +696,21 @@ export default function WalkInAppointmentCard({
                           extrasLabel,
                           date: submittedDate || selectedDate,
                           startTime: selectedStartTime || startTime,
-                          notes,
+                          notes: submittedNotes,
                         });
                         setIsConfirmOpen(true);
                       }}
                     >
+                      <input type="hidden" name="customerId" value={selectedCustomerId} />
+                      <input
+                        type="hidden"
+                        name="customerName"
+                        value={normalizeCustomerName(customerName)}
+                      />
+                      <input type="hidden" name="customerPhone" value={customerPhone} />
+                      <input type="hidden" name="date" value={selectedDate} />
+                      <input type="hidden" name="startTime" value={startTime} />
+                      <input type="hidden" name="notes" value={notes} />
                       {selectedServiceIds.map((serviceId) => (
                         <input key={serviceId} type="hidden" name="serviceIds" value={serviceId} />
                       ))}
@@ -584,272 +724,401 @@ export default function WalkInAppointmentCard({
                             />
                           ))
                         : null}
-                      <input type="hidden" name="customerId" value={selectedCustomerId} />
 
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block">
-                          <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                            Cliente
-                          </span>
-                          <input
-                            name="customerName"
-                            value={customerName}
-                            onChange={(event) => setCustomerName(event.target.value)}
-                            onBlur={() =>
-                              setCustomerName((current) => normalizeCustomerName(current))
-                            }
-                            type="text"
-                            inputMode="text"
-                            autoCapitalize="words"
-                            autoComplete="name"
-                            required
-                            maxLength={80}
-                            placeholder="Nome e sobrenome"
-                            className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
-                          />
-                        </label>
+                      {step === "customer" ? (
+                        <div className="space-y-4">
+                          <StepTitle title="Cliente do encaixe" />
 
-                        <label className="block">
-                          <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                            Telefone
-                          </span>
-                          <input
-                            name="customerPhone"
-                            value={customerPhone}
-                            onChange={(event) => setCustomerPhone(maskBrazilianPhone(event.target.value))}
-                            type="tel"
-                            inputMode="numeric"
-                            autoComplete="tel"
-                            pattern="\([1-9][0-9]\) 9[0-9]{4}-[0-9]{4}"
-                            maxLength={15}
-                            required={!selectedCustomerId}
-                            placeholder="(11) 96590-0713"
-                            className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
-                          />
-                        </label>
-                      </div>
-
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                          Cliente já cadastrado
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsClientPickerOpen(true)}
-                          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-left text-sm text-white transition hover:border-[var(--brand)]/45 hover:bg-white/[0.04]"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate font-bold">
-                              {selectedCustomer?.name || "Selecionar cliente"}
+                          <button
+                            type="button"
+                            onClick={() => setIsClientPickerOpen(true)}
+                            className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-[var(--brand)]/25 bg-[var(--brand-muted)] px-4 py-3 text-left text-sm text-white transition hover:border-[var(--brand)]/50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                                Cliente cadastrado
+                              </span>
+                              <span className="mt-1 block truncate font-black">
+                                {selectedCustomer?.name || "Selecionar cliente"}
+                              </span>
+                              <span className="mt-1 block truncate text-xs text-zinc-400">
+                                {selectedCustomer
+                                  ? formatBrazilianPhone(selectedCustomer.phone) ||
+                                    selectedCustomer.email ||
+                                    "Sem contato"
+                                  : "Opcional: buscar na base da barbearia"}
+                              </span>
                             </span>
-                            <span className="mt-1 block truncate text-xs text-zinc-500">
-                              {selectedCustomer
-                                ? formatBrazilianPhone(selectedCustomer.phone) || selectedCustomer.email || "Sem contato"
-                                : "Buscar na sua base ou preencher manualmente"}
-                            </span>
-                          </span>
-                          <Search className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
-                        </button>
-                      </label>
+                            <Search className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
+                          </button>
 
-                      <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-                              Serviços feitos
-                            </p>
-                            <p className="mt-1 text-sm text-zinc-400">
-                              Selecione um ou mais serviços do encaixe.
-                            </p>
+                          <div className="grid gap-3">
+                            <label className="block">
+                              <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                                Nome completo
+                              </span>
+                              <input
+                                value={customerName}
+                                onChange={(event) => {
+                                  setSelectedCustomerId("");
+                                  setCustomerName(event.target.value);
+                                }}
+                                onBlur={() =>
+                                  setCustomerName((current) => normalizeCustomerName(current))
+                                }
+                                type="text"
+                                inputMode="text"
+                                autoCapitalize="words"
+                                autoComplete="name"
+                                maxLength={80}
+                                placeholder="Nome e sobrenome"
+                                className="min-h-12 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
+                              />
+                            </label>
+
+                            <label className="block">
+                              <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                                Telefone opcional
+                              </span>
+                              <input
+                                value={customerPhone}
+                                onChange={(event) =>
+                                  setCustomerPhone(maskBrazilianPhone(event.target.value))
+                                }
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                maxLength={15}
+                                placeholder="(11) 96590-0713"
+                                className="min-h-12 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
+                              />
+                            </label>
                           </div>
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-zinc-200">
-                            {selectedServiceIds.length}
-                          </span>
-                        </div>
 
-                        <div className="mt-3 space-y-2">
-                          {services.map((service) => {
-                            const selected = selectedServiceIds.includes(service.id);
-
-                            return (
-                              <button
-                                key={service.id}
-                                type="button"
-                                onClick={() => toggleService(service.id)}
-                                className={`flex min-h-[58px] w-full items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left transition ${
-                                  selected
-                                    ? "border-[var(--brand)]/45 bg-[var(--brand-muted)]"
-                                    : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
-                                }`}
-                              >
-                                <span className="flex min-w-0 items-center gap-2">
-                                  <span
-                                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
-                                      selected
-                                        ? "border-[var(--brand)]/45 bg-[var(--brand)] text-white"
-                                        : "border-white/10 bg-black/20 text-zinc-400"
-                                    }`}
-                                  >
-                                    {selected ? (
-                                      <Check className="h-3.5 w-3.5" />
-                                    ) : (
-                                      <Scissors className="h-3.5 w-3.5" />
-                                    )}
-                                  </span>
-                                  <span className="min-w-0">
-                                    <span className="block truncate text-sm font-bold leading-tight text-white">
-                                      {service.name}
-                                    </span>
-                                    <span className="mt-0.5 block text-[11px] leading-tight text-zinc-400">
-                                      {service.duration} min · {formatCurrency(service.price)}
-                                    </span>
-                                  </span>
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-                          Extras do atendimento
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-400">
-                          Teve algum extra nesse encaixe?
-                        </p>
-
-                        <div className="mt-3 grid grid-cols-2 gap-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              setHasExtras(false);
-                              setSelectedExtraIds([]);
-                            }}
-                            className={`min-h-11 rounded-2xl border px-4 py-2 text-sm font-bold transition ${
-                              !hasExtras
-                                ? "border-[var(--brand)]/45 bg-[var(--brand-muted)] text-white"
-                                : "border-white/10 text-zinc-300 hover:bg-white/[0.04]"
-                            }`}
+                            onClick={goToServicesStep}
+                            disabled={!hasCustomerMinimum}
+                            className="min-h-12 w-full rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            Nao
-                          </button>
-                          <button
-                            type="button"
-                            disabled={extras.length === 0}
-                            onClick={() => setHasExtras(true)}
-                            className={`min-h-11 rounded-2xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                              hasExtras
-                                ? "border-[var(--brand)]/45 bg-[var(--brand-muted)] text-white"
-                                : "border-white/10 text-zinc-300 hover:bg-white/[0.04]"
-                            }`}
-                          >
-                            Sim
+                            Continuar
                           </button>
                         </div>
+                      ) : null}
 
-                        {hasExtras ? (
-                          extras.length === 0 ? (
-                            <p className="mt-3 rounded-2xl border border-dashed border-white/10 p-3 text-sm text-zinc-400">
-                              Nenhum extra disponivel no estoque.
-                            </p>
-                          ) : (
-                            <div className="mt-3 space-y-2">
-                              {extras.map((extra) => {
-                                const selected = selectedExtraIds.includes(extra.id);
+                      {step === "services" ? (
+                        <div className="space-y-4">
+                          <StepTitle title="Servicos" />
 
-                                return (
-                                  <button
-                                    key={extra.id}
-                                    type="button"
-                                    onClick={() => toggleExtra(extra.id)}
-                                    className={`flex min-h-[54px] w-full items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left transition ${
-                                      selected
-                                        ? "border-[var(--brand)]/45 bg-[var(--brand-muted)]"
-                                        : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
-                                    }`}
-                                  >
+                          <div className="space-y-2">
+                            {services.map((service) => {
+                              const selected = selectedServiceIds.includes(service.id);
+
+                              return (
+                                <button
+                                  key={service.id}
+                                  type="button"
+                                  onClick={() => toggleService(service.id)}
+                                  className={`flex min-h-[62px] w-full items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left transition ${
+                                    selected
+                                      ? "border-[var(--brand)]/45 bg-[var(--brand-muted)]"
+                                      : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
+                                  }`}
+                                >
+                                  <span className="flex min-w-0 items-center gap-3">
+                                    <span
+                                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                                        selected
+                                          ? "border-[var(--brand)]/45 bg-[var(--brand)] text-white"
+                                          : "border-white/10 bg-black/20 text-zinc-400"
+                                      }`}
+                                    >
+                                      {selected ? (
+                                        <Check className="h-4 w-4" />
+                                      ) : (
+                                        <Scissors className="h-4 w-4" />
+                                      )}
+                                    </span>
                                     <span className="min-w-0">
-                                      <span className="block truncate text-sm font-bold text-white">
-                                        {extra.name}
+                                      <span className="block truncate text-sm font-bold leading-tight text-white">
+                                        {service.name}
                                       </span>
-                                      <span className="mt-0.5 block text-[11px] text-zinc-400">
-                                        {formatCurrency(extra.price)} - estoque {extra.stock}
+                                      <span className="mt-1 block text-xs leading-tight text-zinc-400">
+                                        {service.duration} min - {formatCurrency(service.price)}
                                       </span>
                                     </span>
-                                    {selected ? (
-                                      <Check className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
-                                    ) : null}
-                                  </button>
-                                );
-                              })}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <StepActions
+                            onBack={() => setStep("customer")}
+                            backLabel="Voltar"
+                          />
+
+                          {selectedServiceIds.length > 0 ? (
+                            <div className="sticky bottom-0 -mx-5 -mb-5 border-t border-white/10 bg-[#050b16]/95 p-4 backdrop-blur-xl">
+                              <div className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--brand)] px-4 py-3 text-white shadow-[0_18px_40px_rgba(14,165,233,0.25)]">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/75">
+                                    {selectedServiceIds.length} item(ns)
+                                  </p>
+                                  <p className="text-lg font-black">
+                                    {formatCurrency(selectedGrandTotal)}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={goToScheduleStep}
+                                  className="min-h-10 rounded-xl bg-white px-4 py-2 text-sm font-black text-sky-600 transition hover:bg-sky-50"
+                                >
+                                  Continuar
+                                </button>
+                              </div>
                             </div>
-                          )
-                        ) : null}
-                      </div>
+                          ) : null}
+                        </div>
+                      ) : null}
 
-                      <div className="grid grid-cols-3 gap-2 rounded-3xl border border-white/10 bg-black/20 p-3">
-                        <SummaryTile label="Serviços" value={String(selectedServiceIds.length)} />
-                        <SummaryTile label="Duração" value={`${selectedDuration || 0} min`} />
-                        <SummaryTile label="Total" value={formatCurrency(selectedGrandTotal)} />
-                      </div>
+                      {step === "schedule" ? (
+                        <div className="space-y-4">
+                          <StepTitle title="Data e horario" />
 
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                          Data
-                        </span>
-                        <PremiumDatePicker
-                          name="date"
-                          value={selectedDate}
-                          onChange={setSelectedDate}
-                          required
-                        />
-                      </label>
+                          <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1">
+                            {dateOptions.map((option) => {
+                              const selected = selectedDate === option.value;
 
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                          Horário
-                        </span>
-                        <PremiumTimePicker
-                          name="startTime"
-                          value={startTime}
-                          onChange={setStartTime}
-                          required
-                        />
-                      </label>
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedDate(option.value);
+                                    setStartTime("");
+                                  }}
+                                  className={`min-w-[82px] rounded-2xl border px-3 py-3 text-left transition ${
+                                    selected
+                                      ? "border-[var(--brand)] bg-[var(--brand-muted)]"
+                                      : "border-white/10 bg-black/20 hover:border-white/20"
+                                  }`}
+                                >
+                                  <span className="block text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                                    {option.weekday}
+                                  </span>
+                                  <span className="mt-1 block text-sm font-semibold text-white">
+                                    {option.label}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
 
-                      <label className="block">
-                        <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                          Observação
-                        </span>
-                        <textarea
-                          name="notes"
-                          rows={2}
-                          maxLength={200}
-                          value={notes}
-                          onChange={(event) => setNotes(event.target.value)}
-                          placeholder="Opcional"
-                          className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
-                        />
-                      </label>
+                          <div className="rounded-3xl border border-white/10 bg-black/20 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-white">
+                                  Horarios disponiveis
+                                </p>
+                                <p
+                                  className={`mt-1 text-xs ${
+                                    slotsFeedback.tone === "error"
+                                      ? "text-red-200"
+                                      : "text-zinc-400"
+                                  }`}
+                                >
+                                  {slotsFeedback.message}
+                                </p>
+                              </div>
+                              {isLoadingSlots ? (
+                                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--brand)] border-t-transparent" />
+                              ) : null}
+                            </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={closeModal}
-                          disabled={isCreating}
-                          className="min-h-11 rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
-                        >
-                          Fechar
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={isCreating || selectedServiceIds.length === 0}
-                          className="min-h-11 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {isCreating ? "Criando..." : "Criar encaixe"}
-                        </button>
-                      </div>
+                            {availableSlots.length > 0 ? (
+                              <div className="mt-4 grid min-w-0 gap-4">
+                                <WalkInTimeSection
+                                  title="Manha"
+                                  slots={availablePeriodSlots.morning}
+                                  onSelect={selectWalkInSlot}
+                                />
+                                <WalkInTimeSection
+                                  title="Tarde"
+                                  slots={availablePeriodSlots.afternoon}
+                                  onSelect={selectWalkInSlot}
+                                />
+                                <WalkInTimeSection
+                                  title="Noite"
+                                  slots={availablePeriodSlots.night}
+                                  onSelect={selectWalkInSlot}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <StepActions
+                            onBack={() => setStep("services")}
+                            backLabel="Voltar"
+                          />
+                        </div>
+                      ) : null}
+
+                      {step === "extras" ? (
+                        <div className="space-y-4">
+                          <StepTitle title="O cliente pediu algum extra?" />
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setHasExtras(false);
+                                setSelectedExtraIds([]);
+                              }}
+                              className={`min-h-12 rounded-2xl border px-4 py-2 text-sm font-bold transition ${
+                                !hasExtras
+                                  ? "border-[var(--brand)]/45 bg-[var(--brand-muted)] text-white"
+                                  : "border-white/10 text-zinc-300 hover:bg-white/[0.04]"
+                              }`}
+                            >
+                              Nao teve
+                            </button>
+                            <button
+                              type="button"
+                              disabled={extras.length === 0}
+                              onClick={() => setHasExtras(true)}
+                              className={`min-h-12 rounded-2xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                                hasExtras
+                                  ? "border-[var(--brand)]/45 bg-[var(--brand-muted)] text-white"
+                                  : "border-white/10 text-zinc-300 hover:bg-white/[0.04]"
+                              }`}
+                            >
+                              Sim
+                            </button>
+                          </div>
+
+                          {hasExtras ? (
+                            extras.length === 0 ? (
+                              <p className="rounded-2xl border border-dashed border-white/10 p-3 text-sm text-zinc-400">
+                                Nenhum extra disponivel no estoque.
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                {extras.map((extra) => {
+                                  const selected = selectedExtraIds.includes(extra.id);
+
+                                  return (
+                                    <button
+                                      key={extra.id}
+                                      type="button"
+                                      onClick={() => toggleExtra(extra.id)}
+                                      className={`flex min-h-[54px] w-full items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left transition ${
+                                        selected
+                                          ? "border-[var(--brand)]/45 bg-[var(--brand-muted)]"
+                                          : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
+                                      }`}
+                                    >
+                                      <span className="min-w-0">
+                                        <span className="block truncate text-sm font-bold text-white">
+                                          {extra.name}
+                                        </span>
+                                        <span className="mt-0.5 block text-[11px] text-zinc-400">
+                                          {formatCurrency(extra.price)} - estoque {extra.stock}
+                                        </span>
+                                      </span>
+                                      {selected ? (
+                                        <Check className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
+                                      ) : null}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )
+                          ) : null}
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() => setStep("schedule")}
+                              className="min-h-11 rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
+                            >
+                              Voltar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setStep("summary")}
+                              className="min-h-11 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110"
+                            >
+                              Continuar
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {step === "summary" ? (
+                        <div className="space-y-4">
+                          <StepTitle title="Resumo" />
+
+                          <div className="space-y-3 rounded-3xl border border-white/10 bg-black/20 p-4 text-sm">
+                            <SummaryRow label="Cliente" value={normalizeCustomerName(customerName)} />
+                            <SummaryRow
+                              label="Telefone"
+                              value={formatBrazilianPhone(customerPhone) || "Nao informado"}
+                            />
+                            <SummaryRow
+                              label="Servicos"
+                              value={
+                                selectedServices.map((service) => service.name).join(" + ") ||
+                                "Nao informado"
+                              }
+                            />
+                            <SummaryRow label="Data" value={formatDateValue(selectedDate)} />
+                            <SummaryRow label="Horario" value={startTime || "Nao informado"} />
+                            <SummaryRow label="Duracao" value={`${selectedDuration || 0} min`} />
+                            <SummaryRow
+                              label="Extras"
+                              value={
+                                hasExtras && selectedExtras.length > 0
+                                  ? selectedExtras.map((extra) => extra.name).join(" + ")
+                                  : "Sem extras"
+                              }
+                            />
+                            <SummaryRow label="Total" value={formatCurrency(selectedGrandTotal)} />
+                          </div>
+
+                          <label className="block">
+                            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                              Observacao
+                            </span>
+                            <textarea
+                              rows={2}
+                              maxLength={200}
+                              value={notes}
+                              onChange={(event) => setNotes(event.target.value)}
+                              placeholder="Opcional"
+                              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
+                            />
+                          </label>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() => setStep("extras")}
+                              disabled={isCreating}
+                              className="min-h-11 rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
+                            >
+                              Voltar
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isCreating || selectedServiceIds.length === 0 || !startTime}
+                              className="min-h-11 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isCreating ? "Criando..." : "Confirmar encaixe"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </form>
                   )}
                 </div>
@@ -915,7 +1184,7 @@ export default function WalkInAppointmentCard({
                       Encaixe criado!
                     </h2>
                     <p className="mt-2 text-sm text-zinc-400">
-                      O horário foi reservado e a agenda do dia já foi atualizada.
+                      O horario foi reservado e a agenda do dia ja foi atualizada.
                     </p>
                   </div>
 
@@ -936,9 +1205,9 @@ export default function WalkInAppointmentCard({
 
                 <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
                   <SummaryRow label="Cliente" value={successDetails.customerName} />
-                  <SummaryRow label="Serviços" value={successDetails.serviceName} />
+                  <SummaryRow label="Servicos" value={successDetails.serviceName} />
                   <SummaryRow label="Data" value={formatDateValue(successDetails.date)} />
-                  <SummaryRow label="Horário" value={successDetails.startTime} />
+                  <SummaryRow label="Horario" value={successDetails.startTime} />
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1153,7 +1422,7 @@ function WalkInConfirmPopup({
     <div className="fixed inset-0 z-[280] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-6 backdrop-blur-md">
       <button
         type="button"
-        aria-label="Fechar confirmação"
+        aria-label="Fechar confirmacao"
         className="absolute inset-0"
         onClick={onClose}
         disabled={isPending}
@@ -1169,7 +1438,7 @@ function WalkInConfirmPopup({
               Criar encaixe manual?
             </h3>
             <p className="mt-1 text-sm leading-6 text-zinc-400">
-              Confira os dados antes de reservar o horário.
+              Confira os dados antes de reservar o horario.
             </p>
           </div>
           <button
@@ -1185,10 +1454,10 @@ function WalkInConfirmPopup({
         <div className="mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
           <SummaryRow label="Cliente" value={summary.customerName} />
           <SummaryRow label="Data" value={formatDateValue(summary.date)} />
-          <SummaryRow label="Telefone" value={formatBrazilianPhone(summary.customerPhone) || "Não informado"} />
-          <SummaryRow label="Serviços" value={summary.serviceName} />
-          <SummaryRow label="Horário" value={summary.startTime} />
-          <SummaryRow label="Duração" value={`${duration || 0} min`} />
+          <SummaryRow label="Telefone" value={formatBrazilianPhone(summary.customerPhone) || "Nao informado"} />
+          <SummaryRow label="Servicos" value={summary.serviceName} />
+          <SummaryRow label="Horario" value={summary.startTime} />
+          <SummaryRow label="Duracao" value={`${duration || 0} min`} />
           <SummaryRow label="Total" value={formatCurrency(total)} />
           {summary.notes ? <SummaryRow label="Obs." value={summary.notes} /> : null}
         </div>
@@ -1216,14 +1485,67 @@ function WalkInConfirmPopup({
   );
 }
 
-function SummaryTile({ label, value }: { label: string; value: string }) {
+function StepTitle({ title }: { title: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-center">
-      <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-zinc-500">
-        {label}
-      </p>
-      <p className="mt-1 truncate text-sm font-black text-white">{value}</p>
+    <h3 className="text-xl font-black tracking-tight text-white">{title}</h3>
+  );
+}
+
+function WalkInTimeSection({
+  title,
+  slots,
+  onSelect,
+}: {
+  title: string;
+  slots: string[];
+  onSelect: (slot: string) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-base font-semibold text-white">{title}</h4>
+        <span className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">
+          {slots.length} disponiveis
+        </span>
+      </div>
+
+      {slots.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-white/10 px-4 py-4 text-sm text-zinc-500">
+          Sem horarios livres nesse periodo.
+        </p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {slots.map((slot) => (
+            <button
+              key={slot}
+              type="button"
+              onClick={() => onSelect(slot)}
+              className="min-h-11 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)]"
+            >
+              {slot}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function StepActions({
+  onBack,
+  backLabel,
+}: {
+  onBack: () => void;
+  backLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onBack}
+      className="min-h-11 w-full rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
+    >
+      {backLabel}
+    </button>
   );
 }
 
