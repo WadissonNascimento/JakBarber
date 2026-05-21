@@ -8,7 +8,7 @@ import {
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
 import {
-  getManualFitInCustomerSnapshot,
+  getManualFitInCustomerDisplay,
   getManualFitInVisibleNotes,
 } from "@/lib/manualFitIn";
 import AdminAgendaClient from "./AdminAgendaClient";
@@ -133,39 +133,46 @@ export default async function AdminAgendaPage({
 
   return (
     <AdminAgendaClient
-      appointments={report.appointments.map((appointment) => ({
-        id: appointment.id,
-        publicId: appointment.publicId,
-        date: appointment.date,
-        status: appointment.status,
-        paymentMethod: appointment.paymentMethod,
-        notes: appointment.isManualFitIn
-          ? getManualFitInVisibleNotes(appointment.notes) || null
-          : appointment.notes,
-        barber: appointment.barber,
-        customer: appointment.isManualFitIn
-          ? {
-              ...appointment.customer,
-              name:
-                getManualFitInCustomerSnapshot(appointment.notes).name ||
-                "Cliente sem cadastro",
-              phone: getManualFitInCustomerSnapshot(appointment.notes).phone || null,
-              email: null,
-            }
-          : appointment.customer,
-        services: appointment.services.map((service) => ({
-          serviceId: service.serviceId,
-          nameSnapshot: service.nameSnapshot,
-          orderIndex: service.orderIndex,
-          priceSnapshot: toMoneyNumber(service.priceSnapshot),
-        })),
-        items: appointment.items.map((item) => ({
-          extraProductId: item.extraProductId,
-          productNameSnapshot: item.productNameSnapshot,
-          quantity: item.quantity,
-          subtotal: toMoneyNumber(item.subtotal),
-        })),
-      }))}
+      appointments={report.appointments.map((appointment) => {
+        const manualCustomer = appointment.isManualFitIn
+          ? getManualFitInCustomerDisplay({
+              notes: appointment.notes,
+              fallbackCustomer: appointment.customer,
+            })
+          : null;
+
+        return {
+          id: appointment.id,
+          publicId: appointment.publicId,
+          date: appointment.date,
+          status: appointment.status,
+          paymentMethod: appointment.paymentMethod,
+          notes: appointment.isManualFitIn
+            ? getManualFitInVisibleNotes(appointment.notes) || null
+            : appointment.notes,
+          barber: appointment.barber,
+          customer: appointment.isManualFitIn
+            ? {
+                ...appointment.customer,
+                name: manualCustomer?.name || "Cliente sem cadastro",
+                phone: manualCustomer?.phone || null,
+                email: manualCustomer?.email || null,
+              }
+            : appointment.customer,
+          services: appointment.services.map((service) => ({
+            serviceId: service.serviceId,
+            nameSnapshot: service.nameSnapshot,
+            orderIndex: service.orderIndex,
+            priceSnapshot: toMoneyNumber(service.priceSnapshot),
+          })),
+          items: appointment.items.map((item) => ({
+            extraProductId: item.extraProductId,
+            productNameSnapshot: item.productNameSnapshot,
+            quantity: item.quantity,
+            subtotal: toMoneyNumber(item.subtotal),
+          })),
+        };
+      })}
       barbers={barbers}
       services={services.map((service) => ({
         ...service,

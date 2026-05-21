@@ -27,6 +27,44 @@ export function getManualFitInCustomerSnapshot(notes: string | null | undefined)
   };
 }
 
+function isManualFitInPlaceholderName(name: string | null | undefined) {
+  const normalizedName = String(name || "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    !normalizedName ||
+    normalizedName === "encaixe manual" ||
+    normalizedName === "cliente sem cadastro"
+  );
+}
+
+export function getManualFitInCustomerDisplay({
+  notes,
+  fallbackCustomer,
+}: {
+  notes: string | null | undefined;
+  fallbackCustomer?: {
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  } | null;
+}) {
+  const snapshot = getManualFitInCustomerSnapshot(notes);
+  const fallbackName = fallbackCustomer?.name?.trim() || "";
+  const fallbackPhone = fallbackCustomer?.phone?.trim() || "";
+
+  return {
+    name:
+      snapshot.name ||
+      (!isManualFitInPlaceholderName(fallbackName)
+        ? fallbackName
+        : "Cliente sem cadastro"),
+    phone: snapshot.phone || fallbackPhone || null,
+    email: fallbackCustomer?.email || null,
+  };
+}
+
 export function getManualFitInVisibleNotes(notes: string | null | undefined) {
   const rawNotes = String(notes || "").trim();
 
