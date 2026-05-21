@@ -11,7 +11,10 @@ import {
   getAppointmentGrandTotal,
   getAppointmentTotalBarberPayout,
 } from "@/lib/appointmentServices";
-import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
+import {
+  getManualFitInCustomerSnapshot,
+  getManualFitInVisibleNotes,
+} from "@/lib/manualFitIn";
 import { appointmentForAdminSelect } from "@/lib/appointmentSelects";
 import { getFinanceDashboardData } from "@/lib/financeReports";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
@@ -195,7 +198,9 @@ async function getAdminFinanceAppointments({
         barberId: appointment.barberId,
         barberName: appointment.barber.name || "Barbeiro",
         serviceName: getAppointmentDisplayName(appointment.services),
-        notes: appointment.notes,
+        notes: appointment.isManualFitIn
+          ? getManualFitInVisibleNotes(appointment.notes) || null
+          : appointment.notes,
         services: appointment.services
           .slice()
           .sort((a, b) => a.orderIndex - b.orderIndex)

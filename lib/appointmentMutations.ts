@@ -23,6 +23,7 @@ import {
 } from "@/lib/financials";
 import { roundMoney, toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { mergeManualFitInNotes } from "@/lib/manualFitIn";
 import {
   createScheduleDate,
   formatScheduleTime,
@@ -1204,7 +1205,12 @@ async function rescheduleCustomerAppointmentInTransaction(
     data: {
       barberId,
       date: appointmentDate,
-      notes: notes ?? currentAppointment.notes,
+      notes: currentAppointment.isManualFitIn
+        ? mergeManualFitInNotes({
+            currentNotes: currentAppointment.notes,
+            nextVisibleNotes: notes,
+          })
+        : notes ?? currentAppointment.notes,
       status: "CONFIRMED",
       reminderSentAt: null,
     },
@@ -1555,7 +1561,12 @@ async function editCompletedAppointmentFinancialItemsInTransaction(
   await db.appointment.update({
     where: { id: appointmentId },
     data: {
-      notes: notes ?? currentAppointment.notes,
+      notes: currentAppointment.isManualFitIn
+        ? mergeManualFitInNotes({
+            currentNotes: currentAppointment.notes,
+            nextVisibleNotes: notes,
+          })
+        : notes ?? currentAppointment.notes,
     },
   });
 

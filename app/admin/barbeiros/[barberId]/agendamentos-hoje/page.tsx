@@ -11,7 +11,10 @@ import {
 } from "@/lib/appointmentStatus";
 import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
-import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
+import {
+  getManualFitInCustomerSnapshot,
+  getManualFitInVisibleNotes,
+} from "@/lib/manualFitIn";
 import {
   getAppointmentDisplayName,
   getAppointmentGrandTotal,
@@ -165,7 +168,9 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
               date: appointment.date,
               status: appointment.status,
               paymentMethod: appointment.paymentMethod,
-              notes: appointment.notes,
+              notes: appointment.isManualFitIn
+                ? getManualFitInVisibleNotes(appointment.notes) || null
+                : appointment.notes,
               barber: {
                 id: barber.id,
                 name: barber.name,

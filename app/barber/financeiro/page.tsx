@@ -13,7 +13,10 @@ import {
 } from "@/lib/appointmentServices";
 import { appointmentForBarberSelect } from "@/lib/appointmentSelects";
 import { getBarberTipRows, getBarberTipsTotal } from "@/lib/barberTips";
-import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
+import {
+  getManualFitInCustomerSnapshot,
+  getManualFitInVisibleNotes,
+} from "@/lib/manualFitIn";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -336,7 +339,9 @@ async function getBarberFinanceData(
         : appointment.customer.name || "Cliente",
       barberId: appointment.barberId,
       serviceName: getAppointmentDisplayName(appointment.services),
-      notes: appointment.notes,
+      notes: appointment.isManualFitIn
+        ? getManualFitInVisibleNotes(appointment.notes) || null
+        : appointment.notes,
       services: appointment.services
         .slice()
         .sort((a, b) => a.orderIndex - b.orderIndex)

@@ -13,7 +13,10 @@ import {
   appointmentForTotalsSelect,
 } from "@/lib/appointmentSelects";
 import { getBarberTipsTotal } from "@/lib/barberTips";
-import { getManualFitInCustomerSnapshot } from "@/lib/manualFitIn";
+import {
+  getManualFitInCustomerSnapshot,
+  getManualFitInVisibleNotes,
+} from "@/lib/manualFitIn";
 import {
   createScheduleDayStart,
   getCurrentScheduleDate,
@@ -443,7 +446,9 @@ export async function getBarberDashboardData(
         status: appointment.status,
         paymentMethod: appointment.paymentMethod,
         isManualFitIn: appointment.isManualFitIn,
-        notes: appointment.notes,
+        notes: appointment.isManualFitIn
+          ? getManualFitInVisibleNotes(appointment.notes) || null
+          : appointment.notes,
         customer: getAppointmentCustomerForBarberCard(appointment),
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
@@ -466,7 +471,9 @@ export async function getBarberDashboardData(
         status: normalizeAppointmentStatus(appointment.status),
         paymentMethod: appointment.paymentMethod,
         isManualFitIn: appointment.isManualFitIn,
-        notes: appointment.notes,
+        notes: appointment.isManualFitIn
+          ? getManualFitInVisibleNotes(appointment.notes) || null
+          : appointment.notes,
         customer: getAppointmentCustomerForBarberCard(appointment),
         serviceName: getAppointmentDisplayName(appointment.services),
         serviceMeta: getAppointmentServiceMetaLine(appointment.services),
@@ -819,7 +826,9 @@ export async function getBarberTodayDashboardData(barberId: string) {
         status: appointment.status,
         paymentMethod: appointment.paymentMethod,
         isManualFitIn: appointment.isManualFitIn,
-        notes: appointment.notes,
+        notes: appointment.isManualFitIn
+          ? getManualFitInVisibleNotes(appointment.notes) || null
+          : appointment.notes,
         customer: getAppointmentCustomerForBarberCard(appointment),
 
         serviceName: getAppointmentDisplayName(appointment.services),
@@ -1064,6 +1073,9 @@ export async function getBarberClientProfile(barberId: string, customerId: strin
     },
     appointments: customer.customerAppointments.map((appointment) => ({
       ...appointment,
+      notes: appointment.isManualFitIn
+        ? getManualFitInVisibleNotes(appointment.notes) || null
+        : appointment.notes,
       status: normalizeAppointmentStatus(appointment.status),
     })),
   };
