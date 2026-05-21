@@ -18,6 +18,9 @@ import {
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
+import OperationalFeedbackDialog, {
+  type OperationalFeedbackState,
+} from "@/components/ui/OperationalFeedbackDialog";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
@@ -747,16 +750,24 @@ export function AdminAppointmentActions({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPaymentPromptOpen, setIsPaymentPromptOpen] = useState(false);
+  const [actionFeedback, setActionFeedback] =
+    useState<OperationalFeedbackState>(null);
   const status = normalizeAppointmentStatus(appointment.status);
   const canEdit = !["CANCELLED", "NO_SHOW"].includes(status);
   const canChangeStatus = !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(status);
+  const actionPending = isPending || isSubmitting;
 
   function runStatus(
     nextStatus: string,
     paymentMethod?: AppointmentPaymentMethod
   ) {
+    if (actionPending) {
+      return;
+    }
+
     if (nextStatus === "COMPLETED" && !paymentMethod) {
       setIsPaymentPromptOpen(true);
       return;
@@ -771,33 +782,58 @@ export function AdminAppointmentActions({
       return;
     }
 
-    setIsPaymentPromptOpen(false);
+    setIsSubmitting(true);
 
     startTransition(async () => {
-      const formData = new FormData();
-      formData.set("appointmentId", appointment.id);
-      formData.set("status", nextStatus);
+      try {
+        const formData = new FormData();
+        formData.set("appointmentId", appointment.id);
+        formData.set("status", nextStatus);
 
-      if (paymentMethod) {
-        formData.set("paymentMethod", paymentMethod);
+        if (paymentMethod) {
+          formData.set("paymentMethod", paymentMethod);
+        }
+
+        if (reason) {
+          formData.set("cancellationReason", reason);
+        }
+
+        const result = await updateAdminAppointmentStatusAction(formData);
+
+        if (result.ok) {
+          setActionFeedback(null);
+          setIsPaymentPromptOpen(false);
+          router.refresh();
+        } else {
+          setActionFeedback({
+            title:
+              nextStatus === "COMPLETED"
+                ? "Nao foi possivel concluir"
+                : "Nao foi possivel atualizar",
+            message: result.message,
+            tone: "error",
+          });
+        }
+      } catch {
+        setActionFeedback({
+          title: "Erro ao salvar",
+          message:
+            "Nao foi possivel atualizar o atendimento agora. Confira sua conexao e tente novamente.",
+          tone: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
       }
-
-      if (reason) {
-        formData.set("cancellationReason", reason);
-      }
-
-      const result = await updateAdminAppointmentStatusAction(formData);
-      window.alert(result.message);
-      router.refresh();
     });
   }
 
   return (
+    <>
     <div className="grid min-w-[220px] grid-cols-2 gap-2 sm:flex sm:flex-wrap">
       {canEdit ? (
         <button
           type="button"
-          disabled={isPending}
+          disabled={actionPending}
           onClick={() => setIsEditing(true)}
           className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-100 transition hover:bg-white/[0.06] disabled:opacity-60"
         >
@@ -809,7 +845,7 @@ export function AdminAppointmentActions({
         <>
           <button
             type="button"
-            disabled={isPending}
+            disabled={actionPending}
             onClick={() => runStatus("COMPLETED")}
             className="rounded-xl border border-emerald-300/35 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/10 disabled:opacity-60"
           >
@@ -817,7 +853,7 @@ export function AdminAppointmentActions({
           </button>
           <button
             type="button"
-            disabled={isPending}
+            disabled={actionPending}
             onClick={() => runStatus("NO_SHOW")}
             className="rounded-xl border border-orange-300/35 px-3 py-2 text-xs font-bold text-orange-100 transition hover:bg-orange-400/10 disabled:opacity-60"
           >
@@ -825,7 +861,7 @@ export function AdminAppointmentActions({
           </button>
           <button
             type="button"
-            disabled={isPending}
+            disabled={actionPending}
             onClick={() => runStatus("CANCELLED")}
             className="rounded-xl border border-red-400/40 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-500/10 disabled:opacity-60"
           >
@@ -849,12 +885,17 @@ export function AdminAppointmentActions({
       ) : null}
       {isPaymentPromptOpen ? (
         <AdminPaymentMethodPrompt
-          isPending={isPending}
+          isPending={actionPending}
           onClose={() => setIsPaymentPromptOpen(false)}
           onSelect={(paymentMethod) => runStatus("COMPLETED", paymentMethod)}
         />
       ) : null}
     </div>
+    <OperationalFeedbackDialog
+      feedback={actionFeedback}
+      onClose={() => setActionFeedback(null)}
+    />
+    </>
   );
 }
 
@@ -950,6 +991,8 @@ function AdminAppointmentEditModal({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [dialogFeedback, setDialogFeedback] =
+    useState<OperationalFeedbackState>(null);
   const [selectedBarberId, setSelectedBarberId] = useState(appointment.barber.id);
   const date = new Date(appointment.date);
   const status = normalizeAppointmentStatus(appointment.status);
@@ -966,12 +1009,27 @@ function AdminAppointmentEditModal({
 
   function submitEdit(formData: FormData) {
     startTransition(async () => {
-      const result = await editAdminAppointmentAction(formData);
-      window.alert(result.message);
+      try {
+        const result = await editAdminAppointmentAction(formData);
 
-      if (result.ok) {
-        onClose();
-        router.refresh();
+        if (result.ok) {
+          setDialogFeedback(null);
+          onClose();
+          router.refresh();
+        } else {
+          setDialogFeedback({
+            title: "Nao foi possivel salvar",
+            message: result.message,
+            tone: "error",
+          });
+        }
+      } catch {
+        setDialogFeedback({
+          title: "Erro ao salvar",
+          message:
+            "Nao foi possivel salvar as alteracoes agora. Confira sua conexao e tente novamente.",
+          tone: "error",
+        });
       }
     });
   }
@@ -1127,6 +1185,10 @@ function AdminAppointmentEditModal({
           {isPending ? "Salvando..." : "Salvar alterações"}
         </button>
       </form>
+      <OperationalFeedbackDialog
+        feedback={dialogFeedback}
+        onClose={() => setDialogFeedback(null)}
+      />
     </div>
   );
 }

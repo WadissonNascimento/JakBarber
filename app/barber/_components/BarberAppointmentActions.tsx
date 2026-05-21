@@ -9,6 +9,9 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import OperationalFeedbackDialog, {
+  type OperationalFeedbackState,
+} from "@/components/ui/OperationalFeedbackDialog";
 import {
   editCompletedBarberFinanceAppointmentAction,
   editOpenBarberAppointmentAction,
@@ -68,10 +71,13 @@ export default function BarberAppointmentActions({
 }: BarberAppointmentActionsProps) {
   const router = useRouter();
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPaymentPromptOpen, setIsPaymentPromptOpen] = useState(false);
+  const [actionFeedback, setActionFeedback] =
+    useState<OperationalFeedbackState>(null);
   const [, startTransition] = useTransition();
-  const isPending = Boolean(pendingStatus);
+  const isPending = Boolean(pendingStatus) || isSubmittingStatus;
   const isCompletedEdit = ["COMPLETED", "DONE"].includes(status);
   const canEditItems =
     ["PENDING", "CONFIRMED", "COMPLETED", "DONE"].includes(status) &&
@@ -85,6 +91,11 @@ export default function BarberAppointmentActions({
     ) {
       onFeedback({
         message: "Marque todas as retiradas antes de concluir.",
+        tone: "error",
+      });
+      setActionFeedback({
+        title: "Revise as retiradas",
+        message: "Marque todas as retiradas antes de concluir o atendimento.",
         tone: "error",
       });
       return false;
@@ -105,6 +116,10 @@ export default function BarberAppointmentActions({
     nextStatus: string,
     paymentMethod?: AppointmentPaymentMethod
   ) {
+    if (isPending) {
+      return;
+    }
+
     if (nextStatus === "COMPLETED" && !validateCompletion()) {
       return;
     }
@@ -115,34 +130,60 @@ export default function BarberAppointmentActions({
     }
 
     setPendingStatus(nextStatus);
-    onStatusUpdated?.(appointmentId, nextStatus);
-    setIsPaymentPromptOpen(false);
+    setIsSubmittingStatus(true);
 
     startTransition(async () => {
-      const formData = new FormData();
-      formData.set("appointmentId", appointmentId);
-      formData.set("status", nextStatus);
+      try {
+        const formData = new FormData();
+        formData.set("appointmentId", appointmentId);
+        formData.set("status", nextStatus);
 
-      if (nextStatus === "COMPLETED") {
-        formData.set("paymentMethod", paymentMethod || "");
+        if (nextStatus === "COMPLETED") {
+          formData.set("paymentMethod", paymentMethod || "");
 
-        for (const decision of itemDeliveryDecisions) {
-          formData.append(
-            "itemDeliveryDecision",
-            `${decision.appointmentItemId}:${decision.isDelivered ? "delivered" : "not_delivered"}`
-          );
+          for (const decision of itemDeliveryDecisions) {
+            formData.append(
+              "itemDeliveryDecision",
+              `${decision.appointmentItemId}:${decision.isDelivered ? "delivered" : "not_delivered"}`
+            );
+          }
         }
-      }
 
-      const result = await updateAppointmentStatusAction(formData);
-      onFeedback({ message: result.message, tone: result.tone });
+        const result = await updateAppointmentStatusAction(formData);
+        onFeedback({ message: result.message, tone: result.tone });
 
-      if (!result.ok) {
+        if (result.ok) {
+          setIsPaymentPromptOpen(false);
+          setActionFeedback(null);
+          onStatusUpdated?.(appointmentId, nextStatus);
+          router.refresh();
+        } else {
+          setActionFeedback({
+            title:
+              nextStatus === "COMPLETED"
+                ? "Nao foi possivel concluir"
+                : "Nao foi possivel atualizar",
+            message: result.message,
+            tone: "error",
+          });
+          onStatusUpdated?.(appointmentId, status);
+        }
+      } catch {
+        onFeedback({
+          message: "Nao foi possivel atualizar o atendimento. Tente novamente.",
+          tone: "error",
+        });
+        setActionFeedback({
+          title: "Erro ao salvar",
+          message:
+            "Nao foi possivel atualizar o atendimento agora. Confira sua conexao e tente novamente.",
+          tone: "error",
+        });
         onStatusUpdated?.(appointmentId, status);
+      } finally {
+        setPendingStatus(null);
+        setIsSubmittingStatus(false);
       }
-
-      router.refresh();
-      setPendingStatus(null);
     });
   }
 
@@ -192,6 +233,10 @@ export default function BarberAppointmentActions({
           onFeedback={onFeedback}
         />
       ) : null}
+      <OperationalFeedbackDialog
+        feedback={actionFeedback}
+        onClose={() => setActionFeedback(null)}
+      />
     </>
   );
 }
@@ -298,6 +343,8 @@ function BarberEditAppointmentModal({
 }) {
   const [isPending, startTransition] = useTransition();
   const [isMounted, setIsMounted] = useState(false);
+  const [dialogFeedback, setDialogFeedback] =
+    useState<OperationalFeedbackState>(null);
   const [selectedServiceIds, setSelectedServiceIds] = useState(currentServiceIds);
   const [selectedExtraIds, setSelectedExtraIds] = useState(currentExtraProductIds);
   const total = useMemo(() => {
@@ -333,13 +380,33 @@ function BarberEditAppointmentModal({
 
   function submitEdit(formData: FormData) {
     startTransition(async () => {
-      const result = isCompletedEdit
-        ? await editCompletedBarberFinanceAppointmentAction(formData)
-        : await editOpenBarberAppointmentAction(formData);
-      onFeedback({ message: result.message, tone: result.tone });
+      try {
+        const result = isCompletedEdit
+          ? await editCompletedBarberFinanceAppointmentAction(formData)
+          : await editOpenBarberAppointmentAction(formData);
+        onFeedback({ message: result.message, tone: result.tone });
 
-      if (result.ok) {
-        onSaved();
+        if (result.ok) {
+          setDialogFeedback(null);
+          onSaved();
+        } else {
+          setDialogFeedback({
+            title: "Nao foi possivel salvar",
+            message: result.message,
+            tone: "error",
+          });
+        }
+      } catch {
+        onFeedback({
+          message: "Nao foi possivel salvar as alteracoes. Tente novamente.",
+          tone: "error",
+        });
+        setDialogFeedback({
+          title: "Erro ao salvar",
+          message:
+            "Nao foi possivel salvar as alteracoes agora. Confira sua conexao e tente novamente.",
+          tone: "error",
+        });
       }
     });
   }
@@ -506,6 +573,10 @@ function BarberEditAppointmentModal({
           </div>
         </div>
       </form>
+      <OperationalFeedbackDialog
+        feedback={dialogFeedback}
+        onClose={() => setDialogFeedback(null)}
+      />
     </div>,
     document.body
   );

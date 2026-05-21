@@ -12,6 +12,9 @@ import {
   X,
 } from "lucide-react";
 import FeedbackMessage from "@/components/FeedbackMessage";
+import OperationalFeedbackDialog, {
+  type OperationalFeedbackState,
+} from "@/components/ui/OperationalFeedbackDialog";
 import { PremiumDatePicker, PremiumTimePicker } from "@/components/ui/PremiumFilters";
 import { isActiveAppointmentStatus, minutesToTime, toMinutes } from "@/lib/barberSchedule";
 import {
@@ -50,6 +53,29 @@ type WalkInSuccessDetails = {
   date: string;
   startTime: string;
 };
+
+const WALK_IN_DRAFT_MAX_AGE_MS = 30 * 60 * 1000;
+
+type WalkInDraft = {
+  savedAt: number;
+  selectedCustomerId: string;
+  customerName: string;
+  customerPhone: string;
+  selectedServiceIds: string[];
+  hasExtras: boolean;
+  selectedExtraIds: string[];
+  selectedDate: string;
+  startTime: string;
+  notes: string;
+};
+
+function getWalkInDraftKey() {
+  if (typeof window === "undefined") {
+    return "jakbarber:walk-in-draft";
+  }
+
+  return `jakbarber:walk-in-draft:${window.location.host}`;
+}
 
 function getRoundedStartTime() {
   const currentMinutes = getCurrentScheduleMinutes();
@@ -151,12 +177,16 @@ export default function WalkInAppointmentCard({
   }>({ message: null, tone: "success" });
   const [successDetails, setSuccessDetails] = useState<WalkInSuccessDetails | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isSubmitLocked, setIsSubmitLocked] = useState(false);
+  const [actionFeedback, setActionFeedback] =
+    useState<OperationalFeedbackState>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [hasExtras, setHasExtras] = useState(false);
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
   const selectedServices = useMemo(
     () => services.filter((service) => selectedServiceIds.includes(service.id)),
     [selectedServiceIds, services]
@@ -191,6 +221,7 @@ export default function WalkInAppointmentCard({
   );
   const [selectedDate, setSelectedDate] = useState(() => getCurrentScheduleDateValue());
   const isDisabled = services.length === 0;
+  const isCreating = isPending || isSubmitLocked;
 
   useEffect(() => {
     setMounted(true);
@@ -226,8 +257,41 @@ export default function WalkInAppointmentCard({
     };
   }, [isOpen, isSuccessOpen, isClientPickerOpen, isConfirmOpen, mounted]);
 
+  useEffect(() => {
+    if (!mounted || !isOpen) {
+      return;
+    }
+
+    const draft: WalkInDraft = {
+      savedAt: Date.now(),
+      selectedCustomerId,
+      customerName,
+      customerPhone,
+      selectedServiceIds,
+      hasExtras,
+      selectedExtraIds,
+      selectedDate,
+      startTime,
+      notes,
+    };
+
+    window.localStorage.setItem(getWalkInDraftKey(), JSON.stringify(draft));
+  }, [
+    customerName,
+    customerPhone,
+    hasExtras,
+    isOpen,
+    mounted,
+    notes,
+    selectedCustomerId,
+    selectedDate,
+    selectedExtraIds,
+    selectedServiceIds,
+    startTime,
+  ]);
+
   function closeModal() {
-    if (isPending) {
+    if (isCreating) {
       return;
     }
 
@@ -237,6 +301,7 @@ export default function WalkInAppointmentCard({
     setPendingFormData(null);
     setPendingSummary(null);
     setFeedback({ message: null, tone: "success" });
+    setActionFeedback(null);
   }
 
   function closeSuccessModal() {
@@ -245,20 +310,40 @@ export default function WalkInAppointmentCard({
   }
 
   function openWalkInModal() {
-    setSelectedCustomerId("");
-    setCustomerName("");
-    setCustomerPhone("");
+    let parsedDraft: WalkInDraft | null = null;
+
+    try {
+      const storedDraft = window.localStorage.getItem(getWalkInDraftKey());
+      parsedDraft = storedDraft ? (JSON.parse(storedDraft) as WalkInDraft) : null;
+    } catch {
+      window.localStorage.removeItem(getWalkInDraftKey());
+    }
+
+    const validDraft =
+      parsedDraft &&
+      Date.now() - parsedDraft.savedAt <= WALK_IN_DRAFT_MAX_AGE_MS;
+    const draft = validDraft ? parsedDraft : null;
+
+    setSelectedCustomerId(draft ? draft.selectedCustomerId : "");
+    setCustomerName(draft ? draft.customerName : "");
+    setCustomerPhone(draft ? draft.customerPhone : "");
     setClientSearch("");
     setIsClientPickerOpen(false);
     setIsConfirmOpen(false);
     setPendingFormData(null);
     setPendingSummary(null);
-    setSelectedServiceIds([]);
-    setHasExtras(false);
-    setSelectedExtraIds([]);
-    setSelectedDate(getCurrentScheduleDateValue());
-    setStartTime(getSuggestedStartTime(activeAppointments, 30));
+    setSelectedServiceIds(draft ? draft.selectedServiceIds : []);
+    setHasExtras(draft ? draft.hasExtras : false);
+    setSelectedExtraIds(draft ? draft.selectedExtraIds : []);
+    setSelectedDate(draft ? draft.selectedDate : getCurrentScheduleDateValue());
+    setStartTime(
+      draft
+        ? draft.startTime
+        : getSuggestedStartTime(activeAppointments, 30)
+    );
+    setNotes(draft ? draft.notes : "");
     setFeedback({ message: null, tone: "success" });
+    setActionFeedback(null);
     setIsOpen(true);
   }
 
@@ -302,47 +387,73 @@ export default function WalkInAppointmentCard({
   }
 
   function confirmWalkInCreation() {
-    if (!pendingFormData || !pendingSummary) {
+    if (isCreating || !pendingFormData || !pendingSummary) {
       return;
     }
 
     const formData = pendingFormData;
     const summary = pendingSummary;
 
+    setIsSubmitLocked(true);
+
     startTransition(async () => {
-      const result = await createWalkInAppointmentAction(formData);
+      try {
+        const result = await createWalkInAppointmentAction(formData);
 
-      setFeedback({
-        message: result.ok ? null : result.message,
-        tone: result.tone,
-      });
-
-      if (result.ok) {
-        setSuccessDetails({
-          customerName: summary.customerName || "Cliente",
-          serviceName: summary.serviceName,
-          date: summary.date,
-          startTime: summary.startTime || startTime,
+        setFeedback({
+          message: result.ok ? null : result.message,
+          tone: result.tone,
         });
-        setSelectedCustomerId("");
-        setCustomerName("");
-        setCustomerPhone("");
-        setHasExtras(false);
-        setSelectedExtraIds([]);
-        setPendingFormData(null);
-        setPendingSummary(null);
+
+        if (result.ok) {
+          window.localStorage.removeItem(getWalkInDraftKey());
+          setActionFeedback(null);
+          setSuccessDetails({
+            customerName: summary.customerName || "Cliente",
+            serviceName: summary.serviceName,
+            date: summary.date,
+            startTime: summary.startTime || startTime,
+          });
+          setSelectedCustomerId("");
+          setCustomerName("");
+          setCustomerPhone("");
+          setHasExtras(false);
+          setSelectedExtraIds([]);
+          setNotes("");
+          setPendingFormData(null);
+          setPendingSummary(null);
+          setIsConfirmOpen(false);
+          setIsOpen(false);
+          setIsSuccessOpen(true);
+          setStartTime(
+            getSuggestedStartTime(
+              activeAppointments,
+              selectedDuration || 30
+            )
+          );
+          router.refresh();
+        } else {
+          setIsConfirmOpen(false);
+          setActionFeedback({
+            title: "Nao foi possivel criar o encaixe",
+            message: result.message,
+            tone: "error",
+          });
+        }
+      } catch {
         setIsConfirmOpen(false);
-        setIsOpen(false);
-        setIsSuccessOpen(true);
-        setStartTime(
-          getSuggestedStartTime(
-            activeAppointments,
-            selectedDuration || 30
-          )
-        );
-        router.refresh();
-      } else {
-        setIsConfirmOpen(false);
+        setFeedback({
+          message: "Nao foi possivel criar o encaixe. Tente novamente.",
+          tone: "error",
+        });
+        setActionFeedback({
+          title: "Erro ao criar encaixe",
+          message:
+            "Nao foi possivel salvar o encaixe agora. Os dados ficaram preenchidos para voce tentar novamente.",
+          tone: "error",
+        });
+      } finally {
+        setIsSubmitLocked(false);
       }
     });
   }
@@ -425,12 +536,22 @@ export default function WalkInAppointmentCard({
                               message: "Informe nome e sobrenome do cliente.",
                               tone: "error",
                             });
+                            setActionFeedback({
+                              title: "Confira o cliente",
+                              message: "Informe nome e sobrenome do cliente antes de criar o encaixe.",
+                              tone: "error",
+                            });
                             return;
                           }
 
                           if (!isValidBrazilianPhone(submittedCustomerPhone)) {
                             setFeedback({
                               message: "Informe um telefone valido.",
+                              tone: "error",
+                            });
+                            setActionFeedback({
+                              title: "Confira o telefone",
+                              message: "Informe um telefone valido antes de criar o encaixe.",
                               tone: "error",
                             });
                             return;
@@ -705,6 +826,8 @@ export default function WalkInAppointmentCard({
                           name="notes"
                           rows={2}
                           maxLength={200}
+                          value={notes}
+                          onChange={(event) => setNotes(event.target.value)}
                           placeholder="Opcional"
                           className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/40"
                         />
@@ -714,16 +837,17 @@ export default function WalkInAppointmentCard({
                         <button
                           type="button"
                           onClick={closeModal}
+                          disabled={isCreating}
                           className="min-h-11 rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
                         >
                           Fechar
                         </button>
                         <button
                           type="submit"
-                          disabled={isPending || selectedServiceIds.length === 0}
+                          disabled={isCreating || selectedServiceIds.length === 0}
                           className="min-h-11 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {isPending ? "Criando..." : "Criar encaixe"}
+                          {isCreating ? "Criando..." : "Criar encaixe"}
                         </button>
                       </div>
                     </form>
@@ -762,10 +886,10 @@ export default function WalkInAppointmentCard({
               summary={pendingSummary}
               duration={selectedDuration}
               total={selectedGrandTotal}
-              isPending={isPending}
+              isPending={isCreating}
               onConfirm={confirmWalkInCreation}
               onClose={() => {
-                if (isPending) {
+                if (isCreating) {
                   return;
                 }
 
@@ -841,6 +965,11 @@ export default function WalkInAppointmentCard({
             document.body
           )
         : null}
+
+      <OperationalFeedbackDialog
+        feedback={actionFeedback}
+        onClose={() => setActionFeedback(null)}
+      />
     </>
   );
 }

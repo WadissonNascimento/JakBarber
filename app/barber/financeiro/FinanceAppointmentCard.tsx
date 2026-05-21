@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, DollarSign, Pencil, Scissors, ShoppingBag } from "lucide-react";
 import StatusBadge from "@/components/ui/StatusBadge";
+import OperationalFeedbackDialog, {
+  type OperationalFeedbackState,
+} from "@/components/ui/OperationalFeedbackDialog";
 import { editCompletedAdminFinanceAppointmentAction } from "@/app/admin/financeiro/actions";
 import { editCompletedBarberFinanceAppointmentAction } from "@/app/barber/actions";
 import {
@@ -252,6 +255,8 @@ function FinanceEditAppointmentModal({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMounted, setIsMounted] = useState(false);
+  const [dialogFeedback, setDialogFeedback] =
+    useState<OperationalFeedbackState>(null);
   const [selectedServiceIds, setSelectedServiceIds] = useState(
     appointment.services.map((service) => service.serviceId)
   );
@@ -291,15 +296,30 @@ function FinanceEditAppointmentModal({
 
   function submitEdit(formData: FormData) {
     startTransition(async () => {
-      const result =
-        mode === "admin"
-          ? await editCompletedAdminFinanceAppointmentAction(formData)
-          : await editCompletedBarberFinanceAppointmentAction(formData);
-      window.alert(result.message);
+      try {
+        const result =
+          mode === "admin"
+            ? await editCompletedAdminFinanceAppointmentAction(formData)
+            : await editCompletedBarberFinanceAppointmentAction(formData);
 
-      if (result.ok) {
-        onClose();
-        router.refresh();
+        if (result.ok) {
+          setDialogFeedback(null);
+          onClose();
+          router.refresh();
+        } else {
+          setDialogFeedback({
+            title: "Nao foi possivel salvar",
+            message: result.message,
+            tone: "error",
+          });
+        }
+      } catch {
+        setDialogFeedback({
+          title: "Erro ao salvar",
+          message:
+            "Nao foi possivel salvar as alteracoes agora. Confira sua conexao e tente novamente.",
+          tone: "error",
+        });
       }
     });
   }
@@ -472,6 +492,10 @@ function FinanceEditAppointmentModal({
           </div>
         </div>
       </form>
+      <OperationalFeedbackDialog
+        feedback={dialogFeedback}
+        onClose={() => setDialogFeedback(null)}
+      />
     </div>,
     document.body
   );
