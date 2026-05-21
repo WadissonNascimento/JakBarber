@@ -1057,6 +1057,8 @@ async function rescheduleCustomerAppointmentInTransaction(
     });
   }
 
+  const shouldValidateScheduleCapacity = isChangingSchedule;
+
   const dayOfWeek = getScheduleDayOfWeek(date);
   const dayRange = getScheduleDayRange(date);
 
@@ -1112,56 +1114,58 @@ async function rescheduleCustomerAppointmentInTransaction(
     }),
   ]);
 
-  if (!availability) {
-    throw new AppointmentMutationError("Este barbeiro nao atende nesse dia.");
-  }
-
-  const occupiedDuration = getAppointmentDurationFromServices(orderedServices);
-  const selectedStartMinutes = toMinutes(time);
-  const selectedEndMinutes = selectedStartMinutes + occupiedDuration;
-  const availabilityStart = toMinutes(availability.startTime);
-  const availabilityEnd = toMinutes(availability.endTime);
-
-  if (selectedStartMinutes < availabilityStart || selectedEndMinutes > availabilityEnd) {
-    throw new AppointmentMutationError(
-      "O horario escolhido esta fora da disponibilidade do barbeiro."
-    );
-  }
-
-  const endDate = new Date(appointmentDate.getTime() + occupiedDuration * 60000);
-
-  if (isBlockedPeriod(appointmentDate, endDate, blocks)) {
-    throw new AppointmentMutationError("O horario escolhido esta bloqueado pelo barbeiro.");
-  }
-
-  if (isBlockedByRecurringBlock(selectedStartMinutes, selectedEndMinutes, recurringBlocks)) {
-    throw new AppointmentMutationError(
-      "O horario escolhido entra em um bloqueio recorrente do barbeiro."
-    );
-  }
-
-  const conflict = sameDayAppointments.some((appointment) => {
-    if (appointment.id === appointmentId || !isActiveAppointmentStatus(appointment.status)) {
-      return false;
+  if (shouldValidateScheduleCapacity) {
+    if (!availability) {
+      throw new AppointmentMutationError("Este barbeiro nao atende nesse dia.");
     }
 
-    const existingDate = new Date(appointment.date);
-    const existingStartMinutes = getScheduleMinutes(existingDate);
+    const selectedOccupiedDuration = getAppointmentDurationFromServices(orderedServices);
+    const selectedStartMinutes = toMinutes(time);
+    const selectedEndMinutes = selectedStartMinutes + selectedOccupiedDuration;
+    const availabilityStart = toMinutes(availability.startTime);
+    const availabilityEnd = toMinutes(availability.endTime);
 
-    if (conflictMode === "SAME_START_ONLY") {
-      return selectedStartMinutes === existingStartMinutes;
+    if (selectedStartMinutes < availabilityStart || selectedEndMinutes > availabilityEnd) {
+      throw new AppointmentMutationError(
+        "O horario escolhido esta fora da disponibilidade do barbeiro."
+      );
     }
 
-    const existingEndMinutes =
-      existingStartMinutes + getAppointmentServicesOccupiedDuration(appointment.services);
+    const endDate = new Date(appointmentDate.getTime() + selectedOccupiedDuration * 60000);
 
-    return selectedStartMinutes < existingEndMinutes && selectedEndMinutes > existingStartMinutes;
-  });
+    if (isBlockedPeriod(appointmentDate, endDate, blocks)) {
+      throw new AppointmentMutationError("O horario escolhido esta bloqueado pelo barbeiro.");
+    }
 
-  if (conflict) {
-    throw new AppointmentMutationError(
-      "Esse horario acabou de ser reservado. Escolha outro horario."
-    );
+    if (isBlockedByRecurringBlock(selectedStartMinutes, selectedEndMinutes, recurringBlocks)) {
+      throw new AppointmentMutationError(
+        "O horario escolhido entra em um bloqueio recorrente do barbeiro."
+      );
+    }
+
+    const conflict = sameDayAppointments.some((appointment) => {
+      if (appointment.id === appointmentId || !isActiveAppointmentStatus(appointment.status)) {
+        return false;
+      }
+
+      const existingDate = new Date(appointment.date);
+      const existingStartMinutes = getScheduleMinutes(existingDate);
+
+      if (conflictMode === "SAME_START_ONLY") {
+        return selectedStartMinutes === existingStartMinutes;
+      }
+
+      const existingEndMinutes =
+        existingStartMinutes + getAppointmentServicesOccupiedDuration(appointment.services);
+
+      return selectedStartMinutes < existingEndMinutes && selectedEndMinutes > existingStartMinutes;
+    });
+
+    if (conflict) {
+      throw new AppointmentMutationError(
+        "Esse horario acabou de ser reservado. Escolha outro horario."
+      );
+    }
   }
 
   for (const item of currentAppointment.items) {

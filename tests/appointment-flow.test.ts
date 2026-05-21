@@ -7,6 +7,7 @@ import {
   cancelAppointmentByCustomer,
   createCustomerAppointment,
   createManualFitInAppointment,
+  editOpenAppointmentForBarber,
   rescheduleCustomerAppointment,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
@@ -399,6 +400,140 @@ test("customer cannot create concurrent appointment for the same barber and time
     });
 
     assert.equal(appointmentCount, 1);
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("barber can edit an open appointment without revalidating an unchanged slot", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte, pomada } = await createFixture(db, runId);
+    const secondCustomer = await db.user.create({
+      data: {
+        name: "Cliente Seguinte Teste",
+        email: `cliente-seguinte-${runId}@test.local`,
+        role: "CUSTOMER",
+        isActive: true,
+      },
+    });
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+
+    const appointment = await createCustomerAppointment(
+      {
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        time: "10:00",
+      },
+      db
+    );
+
+    await createCustomerAppointment(
+      {
+        customerId: secondCustomer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        time: "10:50",
+      },
+      db
+    );
+
+    await db.barberAvailability.deleteMany({
+      where: {
+        barberId: barber.id,
+        weekDay: nextDay.getDay(),
+      },
+    });
+
+    const edited = await editOpenAppointmentForBarber(
+      {
+        appointmentId: appointment.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        extras: [{ extraProductId: pomada.id, quantity: 1 }],
+        notes: "Apenas ajustou o atendimento existente.",
+      },
+      db
+    );
+
+    assert.equal(edited.appointment.id, appointment.id);
+    assert.equal(edited.appointment.date.getTime(), appointment.date.getTime());
+    assert.equal(edited.appointment.items.length, 1);
+    assert.equal(edited.appointment.notes, "Apenas ajustou o atendimento existente.");
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("barber can record a longer performed service without moving the appointment slot", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte } = await createFixture(db, runId);
+    const secondCustomer = await db.user.create({
+      data: {
+        name: "Cliente Conflito Teste",
+        email: `cliente-conflito-${runId}@test.local`,
+        role: "CUSTOMER",
+        isActive: true,
+      },
+    });
+    const longService = await db.service.create({
+      data: {
+        name: `Servico Longo Teste ${runId}`,
+        price: 80,
+        duration: 70,
+        bufferAfter: 0,
+        commissionType: "PERCENT",
+        commissionValue: 40,
+        isActive: true,
+      },
+    });
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+
+    const appointment = await createCustomerAppointment(
+      {
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        time: "10:00",
+      },
+      db
+    );
+
+    await createCustomerAppointment(
+      {
+        customerId: secondCustomer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        time: "10:50",
+      },
+      db
+    );
+
+    const edited = await editOpenAppointmentForBarber(
+      {
+        appointmentId: appointment.id,
+        barberId: barber.id,
+        serviceIds: [longService.id],
+        notes: "Registrou o servico executado.",
+      },
+      db
+    );
+
+    assert.equal(edited.appointment.id, appointment.id);
+    assert.equal(edited.appointment.date.getTime(), appointment.date.getTime());
+    assert.equal(edited.appointment.services[0].serviceId, longService.id);
   } finally {
     await cleanup();
     await db.$disconnect();
