@@ -21,6 +21,8 @@ const INVALID_IMAGE_MESSAGE =
   "O arquivo enviado nao parece ser uma imagem valida. Envie JPG, PNG, WEBP ou HEIC.";
 const INVALID_HEIC_MESSAGE =
   "Essa foto do iPhone nao chegou como HEIC valido. Envie como JPG/PNG ou tire uma captura e tente novamente.";
+const IMAGE_DECODE_MESSAGE =
+  "Nao foi possivel ler essa foto no navegador. No iPhone, aguarde a foto baixar do iCloud ou envie como JPG/PNG.";
 const HEIC_BRANDS = [
   "heic",
   "heix",
@@ -139,9 +141,63 @@ async function validateImageContent(file: File) {
   return inferredType;
 }
 
-async function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
+type DecodedImage = {
+  image: CanvasImageSource;
+  width: number;
+  height: number;
+  close: () => void;
+};
+
+async function decodeImageWithElement(file: File): Promise<DecodedImage> {
+  const previewUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.decoding = "async";
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error(IMAGE_DECODE_MESSAGE));
+      element.src = previewUrl;
+    });
+
+    return {
+      image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      close: () => URL.revokeObjectURL(previewUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(previewUrl);
+    throw error;
+  }
+}
+
+async function decodeImageFile(file: File): Promise<DecodedImage> {
+  if ("createImageBitmap" in window) {
+    try {
+      const bitmap = await createImageBitmap(file);
+
+      return {
+        image: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        close: () => bitmap.close(),
+      };
+    } catch {
+      // Safari/iOS pode falhar aqui mesmo com uma imagem valida. Tentamos via <img>.
+    }
+  }
+
+  return decodeImageWithElement(file);
+}
+
+async function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  quality: number,
+  mimeType = "image/webp"
+) {
   return new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/webp", quality);
+    canvas.toBlob(resolve, mimeType, quality);
   });
 }
 
@@ -151,12 +207,26 @@ async function compressCanvasToProductBlob(canvas: HTMLCanvasElement) {
   for (const quality of qualities) {
     const blob = await canvasToBlob(canvas, quality);
 
+    if (blob && blob.type === "image/webp" && blob.size <= MAX_IMAGE_SIZE) {
+      return blob;
+    }
+  }
+
+  const fallbackWebp = await canvasToBlob(canvas, 0.64);
+
+  if (fallbackWebp?.type === "image/webp") {
+    return fallbackWebp;
+  }
+
+  for (const quality of [0.92, 0.86, 0.78, 0.68]) {
+    const blob = await canvasToBlob(canvas, quality, "image/jpeg");
+
     if (blob && blob.size <= MAX_IMAGE_SIZE) {
       return blob;
     }
   }
 
-  return canvasToBlob(canvas, 0.64);
+  return canvasToBlob(canvas, 0.6, "image/jpeg");
 }
 
 async function compressCanvasToSecondaryBlob(canvas: HTMLCanvasElement) {
@@ -165,12 +235,26 @@ async function compressCanvasToSecondaryBlob(canvas: HTMLCanvasElement) {
   for (const quality of qualities) {
     const blob = await canvasToBlob(canvas, quality);
 
+    if (blob && blob.type === "image/webp" && blob.size <= MAX_SECONDARY_UPLOAD_SIZE) {
+      return blob;
+    }
+  }
+
+  const fallbackWebp = await canvasToBlob(canvas, 0.68);
+
+  if (fallbackWebp?.type === "image/webp") {
+    return fallbackWebp;
+  }
+
+  for (const quality of [0.9, 0.82, 0.74]) {
+    const blob = await canvasToBlob(canvas, quality, "image/jpeg");
+
     if (blob && blob.size <= MAX_SECONDARY_UPLOAD_SIZE) {
       return blob;
     }
   }
 
-  return canvasToBlob(canvas, 0.68);
+  return canvasToBlob(canvas, 0.68, "image/jpeg");
 }
 
 function getBackgroundReference(data: Uint8ClampedArray, width: number, height: number) {
@@ -239,10 +323,10 @@ function isBackgroundLike(
   return colorDistance(red, green, blue, background) <= EDGE_COLOR_THRESHOLD;
 }
 
-function getContentBounds(bitmap: ImageBitmap) {
+function getContentBounds(image: CanvasImageSource, imageWidth: number, imageHeight: number) {
   const probeCanvas = document.createElement("canvas");
-  probeCanvas.width = bitmap.width;
-  probeCanvas.height = bitmap.height;
+  probeCanvas.width = imageWidth;
+  probeCanvas.height = imageHeight;
 
   const context = probeCanvas.getContext("2d", { willReadFrequently: true });
 
@@ -250,14 +334,14 @@ function getContentBounds(bitmap: ImageBitmap) {
     return {
       left: 0,
       top: 0,
-      width: bitmap.width,
-      height: bitmap.height,
+      width: imageWidth,
+      height: imageHeight,
     };
   }
 
-  context.drawImage(bitmap, 0, 0);
+  context.drawImage(image, 0, 0, imageWidth, imageHeight);
 
-  const { data, width, height } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+  const { data, width, height } = context.getImageData(0, 0, imageWidth, imageHeight);
   const background = getBackgroundReference(data, width, height);
   const visited = new Uint8Array(width * height);
   const queue = new Int32Array(width * height);
@@ -332,8 +416,8 @@ function getContentBounds(bitmap: ImageBitmap) {
     return {
       left: 0,
       top: 0,
-      width: bitmap.width,
-      height: bitmap.height,
+      width: imageWidth,
+      height: imageHeight,
     };
   }
 
@@ -375,7 +459,7 @@ function drawMarketplaceBackground(
 
 function drawStandardizedProduct(
   context: CanvasRenderingContext2D,
-  bitmap: ImageBitmap,
+  image: CanvasImageSource,
   bounds: { left: number; top: number; width: number; height: number },
   size: number
 ) {
@@ -387,7 +471,7 @@ function drawStandardizedProduct(
   const y = Math.round((size - height) / 2);
 
   context.drawImage(
-    bitmap,
+    image,
     bounds.left,
     bounds.top,
     bounds.width,
@@ -404,10 +488,10 @@ export async function prepareProductImageUpload(file: File) {
   validateSourceSize(file);
   await validateImageContent(file);
 
-  let bitmap: ImageBitmap;
+  let decodedImage: DecodedImage;
 
   try {
-    bitmap = await createImageBitmap(file);
+    decodedImage = await decodeImageFile(file);
   } catch {
     if (isHeicImage(file)) {
       return {
@@ -425,7 +509,7 @@ export async function prepareProductImageUpload(file: File) {
   const context = canvas.getContext("2d");
 
   if (!context) {
-    bitmap.close();
+    decodedImage.close();
     return {
       file,
       previewUrl: URL.createObjectURL(file),
@@ -435,15 +519,25 @@ export async function prepareProductImageUpload(file: File) {
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
 
-  const bounds = getContentBounds(bitmap);
+  const bounds = getContentBounds(
+    decodedImage.image,
+    decodedImage.width,
+    decodedImage.height
+  );
   drawMarketplaceBackground(context, OUTPUT_IMAGE_SIZE);
-  drawStandardizedProduct(context, bitmap, bounds, OUTPUT_IMAGE_SIZE);
-  bitmap.close();
+  drawStandardizedProduct(context, decodedImage.image, bounds, OUTPUT_IMAGE_SIZE);
+  decodedImage.close();
 
   const blob = await compressCanvasToProductBlob(canvas);
   const uploadFile =
     blob && blob.size <= MAX_IMAGE_SIZE
-      ? new File([blob], "prepared-product-image.webp", { type: "image/webp" })
+      ? new File(
+          [blob],
+          blob.type === "image/webp"
+            ? "prepared-product-image.webp"
+            : "prepared-product-image.jpg",
+          { type: blob.type || "image/jpeg" }
+        )
       : file;
 
   if (uploadFile.size > MAX_IMAGE_SIZE) {
@@ -461,24 +555,27 @@ export async function prepareSecondaryProductImageUpload(file: File) {
   validateSourceSize(file);
   await validateImageContent(file);
 
-  let bitmap: ImageBitmap;
+  let decodedImage: DecodedImage;
 
   try {
-    bitmap = await createImageBitmap(file);
+    decodedImage = await decodeImageFile(file);
   } catch {
     if (isHeicImage(file)) {
-      throw new Error(INVALID_HEIC_MESSAGE);
+      return {
+        file,
+        previewUrl: URL.createObjectURL(file),
+      };
     }
 
-    throw new Error(INVALID_IMAGE_MESSAGE);
+    throw new Error(IMAGE_DECODE_MESSAGE);
   }
 
   const scale = Math.min(
     1,
-    SECONDARY_OUTPUT_IMAGE_SIZE / Math.max(bitmap.width, bitmap.height)
+    SECONDARY_OUTPUT_IMAGE_SIZE / Math.max(decodedImage.width, decodedImage.height)
   );
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const width = Math.max(1, Math.round(decodedImage.width * scale));
+  const height = Math.max(1, Math.round(decodedImage.height * scale));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -486,7 +583,7 @@ export async function prepareSecondaryProductImageUpload(file: File) {
   const context = canvas.getContext("2d");
 
   if (!context) {
-    bitmap.close();
+    decodedImage.close();
     return {
       file,
       previewUrl: URL.createObjectURL(file),
@@ -495,8 +592,8 @@ export async function prepareSecondaryProductImageUpload(file: File) {
 
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
-  context.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+  context.drawImage(decodedImage.image, 0, 0, width, height);
+  decodedImage.close();
 
   const blob = await compressCanvasToSecondaryBlob(canvas);
 
@@ -504,9 +601,15 @@ export async function prepareSecondaryProductImageUpload(file: File) {
     throw new Error("Nao foi possivel compactar a foto secundaria.");
   }
 
-  const uploadFile = new File([blob], "secondary-product-image.webp", {
-    type: "image/webp",
-  });
+  const uploadFile = new File(
+    [blob],
+    blob.type === "image/webp"
+      ? "secondary-product-image.webp"
+      : "secondary-product-image.jpg",
+    {
+      type: blob.type || "image/jpeg",
+    }
+  );
 
   return {
     file: uploadFile,
