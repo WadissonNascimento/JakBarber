@@ -1802,6 +1802,7 @@ export async function updateAppointmentStatusForAdmin(
           appointmentId,
           nextStatus: normalizedStatus,
           paymentMethod: normalizedPaymentMethod,
+          allowCompletedStatusChange: true,
           cancellationReason:
             normalizedStatus === "CANCELLED"
               ? cancellationReason?.trim() || "Cancelado pelo admin."
@@ -1953,12 +1954,14 @@ async function updateAppointmentStatusWithSideEffects(
     paymentMethod,
     cancellationReason,
     itemDeliveryDecisions,
+    allowCompletedStatusChange = false,
   }: {
     appointmentId: string;
     nextStatus: AppointmentStatus;
     paymentMethod?: AppointmentPaymentMethod | null;
     cancellationReason?: string;
     itemDeliveryDecisions?: AppointmentItemDeliveryDecision[];
+    allowCompletedStatusChange?: boolean;
   },
   db: AppointmentTransactionClient
 ) {
@@ -1979,7 +1982,10 @@ async function updateAppointmentStatusWithSideEffects(
     return appointment;
   }
 
-  if (FINAL_APPOINTMENT_STATUSES.includes(currentStatus)) {
+  const isLeavingCompleted = currentStatus === "COMPLETED";
+  const canLeaveCompleted = allowCompletedStatusChange && isLeavingCompleted;
+
+  if (FINAL_APPOINTMENT_STATUSES.includes(currentStatus) && !canLeaveCompleted) {
     throw new AppointmentMutationError("Esse atendimento já foi finalizado.");
   }
 
@@ -2047,7 +2053,9 @@ async function updateAppointmentStatusWithSideEffects(
         "Informe a forma de pagamento para concluir o atendimento."
       );
     }
+  }
 
+  if (nextStatus === "COMPLETED" || isLeavingCompleted) {
     await assertNoLockedPayoutForAppointmentPeriod(db, {
       shopId: appointment.shopId,
       barberId: appointment.barberId,
@@ -2055,16 +2063,62 @@ async function updateAppointmentStatusWithSideEffects(
     });
   }
 
+  const reopeningCompletedToActive =
+    isLeavingCompleted && ["PENDING", "CONFIRMED"].includes(nextStatus);
+  const closingCompletedAsCancelledOrNoShow =
+    isLeavingCompleted && ["CANCELLED", "NO_SHOW"].includes(nextStatus);
+
+  if (reopeningCompletedToActive) {
+    const itemsToReserveAgain = appointmentItems.filter(
+      (item) => item.deliveredAt !== null && !item.isDelivered
+    );
+
+    for (const item of itemsToReserveAgain) {
+      const updated = await db.extraProduct.updateMany({
+        where: {
+          id: item.extraProductId,
+          stock: {
+            gte: item.quantity,
+          },
+        },
+        data: {
+          stock: {
+            decrement: item.quantity,
+          },
+        },
+      });
+
+      if (updated.count === 0) {
+        throw new AppointmentMutationError(
+          `${item.productNameSnapshot} nao possui estoque suficiente para reabrir esse atendimento.`
+        );
+      }
+
+      await registerExtraStockMovement(
+        {
+          extraProductId: item.extraProductId,
+          shopId: appointment.shopId,
+          type: "ADMIN_REOPEN_RESERVE_OUT",
+          quantity: item.quantity,
+          reason: `Reabertura pelo admin do atendimento concluido ${appointment.id}`,
+        },
+        db
+      );
+    }
+  }
+
   const shouldReturnExtras =
-    nextStatus === "CANCELLED" ||
-    nextStatus === "NO_SHOW" ||
-    nextStatus === "COMPLETED";
-  const returnedItems =
-    nextStatus === "COMPLETED"
-      ? appointmentItems.filter((item) => !item.isDelivered)
-      : shouldReturnExtras
-      ? appointmentItems
-      : [];
+    !isLeavingCompleted &&
+    (nextStatus === "CANCELLED" ||
+      nextStatus === "NO_SHOW" ||
+      nextStatus === "COMPLETED");
+  const returnedItems = closingCompletedAsCancelledOrNoShow
+    ? appointmentItems.filter((item) => item.deliveredAt !== null && item.isDelivered)
+    : nextStatus === "COMPLETED"
+    ? appointmentItems.filter((item) => !item.isDelivered)
+    : shouldReturnExtras
+    ? appointmentItems
+    : [];
 
   if (returnedItems.length > 0) {
     for (const item of returnedItems) {
@@ -2100,7 +2154,11 @@ async function updateAppointmentStatusWithSideEffects(
     }
   }
 
-  if (nextStatus === "CANCELLED" || nextStatus === "NO_SHOW") {
+  if (
+    nextStatus === "CANCELLED" ||
+    nextStatus === "NO_SHOW" ||
+    reopeningCompletedToActive
+  ) {
     await db.appointmentItem.updateMany({
       where: {
         appointmentId,
@@ -2117,7 +2175,7 @@ async function updateAppointmentStatusWithSideEffects(
     data: {
       status: nextStatus,
       paymentMethod:
-        nextStatus === "COMPLETED" ? paymentMethod : appointment.paymentMethod,
+        nextStatus === "COMPLETED" ? paymentMethod : null,
       notes:
         nextStatus === "CANCELLED" && cancellationReason
           ? [appointment.notes, cancellationReason].filter(Boolean).join(" | ")

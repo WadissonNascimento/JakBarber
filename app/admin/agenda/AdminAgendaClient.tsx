@@ -756,8 +756,9 @@ export function AdminAppointmentActions({
   const [actionFeedback, setActionFeedback] =
     useState<OperationalFeedbackState>(null);
   const status = normalizeAppointmentStatus(appointment.status);
+  const isCompleted = status === "COMPLETED";
   const canEdit = !["CANCELLED", "NO_SHOW"].includes(status);
-  const canChangeStatus = !["CANCELLED", "COMPLETED", "DONE", "NO_SHOW"].includes(status);
+  const canChangeStatus = !["CANCELLED", "NO_SHOW"].includes(status);
   const actionPending = isPending || isSubmitting;
 
   function runStatus(
@@ -843,14 +844,25 @@ export function AdminAppointmentActions({
 
       {canChangeStatus ? (
         <>
-          <button
-            type="button"
-            disabled={actionPending}
-            onClick={() => runStatus("COMPLETED")}
-            className="rounded-xl border border-emerald-300/35 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/10 disabled:opacity-60"
-          >
-            Concluir
-          </button>
+          {isCompleted ? (
+            <button
+              type="button"
+              disabled={actionPending}
+              onClick={() => runStatus("CONFIRMED")}
+              className="rounded-xl border border-sky-300/35 px-3 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-400/10 disabled:opacity-60"
+            >
+              Reabrir
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={actionPending}
+              onClick={() => runStatus("COMPLETED")}
+              className="rounded-xl border border-emerald-300/35 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/10 disabled:opacity-60"
+            >
+              Concluir
+            </button>
+          )}
           <button
             type="button"
             disabled={actionPending}
