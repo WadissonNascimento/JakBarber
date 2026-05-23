@@ -12,7 +12,7 @@ import {
 } from "@/lib/mail";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
-import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getCurrentShopAppUrl } from "@/lib/appUrl";
 import { getPostLoginRedirect, sanitizeInternalRedirect } from "@/lib/authRedirect";
 import { getCurrentShopId } from "@/lib/shop";
 import { createRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
@@ -55,12 +55,12 @@ function buildPendingRegistrationRedirect(
   return `/register/verify?email=${encodeURIComponent(email)}&sent=1${devCodeQuery}${redirectQuery}`;
 }
 
-function buildVerificationUrl(email: string, redirectTo?: string) {
+async function buildVerificationUrl(email: string, redirectTo?: string) {
   const redirectQuery = redirectTo
     ? `&redirectTo=${encodeURIComponent(redirectTo)}`
     : "";
 
-  return `${getConfiguredAppUrl()}/register/verify?email=${encodeURIComponent(email)}${redirectQuery}`;
+  return `${await getCurrentShopAppUrl()}/register/verify?email=${encodeURIComponent(email)}${redirectQuery}`;
 }
 
 export async function registerCustomerAction(
@@ -167,7 +167,7 @@ export async function registerCustomerAction(
       to: email,
       name,
       code,
-      verifyUrl: buildVerificationUrl(email, redirectTo),
+      verifyUrl: await buildVerificationUrl(email, redirectTo),
       accountLabel: "seu cadastro",
     });
   } catch (error) {
@@ -408,7 +408,7 @@ export async function resendRegistrationCodeAction(
       to: email,
       name: pending.name,
       code,
-      verifyUrl: buildVerificationUrl(email, redirectTo),
+      verifyUrl: await buildVerificationUrl(email, redirectTo),
       accountLabel: "seu cadastro",
     });
   } catch (error) {

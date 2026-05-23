@@ -9,7 +9,7 @@ import {
   mutationSuccess,
   type MutationResult,
 } from "@/lib/mutationResult";
-import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getShopAppUrl } from "@/lib/appUrl";
 import {
   FULL_NAME_REQUIREMENT_MESSAGE,
   isValidCustomerFullName,
@@ -43,8 +43,8 @@ function getEmailChangeExpirationDate() {
   return new Date(Date.now() + 10 * 60 * 1000);
 }
 
-function buildEmailChangeVerifyUrl() {
-  return `${getConfiguredAppUrl()}/meu-perfil`;
+function buildEmailChangeVerifyUrl(shop: { primaryDomain?: string | null } | null) {
+  return `${getShopAppUrl(shop)}/meu-perfil`;
 }
 
 export async function updateCustomerProfileAction(
@@ -87,6 +87,11 @@ export async function updateCustomerProfileAction(
       email: true,
       name: true,
       shopId: true,
+      shop: {
+        select: {
+          primaryDomain: true,
+        },
+      },
     },
   });
 
@@ -185,7 +190,7 @@ export async function updateCustomerProfileAction(
         to: email,
         name,
         code,
-        verifyUrl: buildEmailChangeVerifyUrl(),
+        verifyUrl: buildEmailChangeVerifyUrl(currentUser.shop),
         accountLabel: "troca de e-mail",
       });
     } catch {

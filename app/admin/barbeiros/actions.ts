@@ -5,7 +5,7 @@ import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { sendVerificationCodeEmail } from "@/lib/mail";
-import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getShopAppUrl } from "@/lib/appUrl";
 import {
   mutationError,
   mutationSuccess,
@@ -34,8 +34,11 @@ function getExpirationDate() {
   return new Date(Date.now() + 10 * 60 * 1000);
 }
 
-function buildVerificationUrl(email: string) {
-  return `${getConfiguredAppUrl()}/register/verify?email=${encodeURIComponent(email)}`;
+function buildVerificationUrl(
+  email: string,
+  shop: { primaryDomain?: string | null } | null
+) {
+  return `${getShopAppUrl(shop)}/register/verify?email=${encodeURIComponent(email)}`;
 }
 
 function isValidTimeRange(startTime: string, endTime: string) {
@@ -111,13 +114,19 @@ export async function createBarberAction(
     return mutationError("A senha deve ter pelo menos 6 caracteres.");
   }
 
-  const [existingUser, existingPendingRegistration] = await Promise.all([
+  const [existingUser, existingPendingRegistration, shop] = await Promise.all([
     prisma.user.findFirst({
       where: { shopId: admin.shopId || undefined, email },
     }),
     prisma.pendingRegistration.findFirst({
       where: { shopId: admin.shopId || undefined, email },
     }),
+    admin.shopId
+      ? prisma.shop.findUnique({
+          where: { id: admin.shopId },
+          select: { primaryDomain: true },
+        })
+      : null,
   ]);
 
   if (existingUser) {
@@ -158,7 +167,7 @@ export async function createBarberAction(
       to: email,
       name,
       code,
-      verifyUrl: buildVerificationUrl(email),
+      verifyUrl: buildVerificationUrl(email, shop),
       accountLabel: "o cadastro de barbeiro",
     });
   } catch (error) {

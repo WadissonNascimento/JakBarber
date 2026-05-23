@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { readFile } from "fs/promises";
 import { Prisma } from "@prisma/client";
-import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getShopAppUrl } from "@/lib/appUrl";
 import {
   renderCustomerAppointmentCancelledEmail,
   renderCustomerAppointmentCompletedEmail,
@@ -81,16 +81,6 @@ function resolveEmailLogoUrl(
   const appUrl = getShopAppUrl(shop);
   const normalizedPath = value.startsWith("/") ? value : `/${value}`;
   return `${appUrl}${normalizedPath}`;
-}
-
-function getShopAppUrl(shop: { primaryDomain?: string | null } | null | undefined) {
-  const domain = shop?.primaryDomain?.trim();
-
-  if (domain) {
-    return `https://${domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`;
-  }
-
-  return getConfiguredAppUrl();
 }
 
 function buildCustomerThemeFromShop(shop: {

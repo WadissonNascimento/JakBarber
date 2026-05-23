@@ -12,7 +12,7 @@ import {
   type BarberEmailTheme,
 } from "@/lib/email/barberTemplates";
 import { getAppointmentDisplayName } from "@/lib/appointmentServices";
-import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getShopAppUrl } from "@/lib/appUrl";
 import { sendEmailMessage } from "@/lib/mail";
 import { basePrisma } from "@/lib/prisma-core";
 import { getShopEmailIdentity } from "@/lib/shopEmailIdentity";
@@ -64,16 +64,6 @@ const appointmentEmailInclude = {
 
 function normalizeName(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
-}
-
-function getShopAppUrl(shop?: { primaryDomain?: string | null } | null) {
-  const domain = shop?.primaryDomain?.trim();
-
-  if (domain) {
-    return `https://${domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`;
-  }
-
-  return getConfiguredAppUrl();
 }
 
 function absoluteAppUrl(pathname: string, shop?: { primaryDomain?: string | null } | null) {

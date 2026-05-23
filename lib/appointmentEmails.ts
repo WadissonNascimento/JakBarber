@@ -7,7 +7,7 @@ import {
   getAppointmentGrandTotal,
   getAppointmentServiceMetaLine,
 } from "@/lib/appointmentServices";
-import { getConfiguredAppUrl } from "@/lib/appUrl";
+import { getShopAppUrl } from "@/lib/appUrl";
 import {
   sendAppointmentCancelledEmail,
   sendAppointmentCompletedEmail,
@@ -109,16 +109,6 @@ const appointmentEmailInclude = {
 
 function normalizeName(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
-}
-
-function getShopAppUrl(shop: { primaryDomain?: string | null }) {
-  const domain = shop.primaryDomain?.trim();
-
-  if (domain) {
-    return `https://${domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "")}`;
-  }
-
-  return getConfiguredAppUrl();
 }
 
 function getCustomerAppointmentsUrl(shop: { primaryDomain?: string | null }) {
