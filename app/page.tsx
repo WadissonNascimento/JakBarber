@@ -2,7 +2,11 @@ import { unstable_cache } from "next/cache";
 import { basePrisma } from "@/lib/prisma-core";
 import { toMoneyNumber } from "@/lib/money";
 import { getCurrentShop } from "@/lib/shop";
-import { isWrTechInstitutionalRequest } from "@/lib/wrTechInstitutionalServer";
+import {
+  isWrTechAppRequest,
+  isWrTechInstitutionalRequest,
+} from "@/lib/wrTechInstitutionalServer";
+import WrTechAppPlaceholder from "./WrTechAppPlaceholder";
 import WrTechSolutionsLanding from "./WrTechSolutionsLanding";
 import HomeClient, {
   type HomeBarber,
@@ -141,6 +145,10 @@ const getHomePublicData = unstable_cache(
 );
 
 export default async function HomePage() {
+  if (await isWrTechAppRequest()) {
+    return <WrTechAppPlaceholder />;
+  }
+
   if (await isWrTechInstitutionalRequest()) {
     return <WrTechSolutionsLanding />;
   }

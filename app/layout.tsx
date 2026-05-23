@@ -21,10 +21,14 @@ import {
   JAKBARBER_THEME_COLOR,
 } from "@/lib/pwaAssets";
 import {
+  WR_TECH_APP_URL,
   WR_TECH_LOGO_PATH,
   WR_TECH_SITE_URL,
 } from "@/lib/wrTechInstitutional";
-import { isWrTechInstitutionalRequest } from "@/lib/wrTechInstitutionalServer";
+import {
+  isWrTechAppRequest,
+  isWrTechInstitutionalRequest,
+} from "@/lib/wrTechInstitutionalServer";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -37,6 +41,26 @@ const headingFont = Space_Grotesk({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (await isWrTechAppRequest()) {
+    const title = "WR Tech Solutions | Plataforma";
+    const description =
+      "Dominio reservado para a plataforma da WR Tech Solutions.";
+
+    return {
+      metadataBase: new URL(WR_TECH_APP_URL),
+      applicationName: "WR Tech Solutions",
+      title: {
+        default: title,
+        template: "%s",
+      },
+      description,
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
   if (await isWrTechInstitutionalRequest()) {
     const title = "WR Tech Solutions | Sistema para barbearias";
     const description =
@@ -196,6 +220,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
+  if (await isWrTechAppRequest()) {
+    return {
+      width: "device-width",
+      initialScale: 1,
+      viewportFit: "cover",
+      themeColor: "#05070b",
+      colorScheme: "dark",
+    };
+  }
+
   if (await isWrTechInstitutionalRequest()) {
     return {
       width: "device-width",
@@ -225,6 +259,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  if (await isWrTechAppRequest()) {
+    return (
+      <html lang="pt-BR">
+        <body
+          className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[#05070b] text-white`}
+          data-site="wr-tech-app"
+        >
+          <ClientRuntimeGuard />
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   if (await isWrTechInstitutionalRequest()) {
     return (
       <html lang="pt-BR">

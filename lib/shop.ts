@@ -2,6 +2,7 @@ import { cache as reactCache } from "react";
 import { headers } from "next/headers";
 import type { Shop } from "@prisma/client";
 import { basePrisma } from "@/lib/prisma-core";
+import { isWrTechAppHost } from "@/lib/wrTechInstitutional";
 
 const cache: typeof reactCache =
   typeof reactCache === "function"
@@ -130,6 +131,10 @@ function getDomainCandidates(host: string) {
 function canUseDefaultShopFallback(host: string | null) {
   if (!host) {
     return true;
+  }
+
+  if (isWrTechAppHost(host)) {
+    return false;
   }
 
   if (process.env.NODE_ENV !== "production" && isLocalHost(host)) {

@@ -5,7 +5,13 @@ export const WR_TECH_INSTITUTIONAL_HOSTS = [
   "www.wrtechsolutions.localhost",
 ];
 
+export const WR_TECH_APP_HOSTS = [
+  "app.wrtechsolutions.tech",
+  "app.wrtechsolutions.localhost",
+];
+
 export const WR_TECH_SITE_URL = "https://wrtechsolutions.tech";
+export const WR_TECH_APP_URL = "https://app.wrtechsolutions.tech";
 export const WR_TECH_LOGO_PATH = "/wr-tech/logo.png";
 export const WR_TECH_HEADER_LOGO_PATH = "/wr-tech/logo-header.png";
 
@@ -21,4 +27,10 @@ export function isWrTechInstitutionalHost(value: string | null | undefined) {
   const host = normalizeWrTechHost(value);
 
   return Boolean(host && WR_TECH_INSTITUTIONAL_HOSTS.includes(host));
+}
+
+export function isWrTechAppHost(value: string | null | undefined) {
+  const host = normalizeWrTechHost(value);
+
+  return Boolean(host && WR_TECH_APP_HOSTS.includes(host));
 }
