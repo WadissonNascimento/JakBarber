@@ -19,9 +19,20 @@ function isLocalHost(value: string | null | undefined) {
   );
 }
 
+function normalizePublicHost(value: string | null | undefined) {
+  const host = getFirstHeaderValue(value || "");
+
+  if (!host || isLocalHost(host)) {
+    return host;
+  }
+
+  return host.replace(/:3000$/, "");
+}
+
 function getPublicHost(headers: Headers, requestUrl: URL) {
-  const host = getFirstHeaderValue(headers.get("host"));
-  const forwardedHost = getFirstHeaderValue(headers.get("x-forwarded-host"));
+  const host = normalizePublicHost(headers.get("host"));
+  const forwardedHost = normalizePublicHost(headers.get("x-forwarded-host"));
+  const requestHost = normalizePublicHost(requestUrl.host);
 
   if (host && !isLocalHost(host)) {
     return host;
@@ -31,11 +42,11 @@ function getPublicHost(headers: Headers, requestUrl: URL) {
     return forwardedHost;
   }
 
-  if (!isLocalHost(requestUrl.host)) {
-    return requestUrl.host;
+  if (requestHost && !isLocalHost(requestHost)) {
+    return requestHost;
   }
 
-  return host || forwardedHost || requestUrl.host;
+  return host || forwardedHost || requestHost || requestUrl.host;
 }
 
 function normalizeAuthRequest(request: NextRequest) {
