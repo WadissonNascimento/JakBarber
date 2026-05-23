@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { googleSignInAction } from "@/app/login/actions";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
@@ -82,10 +81,9 @@ export default function LoginForm({
       </form>
 
       {googleSignInEnabled ? (
-        <form action={googleSignInAction} className="mt-4">
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          <GoogleSignInButton type="submit" />
-        </form>
+        <div className="mt-4">
+          <GoogleSignInButton redirectTo={redirectTo || "/redirecionar"} />
+        </div>
       ) : null}
 
       <p className="mt-6 text-center text-sm text-zinc-300">

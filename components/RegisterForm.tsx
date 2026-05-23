@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { googleSignInAction } from "@/app/login/actions";
 import { registerCustomerAction } from "@/app/register/actions";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
@@ -210,10 +209,9 @@ export default function RegisterForm({
       </form>
 
       {googleSignInEnabled && (
-        <form action={googleSignInAction} className="mt-4">
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          <GoogleSignInButton type="submit" />
-        </form>
+        <div className="mt-4">
+          <GoogleSignInButton redirectTo={redirectTo || "/redirecionar"} />
+        </div>
       )}
 
       <p className="mt-6 text-center text-sm text-zinc-300">

@@ -1,4 +1,7 @@
-import type { ComponentPropsWithoutRef } from "react";
+"use client";
+
+import { useState, type ComponentPropsWithoutRef } from "react";
+import { signIn } from "next-auth/react";
 
 function GoogleIcon() {
   return (
@@ -30,16 +33,33 @@ function GoogleIcon() {
 export default function GoogleSignInButton({
   className = "",
   type = "button",
+  redirectTo,
+  disabled,
+  onClick,
   ...props
-}: ComponentPropsWithoutRef<"button">) {
+}: ComponentPropsWithoutRef<"button"> & { redirectTo?: string }) {
+  const [isPending, setIsPending] = useState(false);
+
   return (
     <button
       type={type}
+      disabled={disabled || isPending}
+      onClick={async (event) => {
+        onClick?.(event);
+
+        if (event.defaultPrevented || !redirectTo) {
+          return;
+        }
+
+        setIsPending(true);
+        await signIn("google", { redirectTo });
+        setIsPending(false);
+      }}
       {...props}
       className={`flex w-full min-h-14 items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white text-base font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${className}`}
     >
       <GoogleIcon />
-      <span>Entrar com Google</span>
+      <span>{isPending ? "Abrindo Google..." : "Entrar com Google"}</span>
     </button>
   );
 }
