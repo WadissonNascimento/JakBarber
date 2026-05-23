@@ -49,6 +49,18 @@ function getPublicHost(headers: Headers, requestUrl: URL) {
   return host || forwardedHost || requestHost || requestUrl.host;
 }
 
+function hostHasExplicitPort(host: string) {
+  return /:\d+$/.test(host);
+}
+
+function applyPublicUrlHost(url: URL, publicHost: string) {
+  url.host = publicHost;
+
+  if (!isLocalHost(publicHost) && !hostHasExplicitPort(publicHost)) {
+    url.port = "";
+  }
+}
+
 function normalizeAuthRequest(request: NextRequest) {
   const headers = new Headers(request.headers);
   const url = new URL(request.url);
@@ -64,11 +76,15 @@ function normalizeAuthRequest(request: NextRequest) {
   if (publicHost) {
     headers.set("host", publicHost);
     headers.set("x-forwarded-host", publicHost);
-    url.host = publicHost;
+    applyPublicUrlHost(url, publicHost);
   }
 
   headers.set("x-forwarded-proto", publicProto);
   url.protocol = `${publicProto}:`;
+
+  if (publicHost && !isLocalHost(publicHost) && !hostHasExplicitPort(publicHost)) {
+    url.port = "";
+  }
 
   const init: RequestInit & { duplex?: "half" } = {
     method: request.method,
