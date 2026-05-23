@@ -15,7 +15,10 @@ import {
   setAppointmentItemDeliveryStatus,
   updateAppointmentStatusForBarber,
 } from "@/lib/appointmentMutations";
-import { notifyCustomerAppointmentCompleted } from "@/lib/appointmentEmails";
+import {
+  notifyCustomerAppointmentCancelled,
+  notifyCustomerAppointmentCompleted,
+} from "@/lib/appointmentEmails";
 import { notifyBarberNoShow } from "@/lib/barberEmails";
 import {
   mutationError,
@@ -29,6 +32,12 @@ import {
   BookingAvailabilityError,
   getBookingAvailability,
 } from "@/lib/bookingAvailability";
+import {
+  getAppointmentOccupiedDuration,
+  isActiveAppointmentStatus,
+  minutesToTime,
+  toMinutes,
+} from "@/lib/barberSchedule";
 import { sanitizeEmailInput } from "@/lib/inputSanitization";
 import { prisma } from "@/lib/prisma";
 import { normalizePaymentMethod } from "@/lib/paymentMethods";
@@ -37,7 +46,14 @@ import {
   isValidBrazilianPhone,
   normalizeBrazilianPhoneForSubmit,
 } from "@/lib/phone";
-import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
+import {
+  createScheduleDateTimeInput,
+  formatScheduleTime,
+  getCurrentScheduleDateValue,
+  getCurrentScheduleMinutes,
+  getScheduleDayRange,
+  getScheduleMinutes,
+} from "@/lib/scheduleTime";
 import { enforceRateLimit } from "@/lib/security";
 import { isUniqueConstraintError } from "@/lib/userIdentity";
 import {
@@ -68,6 +84,20 @@ type WalkInSlotsPayload = {
   periodSlots: WalkInPeriodSlots;
 };
 
+type QuickFitInPreviewPayload = {
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  conflict: {
+    appointmentId: string;
+    publicId: number;
+    customerName: string;
+    startTime: string;
+    endTime: string;
+  } | null;
+};
+
 const emptyWalkInPeriodSlots = (): WalkInPeriodSlots => ({
   morning: [],
   afternoon: [],
@@ -82,6 +112,100 @@ function walkInSlotsError(message: string): MutationResult<WalkInSlotsPayload> {
       periodSlots: emptyWalkInPeriodSlots(),
     },
   } as MutationResult<WalkInSlotsPayload>;
+}
+
+function normalizeQuickFitInDuration(value: unknown) {
+  const duration = Number(value);
+
+  if (!Number.isInteger(duration) || duration < 5 || duration > 240) {
+    return null;
+  }
+
+  return duration;
+}
+
+async function getQuickFitInPreviewForBarber({
+  shopId,
+  barberId,
+  durationMinutes,
+  now = new Date(),
+}: {
+  shopId: string;
+  barberId: string;
+  durationMinutes: number;
+  now?: Date;
+}): Promise<QuickFitInPreviewPayload> {
+  const date = getCurrentScheduleDateValue(now);
+  const startMinutes = getCurrentScheduleMinutes(now);
+  const endMinutes = startMinutes + durationMinutes;
+
+  if (endMinutes > 24 * 60) {
+    throw new Error("A duracao informada ultrapassa o dia de atendimento.");
+  }
+
+  const dayRange = getScheduleDayRange(date);
+
+  if (!dayRange) {
+    throw new Error("Nao foi possivel calcular o horario atual.");
+  }
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      shopId,
+      barberId,
+      date: {
+        gte: dayRange.start,
+        lte: dayRange.end,
+      },
+    },
+    select: {
+      id: true,
+      publicId: true,
+      date: true,
+      status: true,
+      manualDurationMinutes: true,
+      customer: {
+        select: {
+          name: true,
+        },
+      },
+      services: {
+        select: {
+          durationSnapshot: true,
+          bufferAfter: true,
+        },
+      },
+    },
+  });
+
+  const conflict = appointments.find((appointment) => {
+    if (!isActiveAppointmentStatus(appointment.status)) {
+      return false;
+    }
+
+    const existingStart = getScheduleMinutes(new Date(appointment.date));
+    const existingEnd = existingStart + getAppointmentOccupiedDuration(appointment);
+
+    return startMinutes < existingEnd && endMinutes > existingStart;
+  });
+
+  return {
+    date,
+    startTime: minutesToTime(startMinutes),
+    endTime: minutesToTime(endMinutes),
+    durationMinutes,
+    conflict: conflict
+      ? {
+          appointmentId: conflict.id,
+          publicId: conflict.publicId,
+          customerName: conflict.customer?.name || "Cliente",
+          startTime: formatScheduleTime(new Date(conflict.date)),
+          endTime: minutesToTime(
+            getScheduleMinutes(new Date(conflict.date)) + getAppointmentOccupiedDuration(conflict)
+          ),
+        }
+      : null,
+  };
 }
 
 async function requireBarber() {
@@ -317,8 +441,8 @@ export async function updateAppointmentStatusAction(
     return mutationError("Status de agendamento invalido.");
   }
 
-  if (status === "CANCELLED") {
-    return mutationError("Somente o admin pode cancelar agendamentos.");
+  if (status === "CANCELLED" && !cancellationReason) {
+    return mutationError("Informe o motivo do cancelamento.");
   }
 
   const currentAppointment = await prisma.appointment.findFirst({
@@ -360,6 +484,10 @@ export async function updateAppointmentStatusAction(
 
     if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
       await notifyBarberNoShow(appointmentId);
+    }
+
+    if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
+      await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
     }
   });
 
@@ -515,9 +643,29 @@ export async function createWalkInAppointmentAction(
     .map((value) => String(value).trim())
     .filter(Boolean)
     .map((extraProductId) => ({ extraProductId, quantity: 1 }));
-  const date = String(formData.get("date") || "").trim();
-  const startTime = String(formData.get("startTime") || "").trim();
+  const fitInMode = String(formData.get("fitInMode") || "standard") === "quick"
+    ? "quick"
+    : "standard";
+  const manualDurationMinutes = normalizeQuickFitInDuration(
+    formData.get("manualDurationMinutes")
+  );
+  let date = String(formData.get("date") || "").trim();
+  let startTime = String(formData.get("startTime") || "").trim();
   const extraNotes = String(formData.get("notes") || "").trim();
+
+  if (fitInMode === "quick") {
+    if (!manualDurationMinutes) {
+      return mutationError("Informe uma duracao entre 5 e 240 minutos.");
+    }
+
+    const now = new Date();
+    date = getCurrentScheduleDateValue(now);
+    startTime = minutesToTime(getCurrentScheduleMinutes(now));
+
+    if (toMinutes(startTime) + manualDurationMinutes > 24 * 60) {
+      return mutationError("A duracao informada ultrapassa o dia de atendimento.");
+    }
+  }
 
   const rateLimit = await enforceRateLimit({
     scope: "barber:walk_in",
@@ -566,15 +714,17 @@ export async function createWalkInAppointmentAction(
   }
 
   try {
-    const availability = await getBookingAvailability({
-      barberId: barber.id,
-      serviceIds: selectedServiceIds,
-      date,
-    });
-    const availableSlots = flattenAvailableSlots(availability.periodSlots);
+    if (fitInMode === "standard") {
+      const availability = await getBookingAvailability({
+        barberId: barber.id,
+        serviceIds: selectedServiceIds,
+        date,
+      });
+      const availableSlots = flattenAvailableSlots(availability.periodSlots);
 
-    if (!availableSlots.includes(startTime)) {
-      return mutationError("Escolha um dos horarios disponiveis para esse encaixe.");
+      if (!availableSlots.includes(startTime)) {
+        return mutationError("Escolha um dos horarios disponiveis para esse encaixe.");
+      }
     }
   } catch (error) {
     if (error instanceof BookingAvailabilityError) {
@@ -617,10 +767,15 @@ export async function createWalkInAppointmentAction(
       extras: selectedExtras,
       date,
       time: startTime,
+      conflictMode: fitInMode === "quick" ? "SAME_START_ONLY" : "OVERLAP",
+      manualDurationMinutes: fitInMode === "quick" ? manualDurationMinutes : null,
       notes: formatManualFitInNotes({
         customerName: displayCustomerName,
         customerPhone: displayCustomerPhone,
-        notes: extraNotes,
+        notes:
+          fitInMode === "quick" && manualDurationMinutes
+            ? `Encaixe rapido (${manualDurationMinutes} min)${extraNotes ? ` - ${extraNotes}` : ""}`
+            : extraNotes,
       }),
     });
   } catch (error) {
@@ -632,7 +787,43 @@ export async function createWalkInAppointmentAction(
   }
 
   revalidateBarberViews();
-  return mutationSuccess("Encaixe criado com sucesso!");
+  return mutationSuccess(
+    fitInMode === "quick"
+      ? "Encaixe rapido criado com sucesso!"
+      : "Encaixe criado com sucesso!"
+  );
+}
+
+export async function getQuickFitInPreviewAction({
+  durationMinutes,
+}: {
+  durationMinutes: number;
+}): Promise<MutationResult<QuickFitInPreviewPayload>> {
+  const barber = await requireBarber();
+  const normalizedDuration = normalizeQuickFitInDuration(durationMinutes);
+
+  if (!normalizedDuration) {
+    return mutationError(
+      "Informe uma duracao entre 5 e 240 minutos."
+    ) as MutationResult<QuickFitInPreviewPayload>;
+  }
+
+  try {
+    return mutationSuccess(
+      "Previa do encaixe rapido calculada.",
+      await getQuickFitInPreviewForBarber({
+        shopId: barber.shopId,
+        barberId: barber.id,
+        durationMinutes: normalizedDuration,
+      })
+    );
+  } catch (error) {
+    return mutationError(
+      error instanceof Error
+        ? error.message
+        : "Nao foi possivel calcular o encaixe rapido."
+    ) as MutationResult<QuickFitInPreviewPayload>;
+  }
 }
 
 export async function getWalkInAvailableSlotsAction({

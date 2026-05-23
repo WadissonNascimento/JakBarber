@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { CheckCircle2, ChevronDown, Pencil, ShoppingBag, UserX, XCircle } from "lucide-react";
 import OperationalFeedbackDialog, {
   type OperationalFeedbackState,
 } from "@/components/ui/OperationalFeedbackDialog";
@@ -129,6 +130,15 @@ export default function BarberAppointmentActions({
       return;
     }
 
+    const cancellationReason =
+      nextStatus === "CANCELLED"
+        ? window.prompt("Motivo do cancelamento:")?.trim()
+        : "";
+
+    if (nextStatus === "CANCELLED" && !cancellationReason) {
+      return;
+    }
+
     setPendingStatus(nextStatus);
     setIsSubmittingStatus(true);
 
@@ -147,6 +157,10 @@ export default function BarberAppointmentActions({
               `${decision.appointmentItemId}:${decision.isDelivered ? "delivered" : "not_delivered"}`
             );
           }
+        }
+
+        if (cancellationReason) {
+          formData.set("cancellationReason", cancellationReason);
         }
 
         const result = await updateAppointmentStatusAction(formData);
@@ -194,6 +208,7 @@ export default function BarberAppointmentActions({
           disabled={isPending}
           pending={false}
           variant="secondary"
+          icon={<Pencil />}
           onClick={() => setIsEditing(true)}
         >
           Editar
@@ -204,9 +219,32 @@ export default function BarberAppointmentActions({
           disabled={isPending}
           pending={pendingStatus === "COMPLETED"}
           variant="primary"
+          icon={<CheckCircle2 />}
           onClick={requestCompletion}
         >
           Concluir
+        </ActionButton>
+      ) : null}
+      {canComplete ? (
+        <ActionButton
+          disabled={isPending}
+          pending={pendingStatus === "NO_SHOW"}
+          variant="warning"
+          icon={<UserX />}
+          onClick={() => submitStatus("NO_SHOW")}
+        >
+          Faltou
+        </ActionButton>
+      ) : null}
+      {canComplete ? (
+        <ActionButton
+          disabled={isPending}
+          pending={pendingStatus === "CANCELLED"}
+          variant="danger"
+          icon={<XCircle />}
+          onClick={() => submitStatus("CANCELLED")}
+        >
+          Cancelar
         </ActionButton>
       ) : null}
       {isPaymentPromptOpen ? (
@@ -496,11 +534,29 @@ function BarberEditAppointmentModal({
             </div>
           </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-              Extras
-            </p>
-            <div className="mt-2 grid gap-2">
+          <details className="group rounded-2xl border border-white/10 bg-white/[0.025]">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-[var(--brand-strong)]/25 bg-[var(--brand)]/10 px-3 py-2.5 transition hover:border-[var(--brand-strong)]/45 hover:bg-[var(--brand)]/15 [&::-webkit-details-marker]:hidden">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-black/20 text-[var(--brand-strong)]">
+                  <ShoppingBag className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-black uppercase tracking-[0.18em] text-white">
+                    Extras
+                  </span>
+                  <span className="block text-xs font-semibold text-zinc-400">
+                    Clique para escolher produtos extras
+                  </span>
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-black text-[var(--brand-strong)]">
+                  {selectedExtraIds.length}
+                </span>
+                <ChevronDown className="h-4 w-4 text-zinc-400 transition group-open:rotate-180 group-open:text-white" />
+              </span>
+            </summary>
+            <div className="grid gap-2 border-t border-white/10 p-3">
               {extras.map((extra) => {
                 const checked = selectedExtraIds.includes(extra.id);
 
@@ -533,7 +589,7 @@ function BarberEditAppointmentModal({
                 );
               })}
             </div>
-          </div>
+          </details>
 
           <label className="block text-sm font-semibold text-zinc-200">
             Observacoes
@@ -584,21 +640,28 @@ function BarberEditAppointmentModal({
 
 function ActionButton({
   children,
+  icon,
   onClick,
   pending,
   disabled,
   variant,
 }: {
   children: ReactNode;
+  icon: ReactNode;
   onClick: () => void;
   pending: boolean;
   disabled: boolean;
-  variant: "primary" | "secondary" | "danger";
+  variant: "primary" | "secondary" | "warning" | "danger";
 }) {
   const classes = {
-    primary: "bg-[var(--brand)] text-white hover:brightness-110",
-    secondary: "border border-white/10 text-zinc-100 hover:bg-white/[0.06]",
-    danger: "border border-red-500/40 text-red-200 hover:bg-red-500/10",
+    primary:
+      "border border-sky-300/30 bg-[linear-gradient(135deg,var(--brand),#38bdf8)] text-white shadow-[0_12px_30px_rgba(14,165,233,0.28)] hover:brightness-110",
+    secondary:
+      "border border-white/10 bg-white/[0.035] text-zinc-100 hover:border-white/20 hover:bg-white/[0.07]",
+    warning:
+      "border border-amber-300/30 bg-amber-400/10 text-amber-100 hover:border-amber-200/45 hover:bg-amber-400/15",
+    danger:
+      "border border-red-400/35 bg-red-500/10 text-red-100 hover:border-red-300/50 hover:bg-red-500/15",
   };
 
   return (
@@ -606,9 +669,10 @@ function ActionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${classes[variant]}`}
+      className={`inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0 ${classes[variant]}`}
     >
-      {pending ? "Salvando..." : children}
+      {pending ? null : icon}
+      <span className="truncate">{pending ? "Salvando..." : children}</span>
     </button>
   );
 }

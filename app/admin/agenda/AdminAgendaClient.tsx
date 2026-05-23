@@ -1,18 +1,19 @@
 "use client";
 
-import type { FormEvent, ReactNode } from "react";
+import type { ButtonHTMLAttributes, FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-  BadgeDollarSign,
-  CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   ClipboardList,
+  PencilLine,
+  RotateCcw,
+  ShoppingBag,
   UsersRound,
-  Scissors,
-  UserRound,
+  UserX,
   XCircle,
 } from "lucide-react";
 import BackLink from "@/components/ui/BackLink";
@@ -23,6 +24,7 @@ import OperationalFeedbackDialog, {
 } from "@/components/ui/OperationalFeedbackDialog";
 import { getAppointmentItemsLabel } from "@/lib/appointmentItems";
 import StatusBadge from "@/components/ui/StatusBadge";
+import AdminWalkInAppointmentButton from "./AdminWalkInAppointmentButton";
 import {
   getAppointmentDisplayName,
   getAppointmentGrandTotal,
@@ -139,6 +141,7 @@ export default function AdminAgendaClient({
     () => getVisibleAgendaSummary(visibleAppointments),
     [visibleAppointments]
   );
+  const selectedBarberId = draftFilters.barberId || appliedFilters.barberId || "";
 
   useEffect(() => {
     setDraftFilters(initialFilters);
@@ -202,7 +205,6 @@ export default function AdminAgendaClient({
               status visível e leitura confortável no celular.
             </p>
           </div>
-
         </div>
         <div className="mt-5 min-w-0 border-t border-white/10 pt-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -328,6 +330,16 @@ export default function AdminAgendaClient({
                 disabled={isFilterPending}
               />
             ))}
+          </div>
+
+          <div className="mt-3 border-t border-white/10 pt-3">
+            <AdminWalkInAppointmentButton
+              barbers={barbers}
+              services={services}
+              extras={extras}
+              selectedBarberId={selectedBarberId}
+              selectedDate={draftFilters.dateFrom || appliedFilters.dateFrom}
+            />
           </div>
         </div>
 
@@ -659,69 +671,94 @@ function AppointmentMobileCard({
   const total = getAppointmentGrandTotal(appointment.services, appointment.items);
   const extrasLabel = getAppointmentItemsLabel(appointment.items);
   const notes = appointment.notes?.trim();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const status = normalizeAppointmentStatus(appointment.status);
+  const serviceName = getAppointmentDisplayName(appointment.services);
 
   return (
-    <article className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
-            {formatAppointmentPublicId(appointment.publicId)}
-          </p>
-          <h3 className="mt-1 line-clamp-2 text-lg font-bold leading-tight text-white">
-            {appointment.customer.name || "Cliente"}
-          </h3>
-        </div>
-        <StatusBadge
-          variant={appointmentStatusVariant(appointment.status)}
-          className="max-w-[132px] shrink-0 justify-center px-2.5 text-[10px]"
-        >
-          {appointmentStatusLabel(appointment.status)}
-        </StatusBadge>
+    <article
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      onClick={() => setIsExpanded((current) => !current)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          setIsExpanded((current) => !current);
+        }
+      }}
+      className="relative min-w-0 max-w-full cursor-pointer overflow-hidden rounded-[24px] border border-white/10 bg-black/25 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.2)] transition hover:border-white/15 hover:bg-white/[0.035]"
+    >
+      <StatusBadge
+        variant={appointmentStatusVariant(appointment.status)}
+        className="absolute right-4 top-4 w-fit max-w-[130px] shrink-0 justify-center px-2.5 py-1 text-[10px]"
+      >
+        {appointmentStatusLabel(appointment.status)}
+      </StatusBadge>
+
+      <div className="min-w-0 pr-28">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+          {formatAppointmentPublicId(appointment.publicId)}
+        </p>
+        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">
+          {formatScheduleDate(date)}
+        </p>
+        <p className="text-3xl font-black leading-none text-white">
+          {formatScheduleTime(date)}
+        </p>
+        <h3 className="mt-3 min-w-0 truncate text-base font-semibold text-white">
+          {appointment.customer.name || "Cliente"}
+        </h3>
+        <p className="mt-1 min-w-0 truncate text-sm text-zinc-400">{serviceName}</p>
       </div>
 
-      {normalizeAppointmentStatus(appointment.status) === "COMPLETED" ? (
-        <div className="mt-3 inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
-          {paymentMethodLabel(appointment.paymentMethod)}
+      <div className="mt-2 flex min-w-0 items-center justify-between gap-3 border-t border-white/10 pt-2">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
+          <UsersRound className="h-3.5 w-3.5 shrink-0 text-[var(--brand-strong)]/80" />
+          <span className="shrink-0 font-semibold">Responsavel</span>
+          <span className="min-w-0 truncate font-bold text-zinc-300">
+            {appointment.barber.name || "Barbeiro"}
+          </span>
         </div>
+        <span className="shrink-0 text-xs font-black text-zinc-300">{formatCurrency(total)}</span>
+      </div>
+
+      {status === "COMPLETED" ? (
+        <span className="absolute right-4 top-12 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+          {paymentMethodLabel(appointment.paymentMethod)}
+        </span>
       ) : null}
 
-      <div className="mt-4 grid min-w-0 grid-cols-2 gap-2">
-        <InfoTile icon={<CalendarDays />} label="Data" value={formatScheduleDate(date)} />
-        <InfoTile icon={<Clock3 />} label="Hora" value={formatScheduleTime(date)} />
-        <InfoTile
-          icon={<Scissors />}
-          label="Barbeiro"
-          value={appointment.barber.name || "Barbeiro"}
-        />
-        <InfoTile icon={<BadgeDollarSign />} label="Valor" value={formatCurrency(total)} />
-      </div>
-
-      <div className="mt-3 min-w-0 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+      {isExpanded ? (
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+      <div className="mt-3 min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
         <div className="flex items-start gap-2">
-          <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
               Serviço
             </p>
-            <p className="mt-1 break-words text-sm font-semibold text-white">
-              {getAppointmentDisplayName(appointment.services)}
+            <p className="mt-0.5 break-words text-sm font-semibold text-white">
+              {serviceName}
             </p>
           </div>
         </div>
 
-        <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="mt-2 border-t border-white/10 pt-2">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
             Extras
           </p>
-          <p className="mt-1 break-words text-sm text-zinc-300">{extrasLabel}</p>
+          <p className="mt-0.5 break-words text-sm text-zinc-300">{extrasLabel}</p>
         </div>
 
         {notes ? (
-          <div className="mt-3 border-t border-white/10 pt-3">
+          <div className="mt-2 border-t border-white/10 pt-2">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
               Observações
             </p>
-            <p className="mt-1 break-words text-sm text-zinc-300">{notes}</p>
+            <p className="mt-0.5 break-words text-sm text-zinc-300">{notes}</p>
           </div>
         ) : null}
       </div>
@@ -733,6 +770,8 @@ function AppointmentMobileCard({
           extras={extras}
         />
       </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -757,8 +796,9 @@ export function AdminAppointmentActions({
     useState<OperationalFeedbackState>(null);
   const status = normalizeAppointmentStatus(appointment.status);
   const isCompleted = status === "COMPLETED";
-  const canEdit = !["CANCELLED", "NO_SHOW"].includes(status);
-  const canChangeStatus = !["CANCELLED", "NO_SHOW"].includes(status);
+  const isFinalStatus = ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(status);
+  const canEdit = true;
+  const canChangeStatus = true;
   const actionPending = isPending || isSubmitting;
 
   function runStatus(
@@ -830,55 +870,60 @@ export function AdminAppointmentActions({
 
   return (
     <>
-    <div className="grid min-w-[220px] grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+    <div className="grid min-w-[220px] grid-cols-2 gap-2 sm:grid-cols-4">
       {canEdit ? (
-        <button
+        <AdminActionButton
+          icon={<PencilLine className="h-4 w-4" />}
+          label="Editar"
+          tone="neutral"
           type="button"
           disabled={actionPending}
           onClick={() => setIsEditing(true)}
-          className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-zinc-100 transition hover:bg-white/[0.06] disabled:opacity-60"
-        >
-          Editar
-        </button>
+        />
       ) : null}
 
       {canChangeStatus ? (
         <>
-          {isCompleted ? (
-            <button
+          {isFinalStatus ? (
+            <AdminActionButton
+              icon={<RotateCcw className="h-4 w-4" />}
+              label="Reabrir"
+              tone="sky"
               type="button"
               disabled={actionPending}
               onClick={() => runStatus("CONFIRMED")}
-              className="rounded-xl border border-sky-300/35 px-3 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-400/10 disabled:opacity-60"
-            >
-              Reabrir
-            </button>
-          ) : (
-            <button
+            />
+          ) : null}
+          {!isCompleted ? (
+            <AdminActionButton
+              icon={<CheckCircle2 className="h-4 w-4" />}
+              label="Concluir"
+              tone="emerald"
               type="button"
               disabled={actionPending}
               onClick={() => runStatus("COMPLETED")}
-              className="rounded-xl border border-emerald-300/35 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/10 disabled:opacity-60"
-            >
-              Concluir
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={actionPending}
-            onClick={() => runStatus("NO_SHOW")}
-            className="rounded-xl border border-orange-300/35 px-3 py-2 text-xs font-bold text-orange-100 transition hover:bg-orange-400/10 disabled:opacity-60"
-          >
-            Falta
-          </button>
-          <button
-            type="button"
-            disabled={actionPending}
-            onClick={() => runStatus("CANCELLED")}
-            className="rounded-xl border border-red-400/40 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-500/10 disabled:opacity-60"
-          >
-            Cancelar
-          </button>
+            />
+          ) : null}
+          {status !== "NO_SHOW" ? (
+            <AdminActionButton
+              icon={<UserX className="h-4 w-4" />}
+              label="Falta"
+              tone="amber"
+              type="button"
+              disabled={actionPending}
+              onClick={() => runStatus("NO_SHOW")}
+            />
+          ) : null}
+          {status !== "CANCELLED" ? (
+            <AdminActionButton
+              icon={<XCircle className="h-4 w-4" />}
+              label="Cancelar"
+              tone="rose"
+              type="button"
+              disabled={actionPending}
+              onClick={() => runStatus("CANCELLED")}
+            />
+          ) : null}
         </>
       ) : (
         <span className="self-center text-xs font-semibold text-zinc-500">
@@ -988,6 +1033,43 @@ function AdminPaymentMethodPrompt({
   );
 }
 
+function AdminActionButton({
+  icon,
+  label,
+  tone,
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  icon: ReactNode;
+  label: string;
+  tone: "neutral" | "sky" | "emerald" | "amber" | "rose";
+}) {
+  const styles = {
+    neutral:
+      "border-white/10 bg-white/[0.035] text-zinc-100 hover:border-white/20 hover:bg-white/[0.07]",
+    sky:
+      "border-sky-300/30 bg-sky-400/10 text-sky-100 hover:border-sky-300/50 hover:bg-sky-400/15",
+    emerald:
+      "border-emerald-300/30 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-400/15",
+    amber:
+      "border-amber-300/30 bg-amber-400/10 text-amber-100 hover:border-amber-300/50 hover:bg-amber-400/15",
+    rose:
+      "border-rose-300/30 bg-rose-500/10 text-rose-100 hover:border-rose-300/50 hover:bg-rose-500/15",
+  }[tone];
+
+  return (
+    <button
+      {...props}
+      className={`group inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-black transition shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
+    >
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-white/8 transition group-hover:bg-white/12 [&>svg]:h-3.5 [&>svg]:w-3.5">
+        {icon}
+      </span>
+      <span className="min-w-0 truncate">{label}</span>
+    </button>
+  );
+}
+
 function AdminAppointmentEditModal({
   appointment,
   barbers,
@@ -1003,6 +1085,7 @@ function AdminAppointmentEditModal({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isMounted, setIsMounted] = useState(false);
   const [dialogFeedback, setDialogFeedback] =
     useState<OperationalFeedbackState>(null);
   const [selectedBarberId, setSelectedBarberId] = useState(appointment.barber.id);
@@ -1018,6 +1101,20 @@ function AdminAppointmentEditModal({
   const availableServices = services.filter(
     (service) => !service.barberId || service.barberId === selectedBarberId
   );
+
+  useEffect(() => {
+    setIsMounted(true);
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, []);
 
   function submitEdit(formData: FormData) {
     startTransition(async () => {
@@ -1046,11 +1143,21 @@ function AdminAppointmentEditModal({
     });
   }
 
-  return (
-    <div className="fixed inset-0 z-[280] overflow-y-auto bg-black/75 px-4 py-6 backdrop-blur-md">
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[280] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-3 py-4 backdrop-blur-md sm:px-4 sm:py-6"
+      onWheel={(event) => event.preventDefault()}
+      onTouchMove={(event) => event.preventDefault()}
+    >
       <form
         action={submitEdit}
-        className="mx-auto w-full max-w-2xl rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
+        className="max-h-[calc(100svh-2rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(18,22,32,0.98),rgba(8,12,20,0.98))] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)] sm:max-h-[calc(100svh-3rem)]"
+        onWheel={(event) => event.stopPropagation()}
+        onTouchMove={(event) => event.stopPropagation()}
       >
         <input type="hidden" name="appointmentId" value={appointment.id} />
         <div className="flex items-start justify-between gap-4">
@@ -1149,11 +1256,29 @@ function AdminAppointmentEditModal({
           </div>
         </div>
 
-        <div className="mt-5">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-            Extras
-          </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <details className="group mt-5 rounded-2xl border border-white/10 bg-white/[0.025]">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-[var(--brand-strong)]/25 bg-[var(--brand)]/10 px-3 py-2.5 transition hover:border-[var(--brand-strong)]/45 hover:bg-[var(--brand)]/15 [&::-webkit-details-marker]:hidden">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-black/20 text-[var(--brand-strong)]">
+                <ShoppingBag className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-black uppercase tracking-[0.18em] text-white">
+                  Extras
+                </span>
+                <span className="block text-xs font-semibold normal-case tracking-normal text-zinc-400">
+                  Clique para escolher produtos extras
+                </span>
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-black text-[var(--brand-strong)]">
+                {selectedExtraIds.size}
+              </span>
+              <ChevronDown className="h-4 w-4 text-zinc-400 transition group-open:rotate-180 group-open:text-white" />
+            </span>
+          </summary>
+          <div className="grid gap-2 border-t border-white/10 p-3 sm:grid-cols-2">
             {extras.map((extra) => (
               <label
                 key={extra.id}
@@ -1176,7 +1301,7 @@ function AdminAppointmentEditModal({
               </label>
             ))}
           </div>
-        </div>
+        </details>
 
         <label className="mt-5 block text-sm font-semibold text-zinc-200">
           Observações
@@ -1201,7 +1326,8 @@ function AdminAppointmentEditModal({
         feedback={dialogFeedback}
         onClose={() => setDialogFeedback(null)}
       />
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1212,28 +1338,6 @@ function ReadOnlyEditTile({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-1 truncate text-sm font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
-function InfoTile({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-3">
-      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
-        <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
-          {icon}
-        </span>
-        <span className="truncate">{label}</span>
-      </div>
-      <p className="mt-2 break-words text-sm font-semibold text-white">{value}</p>
     </div>
   );
 }

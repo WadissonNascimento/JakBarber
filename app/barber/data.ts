@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAppointmentServicesOccupiedDuration } from "@/lib/barberSchedule";
+import { getAppointmentOccupiedDuration } from "@/lib/barberSchedule";
 import {
   getAppointmentDisplayName,
   getAppointmentGrandTotal,
@@ -465,7 +465,7 @@ export async function getBarberDashboardData(
         items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
-        occupiedDuration: getAppointmentServicesOccupiedDuration(appointment.services),
+        occupiedDuration: getAppointmentOccupiedDuration(appointment),
       })),
       nextAppointments: upcomingAppointments.map((appointment) => ({
         id: appointment.id,
@@ -490,7 +490,7 @@ export async function getBarberDashboardData(
         items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
-        occupiedDuration: getAppointmentServicesOccupiedDuration(appointment.services),
+        occupiedDuration: getAppointmentOccupiedDuration(appointment),
       })),
     },
     appointments: appointments.map((appointment) => ({
@@ -846,7 +846,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
         items: getAppointmentCardItems(appointment.items),
         totalPrice: getAppointmentGrandTotal(appointment.services, appointment.items),
         serviceRevenue: getAppointmentServiceRevenue(appointment.services),
-        occupiedDuration: getAppointmentServicesOccupiedDuration(appointment.services),
+        occupiedDuration: getAppointmentOccupiedDuration(appointment),
       })),
       nextAppointments: [],
     },

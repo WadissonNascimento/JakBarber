@@ -1,67 +1,38 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
+  CalendarPlus,
   Check,
   CheckCircle2,
   Clock3,
-  Plus,
+  Loader2,
   Scissors,
-  Search,
   X,
 } from "lucide-react";
-import FeedbackMessage from "@/components/FeedbackMessage";
 import OperationalFeedbackDialog, {
   type OperationalFeedbackState,
 } from "@/components/ui/OperationalFeedbackDialog";
 import {
-  getCurrentScheduleDateValue,
-} from "@/lib/scheduleTime";
-import { formatBrazilianPhone, maskBrazilianPhone } from "@/lib/phone";
-import { isValidBrazilianPhone } from "@/lib/phone";
-import {
   isValidCustomerFullName,
   normalizeCustomerName,
 } from "@/lib/customerRegistrationValidation";
+import { formatBrazilianPhone, isValidBrazilianPhone, maskBrazilianPhone } from "@/lib/phone";
+import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import {
-  createWalkInAppointmentAction,
-  getQuickFitInPreviewAction,
-  getWalkInAvailableSlotsAction,
-} from "../actions";
-import type { getBarberDashboardData } from "../data";
-
-type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
-
-type WalkInAppointmentCardProps = {
-  services: BarberDashboardData["walkInServices"];
-  extras: BarberDashboardData["walkInExtras"];
-  clients: BarberDashboardData["clients"];
-};
-
-type WalkInSuccessDetails = {
-  customerName: string;
-  serviceName: string;
-  date: string;
-  startTime: string;
-};
-
-const WALK_IN_DRAFT_MAX_AGE_MS = 30 * 60 * 1000;
-
-type WalkInDraft = {
-  savedAt: number;
-  selectedCustomerId: string;
-  customerName: string;
-  customerPhone: string;
-  selectedServiceIds: string[];
-  hasExtras: boolean;
-  selectedExtraIds: string[];
-  selectedDate: string;
-  startTime: string;
-  notes: string;
-};
+  createAdminWalkInAppointmentAction,
+  getAdminQuickFitInPreviewAction,
+  getAdminWalkInAvailableSlotsAction,
+} from "./actions";
+import type {
+  AdminAgendaBarber,
+  AdminAgendaExtra,
+  AdminAgendaService,
+} from "./AdminAgendaClient";
 
 type WalkInStep =
   | "customer"
@@ -88,65 +59,44 @@ type QuickFitInPreview = {
   } | null;
 };
 
-type WalkInPeriodSlots = {
+type PeriodSlots = {
   morning: string[];
   afternoon: string[];
   night: string[];
 };
 
-type WalkInDateOption = {
-  value: string;
-  day: string;
-  weekday: string;
-  label: string;
+type PendingSummary = {
+  customerName: string;
+  customerPhone: string;
+  serviceName: string;
+  extrasLabel: string;
+  date: string;
+  startTime: string;
+  notes: string;
 };
 
-const emptyWalkInPeriodSlots = (): WalkInPeriodSlots => ({
+const emptyPeriodSlots = (): PeriodSlots => ({
   morning: [],
   afternoon: [],
   night: [],
 });
 
-function getWalkInDraftKey() {
-  if (typeof window === "undefined") {
-    return "jakbarber:walk-in-draft";
-  }
-
-  return `jakbarber:walk-in-draft:${window.location.host}`;
-}
-
-
-function formatDateValue(value: string) {
-  const [year, month, day] = value.split("-");
-
-  if (!year || !month || !day) {
-    return value || "Data nao informada";
-  }
-
-  return `${day}/${month}/${year}`;
-}
-
-function addDaysToDateValue(value: string, daysToAdd: number) {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(year, month - 1, day + daysToAdd);
-  const nextYear = date.getFullYear();
-  const nextMonth = String(date.getMonth() + 1).padStart(2, "0");
-  const nextDay = String(date.getDate()).padStart(2, "0");
-
-  return `${nextYear}-${nextMonth}-${nextDay}`;
-}
-
-function getWalkInDateOptions(): WalkInDateOption[] {
-  const today = getCurrentScheduleDateValue();
+function getAdminWalkInDateOptions() {
+  const todayValue = getCurrentScheduleDateValue();
+  const [year, month, day] = todayValue.split("-").map(Number);
+  const today = new Date(year, month - 1, day);
 
   return Array.from({ length: 14 }, (_, index) => {
-    const value = addDaysToDateValue(today, index);
-    const [year, month, day] = value.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    const value = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
 
     return {
       value,
-      day: String(day).padStart(2, "0"),
       weekday: date
         .toLocaleDateString("pt-BR", { weekday: "short" })
         .replace(".", ""),
@@ -158,31 +108,42 @@ function getWalkInDateOptions(): WalkInDateOption[] {
   });
 }
 
-export default function WalkInAppointmentCard({
+function formatDateValue(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return value || "-";
+  }
+
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+export default function AdminWalkInAppointmentButton({
+  barbers,
   services,
   extras,
-  clients,
-}: WalkInAppointmentCardProps) {
+  selectedBarberId,
+  selectedDate,
+}: {
+  barbers: AdminAgendaBarber[];
+  services: AdminAgendaService[];
+  extras: AdminAgendaExtra[];
+  selectedBarberId: string;
+  selectedDate: string;
+}) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [isClientPickerOpen, setIsClientPickerOpen] = useState(false);
   const [isQuickConflictOpen, setIsQuickConflictOpen] = useState(false);
-  const [clientSearch, setClientSearch] = useState("");
-  const [feedback, setFeedback] = useState<{
-    message: string | null;
-    tone: "success" | "error" | "info";
-  }>({ message: null, tone: "success" });
-  const [successDetails, setSuccessDetails] = useState<WalkInSuccessDetails | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [isSubmitLocked, setIsSubmitLocked] = useState(false);
-  const [isQuickPreviewLoading, setIsQuickPreviewLoading] = useState(false);
-  const [actionFeedback, setActionFeedback] =
-    useState<OperationalFeedbackState>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [step, setStep] = useState<WalkInStep>("customer");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [date, setDate] = useState(selectedDate || getCurrentScheduleDateValue());
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [fitInMode, setFitInMode] = useState<FitInMode>("standard");
   const [quickDurationMinutes, setQuickDurationMinutes] = useState("20");
@@ -190,46 +151,9 @@ export default function WalkInAppointmentCard({
   const [hasExtras, setHasExtras] = useState(false);
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
-  const selectedServices = useMemo(
-    () => services.filter((service) => selectedServiceIds.includes(service.id)),
-    [selectedServiceIds, services]
-  );
-  const selectedDuration = selectedServices.reduce(
-    (sum, service) => sum + service.duration,
-    0
-  );
-  const selectedTotal = selectedServices.reduce((sum, service) => sum + service.price, 0);
-  const selectedExtras = useMemo(
-    () => extras.filter((extra) => selectedExtraIds.includes(extra.id)),
-    [selectedExtraIds, extras]
-  );
-  const selectedExtrasTotal = selectedExtras.reduce((sum, extra) => sum + extra.price, 0);
-  const selectedGrandTotal = selectedTotal + selectedExtrasTotal;
-  const selectedCustomer = clients.find((client) => client.id === selectedCustomerId) || null;
-  const filteredClients = useMemo(() => {
-    const search = clientSearch.trim().toLowerCase();
-
-    if (!search) {
-      return clients;
-    }
-
-    return clients.filter((client) =>
-      [client.name, client.phone || "", client.email || ""].some((value) =>
-        value.toLowerCase().includes(search)
-      )
-    );
-  }, [clientSearch, clients]);
-  const [step, setStep] = useState<WalkInStep>("customer");
-  const dateOptions = useMemo(() => getWalkInDateOptions(), []);
-  const hasCustomerMinimum =
-    isValidCustomerFullName(customerName) &&
-    (!customerPhone.trim() || isValidBrazilianPhone(customerPhone));
-  const [startTime, setStartTime] = useState("");
-  const [selectedDate, setSelectedDate] = useState(() => getCurrentScheduleDateValue());
+  const [periodSlots, setPeriodSlots] = useState<PeriodSlots>(emptyPeriodSlots);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
-  const [availablePeriodSlots, setAvailablePeriodSlots] = useState<WalkInPeriodSlots>(
-    () => emptyWalkInPeriodSlots()
-  );
+  const [startTime, setStartTime] = useState("");
   const [slotsFeedback, setSlotsFeedback] = useState<{
     message: string;
     tone: "info" | "error";
@@ -238,9 +162,64 @@ export default function WalkInAppointmentCard({
     tone: "info",
   });
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-  const isDisabled = services.length === 0;
+  const [feedback, setFeedback] = useState<{
+    message: string | null;
+    tone: "success" | "error" | "info";
+  }>({ message: null, tone: "success" });
+  const [successDetails, setSuccessDetails] = useState<PendingSummary | null>(null);
+  const [actionFeedback, setActionFeedback] =
+    useState<OperationalFeedbackState>(null);
+  const [isPending, startTransition] = useTransition();
+  const [isSubmitLocked, setIsSubmitLocked] = useState(false);
+  const [isQuickPreviewLoading, setIsQuickPreviewLoading] = useState(false);
+
+  const selectedBarber = useMemo(
+    () => barbers.find((barber) => barber.id === selectedBarberId) || null,
+    [barbers, selectedBarberId]
+  );
+  const availableServices = useMemo(
+    () =>
+      services.filter(
+        (service) =>
+          !selectedBarberId ||
+          service.barberId === selectedBarberId ||
+          service.barberId === null
+      ),
+    [selectedBarberId, services]
+  );
+  const selectedServices = useMemo(
+    () =>
+      availableServices.filter((service) =>
+        selectedServiceIds.includes(service.id)
+      ),
+    [availableServices, selectedServiceIds]
+  );
+  const selectedExtras = useMemo(
+    () =>
+      hasExtras
+        ? extras.filter((extra) => selectedExtraIds.includes(extra.id))
+        : [],
+    [extras, hasExtras, selectedExtraIds]
+  );
+  const selectedDuration = selectedServices.reduce(
+    (total, service) => total + service.duration,
+    0
+  );
+  const selectedTotal = selectedServices.reduce(
+    (total, service) => total + service.price,
+    0
+  );
+  const selectedExtrasTotal = selectedExtras.reduce(
+    (total, extra) => total + extra.price,
+    0
+  );
+  const selectedGrandTotal = selectedTotal + selectedExtrasTotal;
   const activeDuration =
     fitInMode === "quick" ? Number(quickDurationMinutes) || 0 : selectedDuration;
+  const hasCustomerMinimum =
+    isValidCustomerFullName(customerName) &&
+    (!customerPhone.trim() || isValidBrazilianPhone(customerPhone));
+  const dateOptions = useMemo(() => getAdminWalkInDateOptions(), []);
   const isCreating = isPending || isSubmitLocked;
 
   useEffect(() => {
@@ -248,79 +227,52 @@ export default function WalkInAppointmentCard({
   }, []);
 
   useEffect(() => {
-    setSelectedServiceIds((current) =>
-      current.filter((serviceId) => services.some((service) => service.id === serviceId))
-    );
-  }, [services]);
+    setDate(selectedDate || getCurrentScheduleDateValue());
+  }, [selectedDate]);
 
   useEffect(() => {
-    setSelectedExtraIds((current) =>
-      current.filter((extraId) => extras.some((extra) => extra.id === extraId))
+    setSelectedServiceIds((currentIds) =>
+      currentIds.filter((serviceId) =>
+        services.some(
+          (service) =>
+            service.id === serviceId &&
+            (service.barberId === selectedBarberId || service.barberId === null)
+        )
+      )
     );
-  }, [extras]);
+    setStartTime("");
+    setAvailableSlots([]);
+    setPeriodSlots(emptyPeriodSlots());
+  }, [selectedBarberId, services]);
 
   useEffect(() => {
-    if (
-      !mounted ||
-      (!isOpen && !isSuccessOpen && !isClientPickerOpen && !isQuickConflictOpen)
-    ) {
+    if (!mounted || (!isOpen && !isSuccessOpen && !isQuickConflictOpen)) {
       return;
     }
 
-    const { body, documentElement } = document;
-    const previousOverflow = body.style.overflow;
-    const previousHtmlOverflow = documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
 
-    body.style.overflow = "hidden";
-    documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
 
     return () => {
-      body.style.overflow = previousOverflow;
-      documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.touchAction = previousTouchAction;
     };
-  }, [isOpen, isSuccessOpen, isClientPickerOpen, isQuickConflictOpen, mounted]);
+  }, [isOpen, isQuickConflictOpen, isSuccessOpen, mounted]);
 
   useEffect(() => {
-    if (!mounted || !isOpen) {
+    if (!isOpen || step !== "schedule") {
       return;
     }
 
-    const draft: WalkInDraft = {
-      savedAt: Date.now(),
-      selectedCustomerId,
-      customerName,
-      customerPhone,
-      selectedServiceIds,
-      hasExtras,
-      selectedExtraIds,
-      selectedDate,
-      startTime,
-      notes,
-    };
-
-    window.localStorage.setItem(getWalkInDraftKey(), JSON.stringify(draft));
-  }, [
-    customerName,
-    customerPhone,
-    hasExtras,
-    isOpen,
-    mounted,
-    notes,
-    selectedCustomerId,
-    selectedDate,
-    selectedExtraIds,
-    selectedServiceIds,
-    startTime,
-  ]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    if (!selectedDate || selectedServiceIds.length === 0) {
+    if (!selectedBarberId || !date || selectedServiceIds.length === 0) {
       setAvailableSlots([]);
-      setAvailablePeriodSlots(emptyWalkInPeriodSlots());
+      setPeriodSlots(emptyPeriodSlots());
       setStartTime("");
       setSlotsFeedback({
         message: "Selecione os servicos para ver os horarios disponiveis.",
@@ -331,15 +283,15 @@ export default function WalkInAppointmentCard({
     }
 
     let cancelled = false;
-
     setIsLoadingSlots(true);
     setSlotsFeedback({
       message: "Carregando horarios disponiveis...",
       tone: "info",
     });
 
-    getWalkInAvailableSlotsAction({
-      date: selectedDate,
+    getAdminWalkInAvailableSlotsAction({
+      barberId: selectedBarberId,
+      date,
       serviceIds: selectedServiceIds,
     })
       .then((result) => {
@@ -349,7 +301,7 @@ export default function WalkInAppointmentCard({
 
         if (!result.ok) {
           setAvailableSlots([]);
-          setAvailablePeriodSlots(emptyWalkInPeriodSlots());
+          setPeriodSlots(emptyPeriodSlots());
           setStartTime("");
           setSlotsFeedback({
             message: result.message,
@@ -358,22 +310,22 @@ export default function WalkInAppointmentCard({
           return;
         }
 
-        const periodSlots = result.data?.periodSlots || emptyWalkInPeriodSlots();
-        const slots = result.data?.slots || [
-          ...periodSlots.morning,
-          ...periodSlots.afternoon,
-          ...periodSlots.night,
+        const nextPeriodSlots = result.data?.periodSlots || emptyPeriodSlots();
+        const nextSlots = result.data?.slots || [
+          ...nextPeriodSlots.morning,
+          ...nextPeriodSlots.afternoon,
+          ...nextPeriodSlots.night,
         ];
 
-        setAvailableSlots(slots);
-        setAvailablePeriodSlots(periodSlots);
-        setStartTime((current) => (slots.includes(current) ? current : ""));
+        setPeriodSlots(nextPeriodSlots);
+        setAvailableSlots(nextSlots);
+        setStartTime((current) => (nextSlots.includes(current) ? current : ""));
         setSlotsFeedback({
           message:
-            slots.length > 0
+            nextSlots.length > 0
               ? "Toque em um horario para reservar o encaixe."
               : "Nenhum horario disponivel para essa data e duracao.",
-          tone: slots.length > 0 ? "info" : "error",
+          tone: nextSlots.length > 0 ? "info" : "error",
         });
       })
       .catch(() => {
@@ -382,7 +334,7 @@ export default function WalkInAppointmentCard({
         }
 
         setAvailableSlots([]);
-        setAvailablePeriodSlots(emptyWalkInPeriodSlots());
+        setPeriodSlots(emptyPeriodSlots());
         setStartTime("");
         setSlotsFeedback({
           message: "Nao foi possivel carregar os horarios. Tente novamente.",
@@ -398,7 +350,36 @@ export default function WalkInAppointmentCard({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, selectedDate, selectedServiceIds]);
+  }, [date, isOpen, selectedBarberId, selectedServiceIds, step]);
+
+  function resetForm() {
+    setCustomerName("");
+    setCustomerPhone("");
+    setSelectedServiceIds([]);
+    setFitInMode("standard");
+    setQuickDurationMinutes("20");
+    setQuickPreview(null);
+    setHasExtras(false);
+    setSelectedExtraIds([]);
+    setNotes("");
+    setPeriodSlots(emptyPeriodSlots());
+    setAvailableSlots([]);
+    setStartTime("");
+    setIsQuickConflictOpen(false);
+    setFeedback({ message: null, tone: "success" });
+    setActionFeedback(null);
+    setStep("customer");
+  }
+
+  function openWalkInModal() {
+    if (!selectedBarberId) {
+      return;
+    }
+
+    resetForm();
+    setDate(selectedDate || getCurrentScheduleDateValue());
+    setIsOpen(true);
+  }
 
   function closeModal() {
     if (isCreating) {
@@ -406,89 +387,10 @@ export default function WalkInAppointmentCard({
     }
 
     setIsOpen(false);
-    setIsClientPickerOpen(false);
     setIsQuickConflictOpen(false);
     setQuickPreview(null);
     setFeedback({ message: null, tone: "success" });
     setActionFeedback(null);
-  }
-
-  function closeSuccessModal() {
-    setIsSuccessOpen(false);
-    setSuccessDetails(null);
-  }
-
-  function openWalkInModal() {
-    let parsedDraft: WalkInDraft | null = null;
-
-    try {
-      const storedDraft = window.localStorage.getItem(getWalkInDraftKey());
-      parsedDraft = storedDraft ? (JSON.parse(storedDraft) as WalkInDraft) : null;
-    } catch {
-      window.localStorage.removeItem(getWalkInDraftKey());
-    }
-
-    const validDraft =
-      parsedDraft &&
-      Date.now() - parsedDraft.savedAt <= WALK_IN_DRAFT_MAX_AGE_MS;
-    const draft = validDraft ? parsedDraft : null;
-
-    setSelectedCustomerId(draft ? draft.selectedCustomerId : "");
-    setCustomerName(draft ? draft.customerName : "");
-    setCustomerPhone(draft ? draft.customerPhone : "");
-    setClientSearch("");
-    setIsClientPickerOpen(false);
-    setSelectedServiceIds(draft ? draft.selectedServiceIds : []);
-    setFitInMode("standard");
-    setQuickDurationMinutes("20");
-    setQuickPreview(null);
-    setIsQuickConflictOpen(false);
-    setHasExtras(draft ? draft.hasExtras : false);
-    setSelectedExtraIds(draft ? draft.selectedExtraIds : []);
-    setSelectedDate(draft ? draft.selectedDate : getCurrentScheduleDateValue());
-    setStartTime(draft ? draft.startTime : "");
-    setNotes(draft ? draft.notes : "");
-    setFeedback({ message: null, tone: "success" });
-    setActionFeedback(null);
-    setStep("customer");
-    setIsOpen(true);
-  }
-
-  function toggleService(serviceId: string) {
-    setSelectedServiceIds((current) => {
-      const next = current.includes(serviceId)
-        ? current.filter((id) => id !== serviceId)
-        : [...current, serviceId];
-
-      setStartTime("");
-      return next;
-    });
-  }
-
-  function toggleExtra(extraId: string) {
-    setSelectedExtraIds((current) =>
-      current.includes(extraId)
-        ? current.filter((id) => id !== extraId)
-        : [...current, extraId]
-    );
-  }
-
-  function selectExistingCustomer(customerId: string) {
-    setSelectedCustomerId(customerId);
-
-    if (!customerId) {
-      return;
-    }
-
-    const customer = clients.find((client) => client.id === customerId);
-    if (!customer) {
-      return;
-    }
-
-    setCustomerName(customer.name);
-    setCustomerPhone(formatBrazilianPhone(customer.phone));
-    setClientSearch("");
-    setIsClientPickerOpen(false);
   }
 
   function showWalkInError(title: string, message: string) {
@@ -565,7 +467,10 @@ export default function WalkInAppointmentCard({
     setFeedback({ message: null, tone: "success" });
 
     try {
-      const result = await getQuickFitInPreviewAction({ durationMinutes: duration });
+      const result = await getAdminQuickFitInPreviewAction({
+        barberId: selectedBarberId,
+        durationMinutes: duration,
+      });
 
       if (!result.ok || !result.data) {
         showWalkInError(
@@ -576,7 +481,7 @@ export default function WalkInAppointmentCard({
       }
 
       setQuickPreview(result.data);
-      setSelectedDate(result.data.date);
+      setDate(result.data.date);
       setStartTime(result.data.startTime);
 
       if (result.data.conflict) {
@@ -595,21 +500,93 @@ export default function WalkInAppointmentCard({
     }
   }
 
+  function toggleService(serviceId: string) {
+    setSelectedServiceIds((currentIds) => {
+      const nextIds = currentIds.includes(serviceId)
+        ? currentIds.filter((id) => id !== serviceId)
+        : [...currentIds, serviceId];
+
+      setStartTime("");
+      setAvailableSlots([]);
+      setPeriodSlots(emptyPeriodSlots());
+      return nextIds;
+    });
+  }
+
+  function toggleExtra(extraId: string) {
+    setSelectedExtraIds((currentIds) =>
+      currentIds.includes(extraId)
+        ? currentIds.filter((id) => id !== extraId)
+        : [...currentIds, extraId]
+    );
+  }
+
   function selectWalkInSlot(slot: string) {
     setStartTime(slot);
     setFeedback({ message: null, tone: "success" });
     setStep("extras");
   }
 
-  function createWalkInFromSummary(
-    formData: FormData,
-    summary: {
-      customerName: string;
-      serviceName: string;
-      date: string;
-      startTime: string;
+  function submitSummary() {
+    const formData = new FormData();
+    const submittedCustomerName = normalizeCustomerName(customerName);
+    const submittedCustomerPhone = formatBrazilianPhone(customerPhone);
+    const serviceName =
+      selectedServices.map((service) => service.name).join(" + ") || "Servico";
+    const extrasLabel =
+      hasExtras && selectedExtras.length > 0
+        ? selectedExtras.map((extra) => extra.name).join(" + ")
+        : "";
+
+    if (!isValidCustomerFullName(submittedCustomerName)) {
+      showWalkInError(
+        "Confira o cliente",
+        "Informe nome e sobrenome do cliente antes de criar o encaixe."
+      );
+      return;
     }
-  ) {
+
+    if (customerPhone.trim() && !isValidBrazilianPhone(customerPhone)) {
+      showWalkInError(
+        "Confira o telefone",
+        "O telefone e opcional, mas precisa ser valido quando for informado."
+      );
+      return;
+    }
+
+    if (fitInMode === "standard" && !availableSlots.includes(startTime)) {
+      showWalkInError(
+        "Escolha o horario",
+        "Selecione um horario disponivel na lista antes de criar o encaixe."
+      );
+      return;
+    }
+
+    formData.set("barberId", selectedBarberId);
+    formData.set("customerName", submittedCustomerName);
+    formData.set("customerPhone", submittedCustomerPhone);
+    formData.set("date", date);
+    formData.set("startTime", startTime);
+    formData.set("notes", notes);
+    formData.set("fitInMode", fitInMode);
+    formData.set("manualDurationMinutes", quickDurationMinutes);
+    selectedServiceIds.forEach((serviceId) => formData.append("serviceIds", serviceId));
+    if (hasExtras) {
+      selectedExtraIds.forEach((extraId) => formData.append("extraProductIds", extraId));
+    }
+
+    createAdminWalkInFromSummary(formData, {
+      customerName: submittedCustomerName || "Cliente",
+      customerPhone: submittedCustomerPhone,
+      serviceName,
+      extrasLabel,
+      date,
+      startTime,
+      notes,
+    });
+  }
+
+  function createAdminWalkInFromSummary(formData: FormData, summary: PendingSummary) {
     if (isCreating) {
       return;
     }
@@ -618,38 +595,16 @@ export default function WalkInAppointmentCard({
 
     startTransition(async () => {
       try {
-        const result = await createWalkInAppointmentAction(formData);
-
-        setFeedback({
-          message: result.ok ? null : result.message,
-          tone: result.tone,
-        });
+        const result = await createAdminWalkInAppointmentAction(formData);
 
         if (result.ok) {
-          window.localStorage.removeItem(getWalkInDraftKey());
-          setActionFeedback(null);
-          setSuccessDetails({
-            customerName: summary.customerName || "Cliente",
-            serviceName: summary.serviceName,
-            date: summary.date,
-            startTime: summary.startTime || startTime,
-          });
-          setSelectedCustomerId("");
-          setCustomerName("");
-          setCustomerPhone("");
-          setSelectedServiceIds([]);
-          setFitInMode("standard");
-          setQuickDurationMinutes("20");
-          setQuickPreview(null);
-          setHasExtras(false);
-          setSelectedExtraIds([]);
-          setNotes("");
+          setSuccessDetails(summary);
           setIsOpen(false);
           setIsSuccessOpen(true);
-          setStartTime("");
-          setStep("customer");
+          resetForm();
           router.refresh();
         } else {
+          setFeedback({ message: result.message, tone: result.tone });
           setActionFeedback({
             title: "Nao foi possivel criar o encaixe",
             message: result.message,
@@ -677,12 +632,19 @@ export default function WalkInAppointmentCard({
     <>
       <button
         type="button"
-        disabled={isDisabled}
         onClick={openWalkInModal}
-        className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={!selectedBarberId || availableServices.length === 0}
+        title={
+          selectedBarberId
+            ? "Agendar encaixe para o barbeiro selecionado"
+            : "Selecione um barbeiro para agendar"
+        }
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[var(--brand)]/30 bg-[var(--brand)] px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(14,165,233,0.18)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-zinc-500 disabled:shadow-none sm:w-auto"
       >
-        <Plus className="h-4 w-4 text-[var(--brand-strong)]" />
-        <span className="min-w-0 truncate">Criar encaixe</span>
+        <CalendarPlus className="h-4 w-4" />
+        {selectedBarber
+          ? `Agendar para ${selectedBarber.name || selectedBarber.email || "barbeiro"}`
+          : "Selecione um barbeiro"}
       </button>
 
       {mounted && isOpen
@@ -693,17 +655,21 @@ export default function WalkInAppointmentCard({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[var(--brand-strong)]">
-                        Encaixe manual
+                        Encaixe admin
                       </p>
                       <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
                         Criar encaixe manual
                       </h2>
+                      <p className="mt-1 truncate text-sm text-zinc-400">
+                        {selectedBarber?.name || selectedBarber?.email || "Barbeiro selecionado"}
+                      </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={closeModal}
                       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.08]"
+                      aria-label="Fechar"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -716,128 +682,15 @@ export default function WalkInAppointmentCard({
                     tone="error"
                   />
 
-                  {services.length === 0 ? (
+                  {availableServices.length === 0 ? (
                     <p className="mt-4 rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-400">
-                      Cadastre um servico ativo antes de criar encaixes.
+                      Cadastre um servico ativo para esse barbeiro antes de criar encaixes.
                     </p>
                   ) : (
-                    <form
-                      className="space-y-4"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-
-                        if (step !== "summary") {
-                          return;
-                        }
-
-                        const form = event.currentTarget;
-                        const formData = new FormData(form);
-                        const submittedCustomerName = normalizeCustomerName(
-                          String(formData.get("customerName") || "")
-                        );
-                        const submittedCustomerPhone = String(
-                          formData.get("customerPhone") || ""
-                        );
-                        const submittedDate = String(formData.get("date") || "").trim();
-                        const selectedStartTime = String(formData.get("startTime") || "").trim();
-                        const serviceName =
-                          selectedServices.map((service) => service.name).join(" + ") ||
-                          "Servico";
-
-                        if (!isValidCustomerFullName(submittedCustomerName)) {
-                          showWalkInError(
-                            "Confira o cliente",
-                            "Informe nome e sobrenome do cliente antes de criar o encaixe."
-                          );
-                          return;
-                        }
-
-                        if (
-                          submittedCustomerPhone.trim() &&
-                          !isValidBrazilianPhone(submittedCustomerPhone)
-                        ) {
-                          showWalkInError(
-                            "Confira o telefone",
-                            "O telefone e opcional, mas precisa ser valido quando for informado."
-                          );
-                          return;
-                        }
-
-                        if (
-                          fitInMode === "standard" &&
-                          !availableSlots.includes(selectedStartTime)
-                        ) {
-                          showWalkInError(
-                            "Escolha o horario",
-                            "Selecione um horario disponivel na lista antes de criar o encaixe."
-                          );
-                          return;
-                        }
-
-                        createWalkInFromSummary(formData, {
-                          customerName: submittedCustomerName || "Cliente",
-                          serviceName,
-                          date: submittedDate || selectedDate,
-                          startTime: selectedStartTime || startTime,
-                        });
-                      }}
-                    >
-                      <input type="hidden" name="customerId" value={selectedCustomerId} />
-                      <input
-                        type="hidden"
-                        name="customerName"
-                        value={normalizeCustomerName(customerName)}
-                      />
-                      <input type="hidden" name="customerPhone" value={customerPhone} />
-                      <input type="hidden" name="date" value={selectedDate} />
-                      <input type="hidden" name="startTime" value={startTime} />
-                      <input type="hidden" name="notes" value={notes} />
-                      <input type="hidden" name="fitInMode" value={fitInMode} />
-                      <input
-                        type="hidden"
-                        name="manualDurationMinutes"
-                        value={quickDurationMinutes}
-                      />
-                      {selectedServiceIds.map((serviceId) => (
-                        <input key={serviceId} type="hidden" name="serviceIds" value={serviceId} />
-                      ))}
-                      {hasExtras
-                        ? selectedExtraIds.map((extraId) => (
-                            <input
-                              key={extraId}
-                              type="hidden"
-                              name="extraProductIds"
-                              value={extraId}
-                            />
-                          ))
-                        : null}
-
+                    <div className="space-y-4">
                       {step === "customer" ? (
                         <div className="space-y-4">
                           <StepTitle title="Cliente do encaixe" />
-
-                          <button
-                            type="button"
-                            onClick={() => setIsClientPickerOpen(true)}
-                            className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-[var(--brand)]/25 bg-[var(--brand-muted)] px-4 py-3 text-left text-sm text-white transition hover:border-[var(--brand)]/50"
-                          >
-                            <span className="min-w-0">
-                              <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
-                                Cliente cadastrado
-                              </span>
-                              <span className="mt-1 block truncate font-black">
-                                {selectedCustomer?.name || "Selecionar cliente"}
-                              </span>
-                              <span className="mt-1 block truncate text-xs text-zinc-400">
-                                {selectedCustomer
-                                  ? formatBrazilianPhone(selectedCustomer.phone) ||
-                                    selectedCustomer.email ||
-                                    "Sem contato"
-                                  : "Opcional: buscar na base da barbearia"}
-                              </span>
-                            </span>
-                            <Search className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
-                          </button>
 
                           <div className="grid gap-3">
                             <label className="block">
@@ -846,10 +699,7 @@ export default function WalkInAppointmentCard({
                               </span>
                               <input
                                 value={customerName}
-                                onChange={(event) => {
-                                  setSelectedCustomerId("");
-                                  setCustomerName(event.target.value);
-                                }}
+                                onChange={(event) => setCustomerName(event.target.value)}
                                 onBlur={() =>
                                   setCustomerName((current) => normalizeCustomerName(current))
                                 }
@@ -898,7 +748,7 @@ export default function WalkInAppointmentCard({
                           <StepTitle title="Servicos" />
 
                           <div className="space-y-2">
-                            {services.map((service) => {
+                            {availableServices.map((service) => {
                               const selected = selectedServiceIds.includes(service.id);
 
                               return (
@@ -940,10 +790,7 @@ export default function WalkInAppointmentCard({
                             })}
                           </div>
 
-                          <StepActions
-                            onBack={() => setStep("customer")}
-                            backLabel="Voltar"
-                          />
+                          <StepActions onBack={() => setStep("customer")} />
 
                           {selectedServiceIds.length > 0 ? (
                             <div className="sticky bottom-0 -mx-5 -mb-5 border-t border-white/10 bg-[#050b16]/95 p-4 backdrop-blur-xl">
@@ -1011,7 +858,7 @@ export default function WalkInAppointmentCard({
                             </button>
                           </div>
 
-                          <StepActions onBack={() => setStep("services")} backLabel="Voltar" />
+                          <StepActions onBack={() => setStep("services")} />
                         </div>
                       ) : null}
 
@@ -1021,14 +868,14 @@ export default function WalkInAppointmentCard({
 
                           <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1">
                             {dateOptions.map((option) => {
-                              const selected = selectedDate === option.value;
+                              const selected = date === option.value;
 
                               return (
                                 <button
                                   key={option.value}
                                   type="button"
                                   onClick={() => {
-                                    setSelectedDate(option.value);
+                                    setDate(option.value);
                                     setStartTime("");
                                   }}
                                   className={`min-w-[82px] rounded-2xl border px-3 py-3 text-left transition ${
@@ -1065,35 +912,32 @@ export default function WalkInAppointmentCard({
                                 </p>
                               </div>
                               {isLoadingSlots ? (
-                                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--brand)] border-t-transparent" />
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-strong)]" />
                               ) : null}
                             </div>
 
                             {availableSlots.length > 0 ? (
                               <div className="mt-4 grid min-w-0 gap-4">
-                                <WalkInTimeSection
+                                <TimeSection
                                   title="Manha"
-                                  slots={availablePeriodSlots.morning}
+                                  slots={periodSlots.morning}
                                   onSelect={selectWalkInSlot}
                                 />
-                                <WalkInTimeSection
+                                <TimeSection
                                   title="Tarde"
-                                  slots={availablePeriodSlots.afternoon}
+                                  slots={periodSlots.afternoon}
                                   onSelect={selectWalkInSlot}
                                 />
-                                <WalkInTimeSection
+                                <TimeSection
                                   title="Noite"
-                                  slots={availablePeriodSlots.night}
+                                  slots={periodSlots.night}
                                   onSelect={selectWalkInSlot}
                                 />
                               </div>
                             ) : null}
                           </div>
 
-                          <StepActions
-                            onBack={() => setStep("mode")}
-                            backLabel="Voltar"
-                          />
+                          <StepActions onBack={() => setStep("mode")} />
                         </div>
                       ) : null}
 
@@ -1279,7 +1123,7 @@ export default function WalkInAppointmentCard({
                                   : "Agendamento padrao"
                               }
                             />
-                            <SummaryRow label="Data" value={formatDateValue(selectedDate)} />
+                            <SummaryRow label="Data" value={formatDateValue(date)} />
                             <SummaryRow label="Horario" value={startTime || "Nao informado"} />
                             <SummaryRow label="Duracao" value={`${activeDuration || 0} min`} />
                             <SummaryRow
@@ -1317,7 +1161,8 @@ export default function WalkInAppointmentCard({
                               Voltar
                             </button>
                             <button
-                              type="submit"
+                              type="button"
+                              onClick={submitSummary}
                               disabled={isCreating || selectedServiceIds.length === 0 || !startTime}
                               className="min-h-11 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                             >
@@ -1326,32 +1171,11 @@ export default function WalkInAppointmentCard({
                           </div>
                         </div>
                       ) : null}
-                    </form>
+                    </div>
                   )}
                 </div>
               </div>
             </ModalShell>,
-            document.body
-          )
-        : null}
-
-      {mounted && isClientPickerOpen
-        ? createPortal(
-            <ClientPickerPopup
-              clients={filteredClients}
-              search={clientSearch}
-              selectedCustomerId={selectedCustomerId}
-              onSearchChange={setClientSearch}
-              onSelect={selectExistingCustomer}
-              onClear={() => {
-                setSelectedCustomerId("");
-                setCustomerName("");
-                setCustomerPhone("");
-                setClientSearch("");
-                setIsClientPickerOpen(false);
-              }}
-              onClose={() => setIsClientPickerOpen(false)}
-            />,
             document.body
           )
         : null}
@@ -1372,7 +1196,12 @@ export default function WalkInAppointmentCard({
 
       {mounted && isSuccessOpen && successDetails
         ? createPortal(
-            <ModalShell onClose={closeSuccessModal}>
+            <ModalShell
+              onClose={() => {
+                setIsSuccessOpen(false);
+                setSuccessDetails(null);
+              }}
+            >
               <div className="rounded-[28px] border border-white/10 bg-[#050b16] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -1389,7 +1218,10 @@ export default function WalkInAppointmentCard({
 
                   <button
                     type="button"
-                    onClick={closeSuccessModal}
+                    onClick={() => {
+                      setIsSuccessOpen(false);
+                      setSuccessDetails(null);
+                    }}
                     className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.08]"
                   >
                     <X className="h-4 w-4" />
@@ -1409,25 +1241,16 @@ export default function WalkInAppointmentCard({
                   <SummaryRow label="Horario" value={successDetails.startTime} />
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={closeSuccessModal}
-                    className="min-h-11 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.04]"
-                  >
-                    Fechar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeSuccessModal();
-                      router.push("/barber");
-                    }}
-                    className="min-h-11 rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110"
-                  >
-                    Voltar para o painel
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSuccessOpen(false);
+                    setSuccessDetails(null);
+                  }}
+                  className="mt-5 min-h-11 w-full rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+                >
+                  Fechar
+                </button>
               </div>
             </ModalShell>,
             document.body
@@ -1450,7 +1273,7 @@ function ModalShell({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[200]">
+    <div className="fixed inset-0 z-[11000]">
       <button
         type="button"
         aria-label="Fechar modal"
@@ -1458,137 +1281,65 @@ function ModalShell({
         onClick={onClose}
       />
 
-      <div className="pointer-events-none fixed left-1/2 top-1/2 z-[210] w-[calc(100vw-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 px-0">
+      <div className="pointer-events-none fixed left-1/2 top-1/2 z-[11010] w-[calc(100vw-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 px-0">
         <div className="pointer-events-auto">{children}</div>
       </div>
     </div>
   );
 }
 
-function ClientPickerPopup({
-  clients,
-  search,
-  selectedCustomerId,
-  onSearchChange,
-  onSelect,
-  onClear,
-  onClose,
-}: {
-  clients: WalkInAppointmentCardProps["clients"];
-  search: string;
-  selectedCustomerId: string;
-  onSearchChange: (value: string) => void;
-  onSelect: (customerId: string) => void;
-  onClear: () => void;
-  onClose: () => void;
-}) {
+function StepTitle({ title }: { title: string }) {
   return (
-    <div
-      className="fixed inset-0 z-[260] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-6 backdrop-blur-md"
-      onWheel={(event) => event.preventDefault()}
-      onTouchMove={(event) => {
-        if (!(event.target as HTMLElement).closest("[data-client-picker-scroll]")) {
-          event.preventDefault();
-        }
-      }}
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+        Passo
+      </p>
+      <h3 className="mt-1 text-xl font-black text-white">{title}</h3>
+    </div>
+  );
+}
+
+function StepActions({ onBack }: { onBack: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onBack}
+      className="min-h-11 w-full rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
     >
-      <button
-        type="button"
-        aria-label="Fechar seletor de cliente"
-        className="absolute inset-0"
-        onClick={onClose}
-      />
+      Voltar
+    </button>
+  );
+}
 
-      <div className="relative z-[270] flex max-h-[calc(100svh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#050b16] shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
-        <div className="border-b border-white/10 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-                Clientes
-              </p>
-              <h3 className="mt-1 text-xl font-black text-white">
-                Selecionar cliente
-              </h3>
-              <p className="mt-1 text-sm text-zinc-400">
-                Busque na base do barbeiro.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.08]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+function TimeSection({
+  title,
+  slots,
+  onSelect,
+}: {
+  title: string;
+  slots: string[];
+  onSelect: (slot: string) => void;
+}) {
+  if (slots.length === 0) {
+    return null;
+  }
 
-          <div className="mt-4 flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3">
-            <Search className="h-4 w-4 shrink-0 text-zinc-500" />
-            <input
-              name="clientSearch"
-              type="search"
-              inputMode="search"
-              enterKeyHint="search"
-              value={search}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Nome, numero ou e-mail"
-              autoComplete="off"
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
-              autoFocus
-            />
-          </div>
-        </div>
-
-        <div
-          data-client-picker-scroll
-          className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-3"
-        >
+  return (
+    <div>
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">
+        {title}
+      </p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {slots.map((slot) => (
           <button
+            key={slot}
             type="button"
-            onClick={onClear}
-            className="mb-2 flex min-h-12 w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm font-bold text-zinc-200 transition hover:bg-white/[0.06]"
+            onClick={() => onSelect(slot)}
+            className="min-h-10 rounded-xl border border-white/10 bg-white/[0.035] px-2 text-sm font-black text-white transition hover:border-[var(--brand)]/45 hover:bg-[var(--brand-muted)]"
           >
-            Preencher manualmente
-            {!selectedCustomerId ? <Check className="h-4 w-4 text-[var(--brand-strong)]" /> : null}
+            {slot}
           </button>
-
-          {clients.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-400">
-              Nenhum cliente encontrado.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {clients.map((client) => {
-                const selected = client.id === selectedCustomerId;
-
-                return (
-                  <button
-                    key={client.id}
-                    type="button"
-                    onClick={() => onSelect(client.id)}
-                    className={`flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                      selected
-                        ? "border-[var(--brand)]/45 bg-[var(--brand-muted)]"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-black text-white">
-                        {client.name}
-                      </span>
-                      <span className="mt-1 block truncate text-xs text-zinc-400">
-                        {formatBrazilianPhone(client.phone) || client.email || "Sem contato"}
-                      </span>
-                    </span>
-                    {selected ? (
-                      <Check className="h-4 w-4 shrink-0 text-[var(--brand-strong)]" />
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -1610,7 +1361,7 @@ function QuickConflictPopup({
   }
 
   return (
-    <div className="fixed inset-0 z-[290] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-6 backdrop-blur-md">
+    <div className="fixed inset-0 z-[11100] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/75 px-4 py-6 backdrop-blur-md">
       <button
         type="button"
         aria-label="Fechar aviso"
@@ -1618,7 +1369,7 @@ function QuickConflictPopup({
         onClick={onClose}
       />
 
-      <div className="relative z-[300] w-full max-w-sm rounded-[28px] border border-amber-300/25 bg-[#050b16] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+      <div className="relative z-[11110] w-full max-w-sm rounded-[28px] border border-amber-300/25 bg-[#050b16] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-amber-200">
@@ -1674,75 +1425,37 @@ function QuickConflictPopup({
   );
 }
 
-function StepTitle({ title }: { title: string }) {
+function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <h3 className="text-xl font-black tracking-tight text-white">{title}</h3>
-  );
-}
-
-function WalkInTimeSection({
-  title,
-  slots,
-  onSelect,
-}: {
-  title: string;
-  slots: string[];
-  onSelect: (slot: string) => void;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-base font-semibold text-white">{title}</h4>
-        <span className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">
-          {slots.length} disponiveis
-        </span>
-      </div>
-
-      {slots.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-white/10 px-4 py-4 text-sm text-zinc-500">
-          Sem horarios livres nesse periodo.
-        </p>
-      ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {slots.map((slot) => (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => onSelect(slot)}
-              className="min-h-11 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-white transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-muted)]"
-            >
-              {slot}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2">
+      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </span>
+      <span className="break-words text-right font-semibold text-white">{value}</span>
     </div>
   );
 }
 
-function StepActions({
-  onBack,
-  backLabel,
+function FeedbackMessage({
+  message,
+  tone,
 }: {
-  onBack: () => void;
-  backLabel: string;
+  message: string | null;
+  tone: "success" | "error" | "info";
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onBack}
-      className="min-h-11 w-full rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/[0.04]"
-    >
-      {backLabel}
-    </button>
-  );
-}
+  if (!message) {
+    return null;
+  }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+  const styles = {
+    success: "border-emerald-300/25 bg-emerald-500/10 text-emerald-100",
+    error: "border-red-300/25 bg-red-500/10 text-red-100",
+    info: "border-[var(--brand)]/25 bg-[var(--brand-muted)] text-[var(--brand-strong)]",
+  }[tone];
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-zinc-400">{label}</span>
-      <span className="text-right font-semibold text-white">{value}</span>
+    <div className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${styles}`}>
+      {message}
     </div>
   );
 }

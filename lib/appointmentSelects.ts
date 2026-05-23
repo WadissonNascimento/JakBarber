@@ -52,6 +52,7 @@ const appointmentBaseSelect = {
   paymentMethod: true,
   notes: true,
   isManualFitIn: true,
+  manualDurationMinutes: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.AppointmentSelect;

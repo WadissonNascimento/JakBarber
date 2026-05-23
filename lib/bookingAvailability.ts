@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import {
   generateSlots,
+  getAppointmentOccupiedDuration,
   getAppointmentServicesOccupiedDuration,
   isActiveAppointmentStatus,
   isBlockedByRecurringBlock,
@@ -119,6 +120,7 @@ export async function getBookingAvailability(
       select: {
         date: true,
         status: true,
+        manualDurationMinutes: true,
         services: {
           select: {
             durationSnapshot: true,
@@ -220,8 +222,7 @@ export async function getBookingAvailability(
 
       const appointmentDate = new Date(appointment.date);
       const existingStart = getScheduleMinutes(appointmentDate);
-      const existingEnd =
-        existingStart + getAppointmentServicesOccupiedDuration(appointment.services);
+      const existingEnd = existingStart + getAppointmentOccupiedDuration(appointment);
 
       return candidateStart < existingEnd && candidateEnd > existingStart;
     });

@@ -83,6 +83,24 @@ export function getAppointmentServicesOccupiedDuration(
   );
 }
 
+export function getAppointmentOccupiedDuration(appointment: {
+  manualDurationMinutes?: number | null;
+  services: Array<{
+    durationSnapshot: number;
+    bufferAfter?: number | null;
+  }>;
+}) {
+  if (
+    appointment.manualDurationMinutes &&
+    Number.isInteger(appointment.manualDurationMinutes) &&
+    appointment.manualDurationMinutes > 0
+  ) {
+    return appointment.manualDurationMinutes;
+  }
+
+  return getAppointmentServicesOccupiedDuration(appointment.services);
+}
+
 export function isActiveAppointmentStatus(status: string) {
   const normalized = normalizeAppointmentStatus(status);
   return (

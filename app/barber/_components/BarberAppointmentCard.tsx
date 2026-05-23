@@ -10,6 +10,7 @@ import {
 import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { formatScheduleDate, formatScheduleTime } from "@/lib/scheduleTime";
+import { getManualFitInVisibleNotes } from "@/lib/manualFitIn";
 
 export type BarberAppointmentCardItem = {
   id: string;
@@ -86,6 +87,9 @@ export default function BarberAppointmentCard({
 }: BarberAppointmentCardProps) {
   const [items, setItems] = useState(appointment.items);
   const [isExpanded, setIsExpanded] = useState(false);
+  const visibleNotes = appointment.isManualFitIn
+    ? getManualFitInVisibleNotes(appointment.notes)
+    : appointment.notes;
   const hasPickupItems = items.length > 0;
   const reviewedPickupItems = items.filter((item) => item.deliveredAt);
   const deliveredPickupItems = items.filter((item) => item.isDelivered);
@@ -177,9 +181,12 @@ export default function BarberAppointmentCard({
           <p className="text-2xl font-bold text-white">
             {formatCardTime(appointment.date)}
           </p>
-          <p className="mt-2 block truncate text-base font-semibold text-white">
-            {appointment.customer.name}
-          </p>
+          <div className="mt-2 flex min-w-0 items-center gap-2">
+            <p className="block min-w-0 truncate text-base font-semibold text-white">
+              {appointment.customer.name}
+            </p>
+            {contactHref ? <WhatsAppShortcut href={contactHref} /> : null}
+          </div>
           <p className="mt-1 text-sm text-zinc-400">
             {appointment.serviceName}
           </p>
@@ -254,22 +261,19 @@ export default function BarberAppointmentCard({
         </div>
       ) : null}
 
-      {appointment.notes ? (
+      {visibleNotes ? (
         <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-strong)]">
             Observação
           </p>
           <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-zinc-200">
-            {appointment.notes}
+            {visibleNotes}
           </p>
         </div>
       ) : null}
 
-      <div className="mt-3 flex items-center gap-2">
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-          {actionContent}
-        </div>
-        {contactHref ? <WhatsAppShortcut href={contactHref} /> : null}
+      <div className="mt-3 grid min-w-0 grid-cols-2 gap-2">
+        {actionContent}
       </div>
         </div>
       ) : null}
@@ -315,12 +319,12 @@ function WhatsAppShortcut({ href }: { href: string }) {
       target="_blank"
       rel="noreferrer"
       aria-label="Chamar cliente no WhatsApp"
-      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-300/35 bg-emerald-500 text-white shadow-[0_14px_34px_rgba(34,197,94,0.28)] transition hover:scale-105 hover:bg-emerald-400"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-300/35 bg-emerald-500/15 text-emerald-100 shadow-[0_10px_24px_rgba(34,197,94,0.16)] transition hover:scale-105 hover:bg-emerald-500 hover:text-white"
     >
       <svg
         aria-hidden="true"
         viewBox="0 0 32 32"
-        className="h-5 w-5"
+        className="h-4 w-4"
         fill="currentColor"
       >
         <path d="M16.04 4C9.4 4 4 9.4 4 16.04c0 2.12.56 4.18 1.62 6L4 28l6.12-1.6a12 12 0 0 0 5.92 1.52C22.68 27.92 28 22.6 28 15.96 28 9.36 22.64 4 16.04 4Zm0 21.88a9.86 9.86 0 0 1-5.04-1.38l-.36-.22-3.64.96.98-3.54-.24-.38a9.88 9.88 0 1 1 18.16-5.36 9.86 9.86 0 0 1-9.86 9.92Zm5.42-7.38c-.3-.16-1.76-.86-2.04-.96-.28-.1-.48-.16-.68.16-.2.3-.78.96-.96 1.16-.18.2-.36.22-.66.08-.3-.16-1.26-.46-2.4-1.48-.9-.8-1.5-1.78-1.68-2.08-.18-.3-.02-.46.14-.62.14-.14.3-.36.46-.54.16-.18.2-.30.3-.5.1-.2.04-.38-.02-.54-.08-.16-.68-1.64-.94-2.24-.24-.58-.5-.5-.68-.5h-.58c-.2 0-.52.08-.8.38-.28.3-1.04 1.02-1.04 2.48s1.06 2.88 1.22 3.08c.16.2 2.1 3.2 5.08 4.48.7.3 1.26.48 1.7.62.72.22 1.36.18 1.86.12.58-.08 1.76-.72 2-1.42.24-.7.24-1.3.18-1.42-.08-.12-.28-.2-.58-.36Z" />

@@ -10,6 +10,7 @@ import {
 } from "@/lib/paymentMethods";
 import { registerExtraStockMovement } from "@/lib/extraInventory";
 import {
+  getAppointmentOccupiedDuration,
   getAppointmentServicesOccupiedDuration,
   isActiveAppointmentStatus,
   isBlockedByRecurringBlock,
@@ -73,6 +74,7 @@ export type CreateCustomerAppointmentInput = {
   notes?: string | null;
   now?: Date;
   conflictMode?: "OVERLAP" | "SAME_START_ONLY";
+  manualDurationMinutes?: number | null;
 };
 
 export type RescheduleCustomerAppointmentInput = CreateCustomerAppointmentInput & {
@@ -585,6 +587,14 @@ async function createCustomerAppointmentInTransaction(
   }
 
   const now = input.now ?? new Date();
+  const normalizedManualDurationMinutes =
+    input.manualDurationMinutes &&
+    Number.isInteger(input.manualDurationMinutes) &&
+    input.manualDurationMinutes >= 5 &&
+    input.manualDurationMinutes <= 240
+      ? input.manualDurationMinutes
+      : null;
+
   if (!manualFitIn && isScheduleDateTimePast(appointmentDate, now)) {
     throw new AppointmentMutationError("Nao e possivel agendar em um horario que ja passou.");
   }
@@ -650,7 +660,8 @@ async function createCustomerAppointmentInTransaction(
       throw new AppointmentMutationError("Este barbeiro nao atende nesse dia.");
     }
 
-    const occupiedDuration = getAppointmentDurationFromServices(orderedServices);
+    const occupiedDuration =
+      normalizedManualDurationMinutes || getAppointmentDurationFromServices(orderedServices);
     const selectedStartMinutes = toMinutes(time);
     const selectedEndMinutes = selectedStartMinutes + occupiedDuration;
     const availabilityStart = toMinutes(availability.startTime);
@@ -675,7 +686,8 @@ async function createCustomerAppointmentInTransaction(
     }
   }
 
-  const occupiedDuration = getAppointmentDurationFromServices(orderedServices);
+  const occupiedDuration =
+    normalizedManualDurationMinutes || getAppointmentDurationFromServices(orderedServices);
   const selectedStartMinutes = toMinutes(time);
   const selectedEndMinutes = selectedStartMinutes + occupiedDuration;
 
@@ -691,8 +703,7 @@ async function createCustomerAppointmentInTransaction(
       return selectedStartMinutes === existingStartMinutes;
     }
 
-    const existingEndMinutes =
-      existingStartMinutes + getAppointmentServicesOccupiedDuration(appointment.services);
+    const existingEndMinutes = existingStartMinutes + getAppointmentOccupiedDuration(appointment);
 
     return selectedStartMinutes < existingEndMinutes && selectedEndMinutes > existingStartMinutes;
   });
@@ -714,6 +725,7 @@ async function createCustomerAppointmentInTransaction(
       date: appointmentDate,
       notes,
       isManualFitIn: manualFitIn,
+      manualDurationMinutes: normalizedManualDurationMinutes,
       status: "CONFIRMED",
       services: {
         create: orderedServices.map((service, index) => {
@@ -1156,7 +1168,7 @@ async function rescheduleCustomerAppointmentInTransaction(
       }
 
       const existingEndMinutes =
-        existingStartMinutes + getAppointmentServicesOccupiedDuration(appointment.services);
+        existingStartMinutes + getAppointmentOccupiedDuration(appointment);
 
       return selectedStartMinutes < existingEndMinutes && selectedEndMinutes > existingStartMinutes;
     });
@@ -1703,6 +1715,7 @@ export async function updateAppointmentStatusForBarber(
   db: AppointmentPrismaClient = prisma
 ) {
   const normalizedStatus = normalizeAppointmentStatus(status) as AppointmentStatus;
+  const normalizedCancellationReason = cancellationReason?.trim() || "";
   const normalizedPaymentMethod =
     normalizedStatus === "COMPLETED"
       ? normalizePaymentMethod(paymentMethod)
@@ -1712,10 +1725,8 @@ export async function updateAppointmentStatusForBarber(
     throw new AppointmentMutationError("Status de agendamento invalido.");
   }
 
-  if (normalizedStatus === "CANCELLED") {
-    throw new AppointmentMutationError(
-      "Somente o admin pode cancelar agendamentos."
-    );
+  if (normalizedStatus === "CANCELLED" && !normalizedCancellationReason) {
+    throw new AppointmentMutationError("Informe o motivo do cancelamento.");
   }
 
   if (normalizedStatus === "COMPLETED" && !normalizedPaymentMethod) {
@@ -1741,7 +1752,10 @@ export async function updateAppointmentStatusForBarber(
           appointmentId,
           nextStatus: normalizedStatus,
           paymentMethod: normalizedPaymentMethod,
-          cancellationReason: undefined,
+          cancellationReason:
+            normalizedStatus === "CANCELLED"
+              ? normalizedCancellationReason
+              : undefined,
           itemDeliveryDecisions:
             normalizedStatus === "COMPLETED"
               ? itemDeliveryDecisions
@@ -1983,9 +1997,12 @@ async function updateAppointmentStatusWithSideEffects(
   }
 
   const isLeavingCompleted = currentStatus === "COMPLETED";
-  const canLeaveCompleted = allowCompletedStatusChange && isLeavingCompleted;
+  const isLeavingReleasedFinalStatus =
+    currentStatus === "CANCELLED" || currentStatus === "NO_SHOW";
+  const isLeavingFinalStatus = FINAL_APPOINTMENT_STATUSES.includes(currentStatus);
+  const canLeaveFinalStatus = allowCompletedStatusChange && isLeavingFinalStatus;
 
-  if (FINAL_APPOINTMENT_STATUSES.includes(currentStatus) && !canLeaveCompleted) {
+  if (isLeavingFinalStatus && !canLeaveFinalStatus) {
     throw new AppointmentMutationError("Esse atendimento já foi finalizado.");
   }
 
@@ -2063,15 +2080,19 @@ async function updateAppointmentStatusWithSideEffects(
     });
   }
 
-  const reopeningCompletedToActive =
-    isLeavingCompleted && ["PENDING", "CONFIRMED"].includes(nextStatus);
+  const reopeningFinalToActive =
+    isLeavingFinalStatus && ["PENDING", "CONFIRMED"].includes(nextStatus);
   const closingCompletedAsCancelledOrNoShow =
     isLeavingCompleted && ["CANCELLED", "NO_SHOW"].includes(nextStatus);
+  const completingReleasedFinalStatus =
+    isLeavingReleasedFinalStatus && nextStatus === "COMPLETED";
 
-  if (reopeningCompletedToActive) {
-    const itemsToReserveAgain = appointmentItems.filter(
-      (item) => item.deliveredAt !== null && !item.isDelivered
-    );
+  if (reopeningFinalToActive || completingReleasedFinalStatus) {
+    const itemsToReserveAgain = isLeavingCompleted
+      ? appointmentItems.filter((item) => item.deliveredAt !== null && !item.isDelivered)
+      : completingReleasedFinalStatus
+      ? appointmentItems.filter((item) => item.isDelivered)
+      : appointmentItems;
 
     for (const item of itemsToReserveAgain) {
       const updated = await db.extraProduct.updateMany({
@@ -2098,9 +2119,13 @@ async function updateAppointmentStatusWithSideEffects(
         {
           extraProductId: item.extraProductId,
           shopId: appointment.shopId,
-          type: "ADMIN_REOPEN_RESERVE_OUT",
+          type: reopeningFinalToActive
+            ? "ADMIN_REOPEN_RESERVE_OUT"
+            : "FINANCE_EDIT_RESERVE_OUT",
           quantity: item.quantity,
-          reason: `Reabertura pelo admin do atendimento concluido ${appointment.id}`,
+          reason: reopeningFinalToActive
+            ? `Reabertura pelo admin do atendimento ${appointment.id}`
+            : `Conclusao pelo admin do atendimento ${appointment.id}`,
         },
         db
       );
@@ -2109,12 +2134,13 @@ async function updateAppointmentStatusWithSideEffects(
 
   const shouldReturnExtras =
     !isLeavingCompleted &&
+    !isLeavingReleasedFinalStatus &&
     (nextStatus === "CANCELLED" ||
       nextStatus === "NO_SHOW" ||
       nextStatus === "COMPLETED");
   const returnedItems = closingCompletedAsCancelledOrNoShow
     ? appointmentItems.filter((item) => item.deliveredAt !== null && item.isDelivered)
-    : nextStatus === "COMPLETED"
+    : nextStatus === "COMPLETED" && !isLeavingReleasedFinalStatus
     ? appointmentItems.filter((item) => !item.isDelivered)
     : shouldReturnExtras
     ? appointmentItems
@@ -2157,7 +2183,7 @@ async function updateAppointmentStatusWithSideEffects(
   if (
     nextStatus === "CANCELLED" ||
     nextStatus === "NO_SHOW" ||
-    reopeningCompletedToActive
+    reopeningFinalToActive
   ) {
     await db.appointmentItem.updateMany({
       where: {
