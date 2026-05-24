@@ -81,6 +81,7 @@ export default async function AdminAgendaPage({
   const barberFilter = initialFilters.barberId
     ? { barberId: initialFilters.barberId }
     : {};
+  const shouldLoadBlocks = Boolean(initialFilters.barberId);
 
   const [report, barbers, services, extras, blocks, recurringBlocks] =
     await Promise.all([
@@ -137,7 +138,8 @@ export default async function AdminAgendaPage({
           name: "asc",
         },
       }),
-      prisma.barberBlock.findMany({
+      shouldLoadBlocks
+        ? prisma.barberBlock.findMany({
         where: {
           shopId,
           ...barberFilter,
@@ -162,8 +164,10 @@ export default async function AdminAgendaPage({
         orderBy: {
           startDateTime: "asc",
         },
-      }),
-      prisma.recurringBarberBlock.findMany({
+      })
+        : Promise.resolve([]),
+      shouldLoadBlocks
+        ? prisma.recurringBarberBlock.findMany({
         where: {
           shopId,
           ...barberFilter,
@@ -188,7 +192,8 @@ export default async function AdminAgendaPage({
             startTime: "asc",
           },
         ],
-      }),
+      })
+        : Promise.resolve([]),
     ]);
 
   return (

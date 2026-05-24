@@ -597,6 +597,10 @@ function matchesAgendaBlockFilters(
   block: AdminAgendaBlock,
   filters: AdminAgendaFilters
 ) {
+  if (!filters.barberId) {
+    return false;
+  }
+
   if (filters.dateFrom && block.date < filters.dateFrom) {
     return false;
   }
@@ -605,7 +609,7 @@ function matchesAgendaBlockFilters(
     return false;
   }
 
-  if (filters.barberId && block.barberId !== filters.barberId) {
+  if (block.barberId !== filters.barberId) {
     return false;
   }
 
