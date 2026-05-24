@@ -703,6 +703,8 @@ export async function getBarberTodayDashboardData(barberId: string) {
 
   const [
     todayAppointments,
+    todayBlocks,
+    todayRecurringBlocks,
     walkInServices,
     walkInExtras,
     clientNotes,
@@ -725,6 +727,50 @@ export async function getBarberTodayDashboardData(barberId: string) {
       orderBy: {
         date: "asc",
       },
+    }),
+    prisma.barberBlock.findMany({
+      where: {
+        barberId,
+        ...(shopId ? { shopId } : {}),
+        startDateTime: {
+          lte: todayEnd,
+        },
+        endDateTime: {
+          gte: todayStart,
+        },
+      },
+      include: {
+        barber: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        startDateTime: "asc",
+      },
+    }),
+    prisma.recurringBarberBlock.findMany({
+      where: {
+        barberId,
+        ...(shopId ? { shopId } : {}),
+        isActive: true,
+      },
+      include: {
+        barber: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: [
+        {
+          weekDay: "asc",
+        },
+        {
+          startTime: "asc",
+        },
+      ],
     }),
     prisma.service.findMany({
       where: {
@@ -856,6 +902,13 @@ export async function getBarberTodayDashboardData(barberId: string) {
   const todayServices = Array.from(todayServiceMap.entries())
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const todayDateValue = getScheduleDateValue(todayStart);
+  const agendaBlocksToday = buildAgendaBlockItems({
+    dateFrom: todayDateValue,
+    dateTo: todayDateValue,
+    blocks: todayBlocks,
+    recurringBlocks: todayRecurringBlocks,
+  });
 
   return {
     summary: {
@@ -881,6 +934,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
         0
       ) + todayTips.tipsTotal,
       todayServices,
+      todayBlocks: agendaBlocksToday,
       todayAppointments: normalizedTodayAppointments.map((appointment) => ({
         id: appointment.id,
         publicId: appointment.publicId,

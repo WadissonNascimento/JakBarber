@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import {
   Bell,
   CalendarRange,
+  CalendarX2,
   Clock3,
   Crown,
   DollarSign,
@@ -114,7 +115,26 @@ export default function BarberTodayDashboard({
       (appointment) =>
         new Date(appointment.date).getTime() >= getCurrentScheduleDate().getTime()
     ) || visibleAppointments[0] || null;
-  const agendaPreviewAppointments = visibleAppointments.slice(0, 3);
+  const agendaPreviewItems = useMemo(
+    () =>
+      [
+        ...visibleAppointments.map((appointment) => ({
+          id: appointment.id,
+          type: "appointment" as const,
+          sortTime: new Date(appointment.date).getTime(),
+          appointment,
+        })),
+        ...summary.todayBlocks.map((block) => ({
+          id: block.id,
+          type: "block" as const,
+          sortTime: new Date(block.startDateTime).getTime(),
+          block,
+        })),
+      ]
+        .sort((left, right) => left.sortTime - right.sortTime)
+        .slice(0, 3),
+    [summary.todayBlocks, visibleAppointments]
+  );
   const notificationItems = useMemo(
     () =>
       localNotifications.map((notification) => {
@@ -269,12 +289,17 @@ export default function BarberTodayDashboard({
           </div>
 
           <div className="mt-4 space-y-3">
-            {agendaPreviewAppointments.length === 0 ? (
+            {agendaPreviewItems.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-400">
                 Nenhum próximo horário para hoje.
               </div>
             ) : (
-              agendaPreviewAppointments.map((appointment) => {
+              agendaPreviewItems.map((item) => {
+                if (item.type === "block") {
+                  return <TodayAgendaBlockCard key={item.id} block={item.block} />;
+                }
+
+                const appointment = item.appointment;
                 const contactHref = buildAppointmentContactWhatsAppUrl({
                   customerName: appointment.customer.name,
                   barberName,
@@ -344,6 +369,37 @@ export default function BarberTodayDashboard({
         />
       ) : null}
     </section>
+  );
+}
+
+function TodayAgendaBlockCard({
+  block,
+}: {
+  block: BarberTodayDashboardData["summary"]["todayBlocks"][number];
+}) {
+  return (
+    <div className="rounded-2xl border border-red-300/20 bg-red-500/[0.06] p-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-200/80">
+            <CalendarX2 className="h-3.5 w-3.5" />
+            Bloqueado
+          </p>
+          <p className="mt-2 text-2xl font-black leading-none">
+            {block.startTime} - {block.endTime}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-red-200/20 bg-red-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-red-100">
+          Pausa
+        </span>
+      </div>
+      <div className="mt-3 space-y-1 text-sm">
+        <p className="font-semibold text-white">Motivo: {block.reason}</p>
+        <p className="leading-relaxed text-zinc-300">
+          Esse horario so aceita encaixes rapidos pelo admin ou barbeiro.
+        </p>
+      </div>
+    </div>
   );
 }
 
