@@ -11,7 +11,13 @@ import {
   isGoogleSignInConfigured,
 } from "@/lib/googleAuth";
 import { verifyRegistrationAutoLoginToken } from "@/lib/registrationAutoLogin";
-import { DEFAULT_SHOP_ID, getCurrentShopId } from "@/lib/shop";
+import {
+  DEFAULT_SHOP_ID,
+  getCurrentShopId,
+  getRequestHost,
+  getRequestPath,
+  logTenantObservabilityEvent,
+} from "@/lib/shop";
 import {
   getShopEmailRateLimitIdentifier,
   isUniqueConstraintError,
@@ -19,6 +25,28 @@ import {
 } from "@/lib/userIdentity";
 
 const googleSignInConfigured = isGoogleSignInConfigured();
+
+async function getAuthShopIdWithFallback(fallbackReason: string) {
+  return getCurrentShopId().catch(async (error) => {
+    const [host, path] = await Promise.all([
+      getRequestHost().catch(() => null),
+      getRequestPath().catch(() => null),
+    ]);
+
+    logTenantObservabilityEvent({
+      event: "tenant_auth_fallback_used",
+      host,
+      path,
+      resolvedShopId: DEFAULT_SHOP_ID,
+      usedFallback: true,
+      fallbackReason,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorMessage: error instanceof Error ? error.message : "unknown",
+    });
+
+    return DEFAULT_SHOP_ID;
+  });
+}
 
 function getGoogleProviders() {
   if (!googleSignInConfigured) {
@@ -52,7 +80,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
+        const shopId = await getAuthShopIdWithFallback(
+          "credentials_getCurrentShopId_failed"
+        );
         const rateLimit = await enforceRateLimit({
           scope: "auth:credentials",
           identifier: getShopEmailRateLimitIdentifier(shopId, email),
@@ -161,7 +191,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
 
-      const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
+      const shopId = await getAuthShopIdWithFallback(
+        "google_signIn_getCurrentShopId_failed"
+      );
       const existingUser = await prisma.user.findFirst({
         where: { email, shopId },
       });
@@ -221,7 +253,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (params.account?.provider === "google" && params.user?.email) {
         const email = normalizeIdentityEmail(params.user.email);
-        const shopId = await getCurrentShopId().catch(() => DEFAULT_SHOP_ID);
+        const shopId = await getAuthShopIdWithFallback(
+          "google_jwt_getCurrentShopId_failed"
+        );
         const user = await prisma.user.findFirst({
           where: { email, shopId },
         });

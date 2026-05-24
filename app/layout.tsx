@@ -10,7 +10,13 @@ import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
+import {
+  DEFAULT_SHOP_ID,
+  getCurrentShop,
+  getRequestHost,
+  getRequestPath,
+  logTenantObservabilityEvent,
+} from "@/lib/shop";
 import {
   JAKBARBER_APP_NAME,
   JAKBARBER_APPLE_TOUCH_ICON_PATH,
@@ -297,6 +303,22 @@ export default async function RootLayout({
       ? session.user.role
       : null;
   if (role && (!session?.user?.shopId || shop.id !== session.user.shopId)) {
+    const [host, path] = await Promise.all([
+      getRequestHost().catch(() => null),
+      getRequestPath().catch(() => null),
+    ]);
+
+    logTenantObservabilityEvent({
+      event: "tenant_session_shop_mismatch",
+      host,
+      path,
+      resolvedShopId: shop.id,
+      usedFallback: false,
+      fallbackReason: session?.user?.shopId
+        ? "session_shop_mismatch"
+        : "session_shop_missing",
+    });
+
     redirect("/logout");
   }
 

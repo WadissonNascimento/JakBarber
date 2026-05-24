@@ -59,6 +59,19 @@ type ShopCacheEntry = {
   value: ShopRuntimeConfig | null;
 };
 
+type TenantObservabilityEvent = {
+  event: string;
+  host?: string | null;
+  path?: string | null;
+  resolvedShopId?: string | null;
+  usedFallback?: boolean;
+  fallbackReason?: string | null;
+  prismaModel?: string | null;
+  prismaOperation?: string | null;
+  errorName?: string | null;
+  errorMessage?: string | null;
+};
+
 const SHOP_CACHE_TTL_MS = 60_000;
 const shopRuntimeCache = new Map<string, ShopCacheEntry>();
 const shopRuntimeSelect = {
@@ -87,6 +100,105 @@ function normalizeHost(value: string | null | undefined) {
   }
 
   return value.trim().toLowerCase().replace(/:\d+$/, "");
+}
+
+function sanitizeLogPath(value: string | null | undefined) {
+  const path = value?.trim();
+
+  if (!path) {
+    return null;
+  }
+
+  try {
+    const parsed = path.startsWith("http")
+      ? new URL(path)
+      : new URL(path, "http://local.invalid");
+
+    return sanitizePathSegments(parsed.pathname);
+  } catch {
+    return sanitizePathSegments(path.split("?")[0])?.slice(0, 160) || null;
+  }
+}
+
+function isSensitivePathSegment(segment: string) {
+  let decodedSegment = segment;
+
+  try {
+    decodedSegment = decodeURIComponent(segment);
+  } catch {
+    decodedSegment = segment;
+  }
+
+  return (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      decodedSegment
+    ) ||
+    /^c[a-z0-9]{20,}$/i.test(decodedSegment) ||
+    /^[a-z0-9_-]{18,}$/i.test(decodedSegment) ||
+    /^\d{8,}$/.test(decodedSegment)
+  );
+}
+
+function sanitizePathSegments(path: string | null | undefined) {
+  if (!path) {
+    return null;
+  }
+
+  const pathname = path.split("?")[0]?.slice(0, 240) || "";
+  const sanitized = pathname
+    .split("/")
+    .map((segment) => (isSensitivePathSegment(segment) ? ":id" : segment))
+    .join("/");
+
+  return sanitized || null;
+}
+
+function getPathFromHeaders(headerList: Headers) {
+  return (
+    sanitizeLogPath(headerList.get("x-pathname")) ||
+    sanitizeLogPath(headerList.get("x-invoke-path")) ||
+    sanitizeLogPath(headerList.get("next-url")) ||
+    sanitizeLogPath(headerList.get("x-matched-path"))
+  );
+}
+
+function truncateLogValue(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, "[email]")
+    .replace(/(https?:\/\/[^\s?]+)\?[^\s]+/g, "$1?[redacted]")
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [token]")
+    .replace(/[A-Za-z0-9._~+/=-]{32,}/g, "[token]")
+    .slice(0, 160);
+}
+
+export function logTenantObservabilityEvent(input: TenantObservabilityEvent) {
+  const log =
+    input.event === "tenant_default_fallback_used" &&
+    (process.env.NODE_ENV !== "production" || isLocalHost(input.host))
+      ? console.info
+      : console.warn;
+
+  log(
+    "[tenant-observability]",
+    JSON.stringify({
+      event: input.event,
+      timestamp: new Date().toISOString(),
+      NODE_ENV: process.env.NODE_ENV || "unknown",
+      host: input.host || null,
+      path: input.path || null,
+      resolvedShopId: input.resolvedShopId || null,
+      usedFallback: Boolean(input.usedFallback),
+      fallbackReason: input.fallbackReason || null,
+      prismaModel: input.prismaModel || null,
+      prismaOperation: input.prismaOperation || null,
+      errorName: input.errorName || null,
+      errorMessage: truncateLogValue(input.errorMessage),
+    })
+  );
 }
 
 function getConfiguredHost() {
@@ -159,6 +271,16 @@ export async function getRequestHost() {
   }
 }
 
+export async function getRequestPath() {
+  try {
+    const headerList = await headers();
+
+    return getPathFromHeaders(headerList);
+  } catch {
+    return null;
+  }
+}
+
 const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConfig | null> => {
   const cacheKey = host || "__default__";
   const now = Date.now();
@@ -214,6 +336,14 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
       select: shopRuntimeSelect,
     }));
 
+  logTenantObservabilityEvent({
+    event: "tenant_default_fallback_used",
+    host,
+    resolvedShopId: defaultShop?.id || null,
+    usedFallback: true,
+    fallbackReason: host ? "fallback_allowed_for_host" : "missing_host",
+  });
+
   shopRuntimeCache.set(cacheKey, {
     expiresAt: now + SHOP_CACHE_TTL_MS,
     value: defaultShop,
@@ -224,9 +354,32 @@ const getShopByHost = cache(async (host: string | null): Promise<ShopRuntimeConf
 
 export async function getCurrentShop() {
   const host = await getRequestHost();
-  const shop = await getShopByHost(host).catch(() => null);
+  const path = await getRequestPath();
+  const shop = await getShopByHost(host).catch((error) => {
+    logTenantObservabilityEvent({
+      event: "tenant_resolution_error",
+      host,
+      path,
+      resolvedShopId: null,
+      usedFallback: false,
+      fallbackReason: "shop_lookup_failed",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorMessage: error instanceof Error ? error.message : "unknown",
+    });
+
+    return null;
+  });
 
   if (!shop) {
+    logTenantObservabilityEvent({
+      event: "tenant_unconfigured_returned",
+      host,
+      path,
+      resolvedShopId: UNCONFIGURED_SHOP_ID,
+      usedFallback: false,
+      fallbackReason: "shop_not_resolved",
+    });
+
     return UNCONFIGURED_SHOP_CONFIG;
   }
 
