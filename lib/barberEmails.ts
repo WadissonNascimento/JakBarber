@@ -12,6 +12,8 @@ import {
   type BarberEmailTheme,
 } from "@/lib/email/barberTemplates";
 import { getAppointmentDisplayName } from "@/lib/appointmentServices";
+import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
+import { createAppNotificationSafely } from "@/lib/appNotifications";
 import { getShopAppUrl } from "@/lib/appUrl";
 import { sendEmailMessage } from "@/lib/mail";
 import { basePrisma } from "@/lib/prisma-core";
@@ -174,11 +176,13 @@ async function sendBarberAppointmentEmail({
   appointmentId,
   template,
   eventKey,
+  notificationMetadata,
   render,
 }: {
   appointmentId: string;
   template: string;
   eventKey: string;
+  notificationMetadata?: Record<string, string | number | null | undefined>;
   render: (
     appointment: NonNullable<Awaited<ReturnType<typeof loadAppointmentForBarberEmail>>>,
     data: BarberAppointmentEmailData
@@ -197,6 +201,26 @@ async function sendBarberAppointmentEmail({
     }
 
     const rendered = render(appointment, data);
+    await createAppNotificationSafely({
+      shopId: appointment.shop.id,
+      recipientUserId: appointment.barber.id,
+      type: template,
+      eventKey,
+      eyebrow: getBarberNotificationEyebrow(template),
+      title: getBarberNotificationTitle(template),
+      body: getBarberNotificationBody(template, data),
+      actionUrl: absoluteAppUrl(BARBER_PANEL_PATH, appointment.shop),
+      metadata: {
+        appointmentId: appointment.id,
+        appointmentCode: formatAppointmentPublicId(appointment.publicId),
+        customerName: data.nomeCliente,
+        phone: data.telefoneCliente,
+        serviceName: data.servico,
+        date: data.dataAgendamento,
+        time: data.horarioAgendamento,
+        ...notificationMetadata,
+      },
+    });
     const emailIdentity = await getShopEmailIdentity(appointment.shop.id);
 
     await sendEmailMessage({
@@ -225,6 +249,45 @@ async function sendBarberAppointmentEmail({
       }`
     );
     return false;
+  }
+}
+
+function getBarberNotificationEyebrow(template: string) {
+  if (template === "barber.daily_agenda") return "Agenda";
+  if (template === "barber.new_review") return "Avaliacao";
+  return "Atendimento";
+}
+
+function getBarberNotificationTitle(template: string) {
+  switch (template) {
+    case "barber.new_appointment":
+      return "Novo agendamento";
+    case "barber.appointment_cancelled":
+      return "Agendamento cancelado";
+    case "barber.appointment_rescheduled":
+      return "Agendamento reagendado";
+    case "barber.no_show":
+      return "Cliente marcado como falta";
+    default:
+      return "Atualizacao da agenda";
+  }
+}
+
+function getBarberNotificationBody(
+  template: string,
+  data: BarberAppointmentEmailData
+) {
+  switch (template) {
+    case "barber.new_appointment":
+      return `${data.nomeCliente} marcou ${data.servico} para ${data.horarioAgendamento}.`;
+    case "barber.appointment_cancelled":
+      return `${data.nomeCliente} teve o agendamento de ${data.servico} cancelado.`;
+    case "barber.appointment_rescheduled":
+      return `${data.nomeCliente} teve o agendamento de ${data.servico} reagendado.`;
+    case "barber.no_show":
+      return `${data.nomeCliente} foi marcado como falta.`;
+    default:
+      return `${data.nomeCliente} teve uma atualizacao no atendimento.`;
   }
 }
 
@@ -266,6 +329,10 @@ export async function notifyBarberAppointmentRescheduled({
     appointmentId,
     template: "barber.appointment_rescheduled",
     eventKey: `barber:appointment_rescheduled:${appointmentId}:${previousDate.toISOString()}`,
+    notificationMetadata: {
+      previousDateTime: formatDateTimeLabel(previousDate),
+      nextDateTime: formatDateTimeLabel(nextDate || new Date()),
+    },
     render: (appointment, data) =>
       renderBarberAppointmentRescheduledEmail({
         ...data,
@@ -349,6 +416,27 @@ export async function notifyBarberNewReview(reviewId: string) {
     });
 
     const emailIdentity = await getShopEmailIdentity(review.shop.id);
+    await createAppNotificationSafely({
+      shopId: review.shop.id,
+      recipientUserId: review.barber.id,
+      type: "barber.new_review",
+      eventKey: `barber:new_review:${review.id}`,
+      eyebrow: "Avaliacao",
+      title: "Nova avaliacao recebida",
+      body: `${normalizeName(review.customer.name, "Cliente")} avaliou seu atendimento com ${review.rating} estrela(s).`,
+      actionUrl: absoluteAppUrl("/barber", review.shop),
+      metadata: {
+        reviewId: review.id,
+        appointmentId: review.appointmentId,
+        customerName: normalizeName(review.customer.name, "Cliente"),
+        phone: review.customer.phone,
+        serviceName: serviceLabel(review.appointment.services),
+        date: formatDateLabel(review.appointment.date),
+        time: formatScheduleTime(review.appointment.date),
+        rating: review.rating,
+        reviewComment: review.comment,
+      },
+    });
 
     await sendEmailMessage({
       to: review.barber.email,
@@ -504,6 +592,32 @@ export async function sendDailyBarberAgendaEmails({
     });
 
     const emailIdentity = await getShopEmailIdentity(barber.shop.id);
+    await createAppNotificationSafely({
+      shopId: barber.shop.id,
+      recipientUserId: barber.id,
+      type: "barber.daily_agenda",
+      eventKey: `barber:daily_agenda:${barber.id}:${date}`,
+      eyebrow: "Agenda",
+      title: "Sua agenda do dia",
+      body:
+        appointments.length === 1
+          ? "Voce tem 1 atendimento agendado hoje."
+          : `Voce tem ${appointments.length} atendimentos agendados hoje.`,
+      actionUrl: absoluteAppUrl(BARBER_PANEL_PATH, barber.shop),
+      metadata: {
+        appointmentCount: appointments.length,
+        date,
+        appointments: appointments.map((appointment) => ({
+          appointmentCode: formatAppointmentPublicId(appointment.publicId),
+          customerName: normalizeName(appointment.customer.name, "Cliente"),
+          phone: appointment.customer.phone,
+          serviceName: serviceLabel(appointment.services),
+          date: formatScheduleDate(appointment.date),
+          time: formatScheduleTime(appointment.date),
+          status: "CONFIRMED",
+        })),
+      },
+    });
     const result = await sendEmailMessage({
       to: barber.email || "",
       subject: rendered.subject,

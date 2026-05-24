@@ -1,14 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { ArrowRight, Power, Trash2, X } from "lucide-react";
 import BarberPhotoUploader from "@/components/BarberPhotoUploader";
+import FeedbackMessage from "@/components/FeedbackMessage";
 import BackLink from "@/components/ui/BackLink";
 import SectionCard from "@/components/ui/SectionCard";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { formatBrazilianPhone } from "@/lib/phone";
 import { formatCurrency } from "@/lib/utils";
-import { updateBarberPhotoAction } from "../actions";
+import {
+  deleteBarberAction,
+  toggleBarberStatusAction,
+  updateBarberPhotoAction,
+} from "../actions";
 
 type BarberProfileClientProps = {
   barber: {
@@ -32,6 +40,42 @@ export default function BarberProfileClient({
   summary,
 }: BarberProfileClientProps) {
   const baseHref = `/admin/barbeiros/${barber.id}`;
+  const router = useRouter();
+  const [confirmAction, setConfirmAction] = useState<
+    "deactivate" | "delete" | null
+  >(null);
+  const [feedback, setFeedback] = useState<{
+    message: string | null;
+    tone: "success" | "error" | "info";
+  }>({ message: null, tone: "success" });
+  const [isPending, startTransition] = useTransition();
+
+  function runProfileAction(actionType: "deactivate" | "delete") {
+    const formData = new FormData();
+    formData.set("barberId", barber.id);
+
+    if (actionType === "deactivate") {
+      formData.set("currentActive", String(barber.isActive));
+    }
+
+    startTransition(async () => {
+      const result =
+        actionType === "delete"
+          ? await deleteBarberAction(formData)
+          : await toggleBarberStatusAction(formData);
+
+      setFeedback({ message: result.message, tone: result.tone });
+      setConfirmAction(null);
+
+      if (result.ok) {
+        if (actionType === "delete") {
+          router.push("/admin/barbeiros");
+        } else {
+          router.refresh();
+        }
+      }
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -40,9 +84,15 @@ export default function BarberProfileClient({
         description="Dados, foto e comissões individuais."
         className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(9,12,20,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.10)]"
         actions={
-          <BackLink href="/admin/barbeiros" area="Equipe" className="w-full sm:w-auto" />
+          <BackLink
+            href="/admin/barbeiros"
+            area="Equipe"
+            className="w-full sm:w-auto"
+          />
         }
       >
+        <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
         <div className="mb-5 border-b border-white/10 pb-5">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
             Equipe
@@ -58,7 +108,9 @@ export default function BarberProfileClient({
               <StatusBadge variant={barber.isActive ? "success" : "danger"}>
                 {barber.isActive ? "Ativo" : "Desligado"}
               </StatusBadge>
-              <StatusBadge variant="info">{barber.appointmentsCount} agendamento(s)</StatusBadge>
+              <StatusBadge variant="info">
+                {barber.appointmentsCount} agendamento(s)
+              </StatusBadge>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -81,13 +133,35 @@ export default function BarberProfileClient({
             </div>
           </div>
 
-          <BarberPhotoUploader
-            action={updateBarberPhotoAction}
-            barberId={barber.id}
-            currentImage={barber.image}
-            name={barber.name || "Barbeiro"}
-            compact
-          />
+          <div className="rounded-[22px] border border-white/10 bg-black/20 p-3">
+            <BarberPhotoUploader
+              action={updateBarberPhotoAction}
+              barberId={barber.id}
+              currentImage={barber.image}
+              name={barber.name || "Barbeiro"}
+              compact
+              embedded
+            />
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmAction("delete")}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-100 transition hover:bg-red-500/15"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAction("deactivate")}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-500/10 px-3 py-2 text-sm font-bold text-amber-100 transition hover:bg-amber-500/15"
+              >
+                <Power className="h-4 w-4" />
+                {barber.isActive ? "Desativar" : "Reativar"}
+              </button>
+            </div>
+          </div>
         </div>
         <div className="mt-5 border-t border-white/10 pt-5">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
@@ -121,7 +195,116 @@ export default function BarberProfileClient({
           </div>
         </div>
       </SectionCard>
+
+      {confirmAction ? (
+        <ProfileConfirmDialog
+          actionType={confirmAction}
+          barberName={barber.name || "Barbeiro"}
+          isPending={isPending}
+          isActive={barber.isActive}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => runProfileAction(confirmAction)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ProfileConfirmDialog({
+  actionType,
+  barberName,
+  isPending,
+  isActive,
+  onCancel,
+  onConfirm,
+}: {
+  actionType: "deactivate" | "delete";
+  barberName: string;
+  isPending: boolean;
+  isActive: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
+  const isDelete = actionType === "delete";
+  const title = isDelete
+    ? `Excluir ${barberName} da equipe?`
+    : isActive
+      ? `Desativar ${barberName}?`
+      : `Reativar ${barberName}?`;
+  const description = isDelete
+    ? "Ele some da equipe e nao podera receber novos agendamentos. Os agendamentos antigos continuam salvos no historico."
+    : isActive
+      ? "Ele continuara aparecendo na equipe, mas ficara indisponivel para novos agendamentos."
+      : "Ele voltara a aparecer como ativo e podera receber novos agendamentos.";
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex touch-none items-center justify-center overflow-hidden overscroll-none bg-black/80 px-4 py-6 backdrop-blur-md">
+      <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-[#070d18] text-white shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+              Confirmar acao
+            </p>
+            <h2 className="mt-2 text-2xl font-black">{title}</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              {description}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPending}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-zinc-200 transition hover:bg-white/10 disabled:opacity-60"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid gap-2 p-5">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className={`min-h-12 rounded-2xl px-4 py-3 text-sm font-black text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              isDelete
+                ? "bg-red-500 hover:bg-red-400"
+                : "bg-amber-500 hover:bg-amber-400"
+            }`}
+          >
+            {isPending
+              ? "Processando..."
+              : isDelete
+                ? "Sim, excluir"
+                : isActive
+                  ? "Sim, desativar"
+                  : "Sim, reativar"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPending}
+            className="min-h-12 rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/5 disabled:opacity-60"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

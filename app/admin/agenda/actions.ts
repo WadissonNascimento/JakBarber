@@ -20,6 +20,17 @@ import {
 } from "@/lib/appointmentEmails";
 import { notifyBarberNoShow } from "@/lib/barberEmails";
 import {
+  notifyAdminsAppointmentCancelled,
+  notifyAdminsAppointmentNoShow,
+  notifyAdminsLowStockExtras,
+} from "@/lib/appNotifications";
+import {
+  deleteAdminBarberBlockAction,
+  deleteAdminRecurringBarberBlockAction,
+  updateAdminBarberBlockAction,
+  updateAdminRecurringBarberBlockAction,
+} from "@/app/admin/barbeiros/actions";
+import {
   BookingAvailabilityError,
   getBookingAvailability,
 } from "@/lib/bookingAvailability";
@@ -79,6 +90,22 @@ type AdminQuickFitInPreviewPayload = {
     endTime: string;
   } | null;
 };
+
+export async function updateAdminAgendaBlockAction(formData: FormData) {
+  return updateAdminBarberBlockAction(formData);
+}
+
+export async function deleteAdminAgendaBlockAction(formData: FormData) {
+  return deleteAdminBarberBlockAction(formData);
+}
+
+export async function updateAdminAgendaRecurringBlockAction(formData: FormData) {
+  return updateAdminRecurringBarberBlockAction(formData);
+}
+
+export async function deleteAdminAgendaRecurringBlockAction(formData: FormData) {
+  return deleteAdminRecurringBarberBlockAction(formData);
+}
 
 function flattenAvailableSlots(periodSlots: AdminWalkInPeriodSlots) {
   return [
@@ -663,14 +690,19 @@ export async function updateAdminAppointmentStatusAction(
 
     if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
       await notifyCustomerAppointmentCompleted(appointmentId);
+      if (admin.shopId) {
+        await notifyAdminsLowStockExtras({ shopId: admin.shopId });
+      }
     }
 
     if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
       await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
+      await notifyAdminsAppointmentCancelled(appointmentId, cancellationReason);
     }
 
     if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
       await notifyBarberNoShow(appointmentId);
+      await notifyAdminsAppointmentNoShow(appointmentId);
     }
   });
 

@@ -43,48 +43,48 @@ export default async function CustomerAppointmentsPage() {
   }
 
   const appointments = await prisma.appointment.findMany({
-    where: {
-      customerId: session.user.id,
-      isManualFitIn: false,
-    },
-    select: {
-      id: true,
-      publicId: true,
-      date: true,
-      status: true,
-      paymentMethod: true,
-      notes: true,
-      barber: {
-        select: {
-          name: true,
-          phone: true,
+      where: {
+        customerId: session.user.id,
+        isManualFitIn: false,
+      },
+      select: {
+        id: true,
+        publicId: true,
+        date: true,
+        status: true,
+        paymentMethod: true,
+        notes: true,
+        barber: {
+          select: {
+            name: true,
+            phone: true,
+          },
+        },
+        items: {
+          select: {
+            productNameSnapshot: true,
+            quantity: true,
+            subtotal: true,
+          },
+        },
+        services: {
+          select: {
+            nameSnapshot: true,
+            orderIndex: true,
+            priceSnapshot: true,
+            durationSnapshot: true,
+            bufferAfter: true,
+          },
+        },
+        review: {
+          select: {
+            id: true,
+          },
         },
       },
-      items: {
-        select: {
-          productNameSnapshot: true,
-          quantity: true,
-          subtotal: true,
-        },
+      orderBy: {
+        date: "desc",
       },
-      services: {
-        select: {
-          nameSnapshot: true,
-          orderIndex: true,
-          priceSnapshot: true,
-          durationSnapshot: true,
-          bufferAfter: true,
-        },
-      },
-      review: {
-        select: {
-          id: true,
-        },
-      },
-    },
-    orderBy: {
-      date: "desc",
-    },
   });
 
   return (

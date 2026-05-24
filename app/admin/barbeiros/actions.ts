@@ -36,15 +36,17 @@ function getExpirationDate() {
 
 function buildVerificationUrl(
   email: string,
-  shop: { primaryDomain?: string | null } | null
+  shop: { primaryDomain?: string | null } | null,
 ) {
   return `${getShopAppUrl(shop)}/register/verify?email=${encodeURIComponent(email)}`;
 }
 
 function isValidTimeRange(startTime: string, endTime: string) {
-  return /^\d{2}:\d{2}$/.test(startTime) &&
+  return (
+    /^\d{2}:\d{2}$/.test(startTime) &&
     /^\d{2}:\d{2}$/.test(endTime) &&
-    startTime < endTime;
+    startTime < endTime
+  );
 }
 
 async function requireAdminBarberTarget(formData: FormData) {
@@ -97,12 +99,14 @@ function revalidateAdminBarberAvailabilityViews(barberId: string) {
 }
 
 export async function createBarberAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const admin = await requireAdmin();
 
   const name = String(formData.get("name") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const email = String(formData.get("email") || "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
 
@@ -133,13 +137,13 @@ export async function createBarberAction(
     return mutationError(
       existingUser.isActive
         ? "Ja existe uma conta ativa com esse e-mail."
-        : "Ja existe um barbeiro desligado com esse e-mail. Reative a conta existente em vez de criar outra."
+        : "Ja existe um barbeiro desligado com esse e-mail. Reative a conta existente em vez de criar outra.",
     );
   }
 
   if (existingPendingRegistration) {
     return mutationError(
-      "Ja existe um cadastro pendente com esse e-mail. O barbeiro precisa concluir a verificacao antes de um novo convite."
+      "Ja existe um cadastro pendente com esse e-mail. O barbeiro precisa concluir a verificacao antes de um novo convite.",
     );
   }
 
@@ -179,25 +183,25 @@ export async function createBarberAction(
 
     if (isUniqueConstraintError(error, "email")) {
       return mutationError(
-        "Ja existe uma conta ou cadastro pendente com esse e-mail."
+        "Ja existe uma conta ou cadastro pendente com esse e-mail.",
       );
     }
 
     return mutationError(
       error instanceof Error
         ? error.message
-        : "Nao foi possivel enviar o convite do barbeiro."
+        : "Nao foi possivel enviar o convite do barbeiro.",
     );
   }
 
   revalidatePath("/admin/barbeiros");
   return mutationSuccess(
-    "Convite enviado. O barbeiro precisa confirmar o e-mail para ativar a conta."
+    "Convite enviado. O barbeiro precisa confirmar o e-mail para ativar a conta.",
   );
 }
 
 export async function toggleBarberStatusAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const admin = await requireAdmin();
 
@@ -234,12 +238,12 @@ export async function toggleBarberStatusAction(
   revalidatePath(`/admin/barbeiros/${barberId}`);
   revalidatePath("/admin/agenda");
   return mutationSuccess(
-    currentActive ? "Barbeiro inativado." : "Barbeiro reativado."
+    currentActive ? "Barbeiro inativado." : "Barbeiro reativado.",
   );
 }
 
 export async function updateBarberPhotoAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult | MutationResult<{ image: string }>> {
   const admin = await requireAdmin();
 
@@ -292,13 +296,15 @@ export async function updateBarberPhotoAction(
     return mutationSuccess("Foto do barbeiro atualizada.", { image });
   } catch (error) {
     return mutationError(
-      error instanceof Error ? error.message : "Nao foi possivel atualizar a foto."
+      error instanceof Error
+        ? error.message
+        : "Nao foi possivel atualizar a foto.",
     );
   }
 }
 
 export async function deleteBarberAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const admin = await requireAdmin();
 
@@ -316,7 +322,6 @@ export async function deleteBarberAction(
     },
     select: {
       id: true,
-      isActive: true,
     },
   });
 
@@ -324,14 +329,11 @@ export async function deleteBarberAction(
     return mutationError("Barbeiro nao encontrado.");
   }
 
-  if (!barber.isActive) {
-    return mutationSuccess("Esse barbeiro ja esta desligado.", undefined, "info");
-  }
-
   await prisma.user.update({
     where: { id: barberId },
     data: {
       isActive: false,
+      role: "BARBER_ARCHIVED",
     },
   });
 
@@ -343,19 +345,21 @@ export async function deleteBarberAction(
   revalidatePath("/agendar");
   revalidatePath("/meu-perfil");
   return mutationSuccess(
-    "Barbeiro desligado com sucesso. Historico, servicos prestados e fechamentos foram preservados."
+    "Barbeiro excluido da equipe. Historico, agendamentos antigos e fechamentos foram preservados.",
   );
 }
 
 export async function upsertBarberServiceCommissionAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const admin = await requireAdmin();
 
   const barberId = String(formData.get("barberId") || "").trim();
   const serviceId = String(formData.get("serviceId") || "").trim();
   const commissionType =
-    String(formData.get("commissionType") || "PERCENT") === "FIXED" ? "FIXED" : "PERCENT";
+    String(formData.get("commissionType") || "PERCENT") === "FIXED"
+      ? "FIXED"
+      : "PERCENT";
   const commissionValue = Number(formData.get("commissionValue") || 0);
 
   if (
@@ -423,7 +427,7 @@ export async function upsertBarberServiceCommissionAction(
 }
 
 export async function saveAdminBarberAvailabilityAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const { barber, error } = await requireAdminBarberTarget(formData);
   const weekDay = Number(formData.get("weekDay") || -1);
@@ -465,14 +469,14 @@ export async function saveAdminBarberAvailabilityAction(
 }
 
 export async function createAdminBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const { barber, error } = await requireAdminBarberTarget(formData);
   const startDateTime = createScheduleDateTimeInput(
-    String(formData.get("startDateTime") || "")
+    String(formData.get("startDateTime") || ""),
   );
   const endDateTime = createScheduleDateTimeInput(
-    String(formData.get("endDateTime") || "")
+    String(formData.get("endDateTime") || ""),
   );
   const reason = String(formData.get("reason") || "").trim();
 
@@ -497,8 +501,50 @@ export async function createAdminBarberBlockAction(
   return mutationSuccess("Bloqueio criado para o barbeiro.");
 }
 
+export async function updateAdminBarberBlockAction(
+  formData: FormData,
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const blockId = String(formData.get("blockId") || "").trim();
+  const startDateTime = createScheduleDateTimeInput(
+    String(formData.get("startDateTime") || ""),
+  );
+  const endDateTime = createScheduleDateTimeInput(
+    String(formData.get("endDateTime") || ""),
+  );
+  const reason = String(formData.get("reason") || "").trim();
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  if (!startDateTime || !endDateTime || startDateTime >= endDateTime) {
+    return mutationError("Periodo de bloqueio invalido.");
+  }
+
+  const block = await prisma.barberBlock.findUnique({
+    where: { id: blockId },
+  });
+
+  if (!block || block.barberId !== barber.id) {
+    return mutationError("Bloqueio nao encontrado para este barbeiro.");
+  }
+
+  await prisma.barberBlock.update({
+    where: { id: block.id },
+    data: {
+      startDateTime,
+      endDateTime,
+      reason: reason || null,
+    },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Bloqueio atualizado.");
+}
+
 export async function createAdminRecurringBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const { barber, error } = await requireAdminBarberTarget(formData);
   const weekDay = Number(formData.get("weekDay") || -1);
@@ -529,8 +575,78 @@ export async function createAdminRecurringBarberBlockAction(
   return mutationSuccess("Pausa fixa criada para o barbeiro.");
 }
 
+export async function updateAdminRecurringBarberBlockAction(
+  formData: FormData,
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const recurringBlockId = String(
+    formData.get("recurringBlockId") || "",
+  ).trim();
+  const weekDay = Number(formData.get("weekDay") || -1);
+  const startTime = String(formData.get("startTime") || "");
+  const endTime = String(formData.get("endTime") || "");
+  const reason = String(formData.get("reason") || "").trim();
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  if (weekDay < 0 || weekDay > 6 || !isValidTimeRange(startTime, endTime)) {
+    return mutationError("Pausa fixa invalida.");
+  }
+
+  const recurringBlock = await prisma.recurringBarberBlock.findUnique({
+    where: { id: recurringBlockId },
+  });
+
+  if (!recurringBlock || recurringBlock.barberId !== barber.id) {
+    return mutationError("Pausa fixa nao encontrada para este barbeiro.");
+  }
+
+  await prisma.recurringBarberBlock.update({
+    where: { id: recurringBlock.id },
+    data: {
+      weekDay,
+      startTime,
+      endTime,
+      reason: reason || null,
+    },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Pausa fixa atualizada para o barbeiro.");
+}
+
+export async function deleteAdminRecurringBarberBlockAction(
+  formData: FormData,
+): Promise<MutationResult> {
+  const { barber, error } = await requireAdminBarberTarget(formData);
+  const recurringBlockId = String(
+    formData.get("recurringBlockId") || "",
+  ).trim();
+
+  if (!barber) {
+    return mutationError(error || "Barbeiro invalido.");
+  }
+
+  const recurringBlock = await prisma.recurringBarberBlock.findUnique({
+    where: { id: recurringBlockId },
+  });
+
+  if (!recurringBlock || recurringBlock.barberId !== barber.id) {
+    return mutationError("Pausa fixa nao encontrada para este barbeiro.");
+  }
+
+  await prisma.recurringBarberBlock.delete({
+    where: { id: recurringBlock.id },
+  });
+
+  revalidateAdminBarberAvailabilityViews(barber.id);
+  return mutationSuccess("Pausa fixa removida.");
+}
+
 export async function deleteAdminBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const { barber, error } = await requireAdminBarberTarget(formData);
   const blockId = String(formData.get("blockId") || "").trim();

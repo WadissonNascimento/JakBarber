@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  sendCustomerAppointmentDayReminderNotifications,
-  sendDueAppointmentReminderEmails,
-} from "@/lib/appointmentEmails";
+import { sendOpenAppointmentShiftEndNotifications } from "@/lib/appNotifications";
 import { logSecurityEvent } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +15,12 @@ function getBearerToken(request: Request) {
   return request.headers.get("x-cron-secret")?.trim() || "";
 }
 
-async function handleAppointmentRemindersCron(request: Request) {
+async function handleBarberOpenAppointmentsCron(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
     logSecurityEvent("cron_secret_missing", {
-      route: "/api/cron/appointment-reminders",
+      route: "/api/cron/barber-open-appointments",
     });
 
     return NextResponse.json(
@@ -34,38 +31,26 @@ async function handleAppointmentRemindersCron(request: Request) {
 
   if (getBearerToken(request) !== cronSecret) {
     logSecurityEvent("cron_access_denied", {
-      route: "/api/cron/appointment-reminders",
+      route: "/api/cron/barber-open-appointments",
     });
 
     return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
   }
 
-  const [dayResult, result] = await Promise.all([
-    sendCustomerAppointmentDayReminderNotifications(),
-    sendDueAppointmentReminderEmails(),
-  ]);
+  const result = await sendOpenAppointmentShiftEndNotifications();
 
   return NextResponse.json({
-    message: "Lembretes processados.",
-    dayReminder: {
-      checked: dayResult.checked,
-      created: dayResult.created,
-      skipped: dayResult.skipped,
-      date: dayResult.date,
-    },
+    message: "Atendimentos em aberto processados.",
     checked: result.checked,
-    sent: result.sent,
-    failed: result.failed,
+    created: result.created,
     skipped: result.skipped,
-    windowStart: result.windowStart.toISOString(),
-    windowEnd: result.windowEnd.toISOString(),
   });
 }
 
 export async function GET(request: Request) {
-  return handleAppointmentRemindersCron(request);
+  return handleBarberOpenAppointmentsCron(request);
 }
 
 export async function POST(request: Request) {
-  return handleAppointmentRemindersCron(request);
+  return handleBarberOpenAppointmentsCron(request);
 }

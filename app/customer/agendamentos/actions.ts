@@ -10,6 +10,7 @@ import {
   notifyBarberAppointmentCancelled,
   notifyBarberNewReview,
 } from "@/lib/barberEmails";
+import { notifyAdminsAppointmentCancelled } from "@/lib/appNotifications";
 import { prisma } from "@/lib/prisma";
 import {
   mutationError,
@@ -82,6 +83,7 @@ export async function cancelCustomerAppointmentAction(
   revalidatePath("/barber/agenda");
 
   await notifyBarberAppointmentCancelled(appointmentId, "Cancelado pelo cliente.");
+  await notifyAdminsAppointmentCancelled(appointmentId, "Cancelado pelo cliente.");
 
   return mutationSuccess("Agendamento cancelado com sucesso.");
 }

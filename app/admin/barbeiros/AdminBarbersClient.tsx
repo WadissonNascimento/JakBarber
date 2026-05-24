@@ -35,7 +35,10 @@ export default function AdminBarbersClient({
 }: {
   barbers: BarberItem[];
   pendingBarbers: PendingBarberItem[];
-  initialFeedback?: { message: string; tone: "success" | "error" | "info" } | null;
+  initialFeedback?: {
+    message: string;
+    tone: "success" | "error" | "info";
+  } | null;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<{
@@ -44,7 +47,7 @@ export default function AdminBarbersClient({
   }>(
     initialFeedback
       ? { message: initialFeedback.message, tone: initialFeedback.tone }
-      : { message: null, tone: "success" }
+      : { message: null, tone: "success" },
   );
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -57,7 +60,7 @@ export default function AdminBarbersClient({
       tone: "success" | "error" | "info";
     }>,
     formData: FormData,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) {
     setPendingKey(key);
 
@@ -79,61 +82,60 @@ export default function AdminBarbersClient({
       <FeedbackMessage message={feedback.message} tone={feedback.tone} />
 
       <section className="dashboard-subpanel p-4">
-        <h2 className="text-xl font-bold text-white">Equipe atual de Barbeiros</h2>
+        <h2 className="text-xl font-bold text-white">
+          Equipe atual de Barbeiros
+        </h2>
         <div className="mt-4">
-        {barbers.length === 0 ? (
-          <EmptyState
-            title="Nenhum barbeiro cadastrado"
-            description="Depois que um convite for confirmado, o barbeiro aparecerá aqui."
-          />
-        ) : (
-          <div className="space-y-3">
-            {barbers.map((barber) => (
-              <Link
-                key={barber.id}
-                href={`/admin/barbeiros/${barber.id}`}
-                className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))] px-3 py-3 shadow-[0_18px_44px_rgba(0,0,0,0.22)] transition hover:border-sky-400/30 hover:bg-sky-500/10"
-              >
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-sky-400/20 bg-sky-500/10 text-xl font-semibold text-sky-200">
-                  {barber.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={barber.image}
-                      alt={barber.name || "Barbeiro"}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (barber.name || "B").slice(0, 1).toUpperCase()
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-white sm:text-lg">
-                      {barber.name || "Barbeiro"}
-                    </h3>
-                    <span
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                        barber.isActive
-                          ? "border-sky-400/30 bg-sky-500/10 text-sky-200"
-                          : "border-red-500/25 bg-red-500/10 text-red-200"
-                      }`}
-                    >
-                      {barber.isActive ? "Ativo" : "Off"}
-                    </span>
+          {barbers.length === 0 ? (
+            <EmptyState
+              title="Nenhum barbeiro cadastrado"
+              description="Depois que um convite for confirmado, o barbeiro aparecerá aqui."
+            />
+          ) : (
+            <div className="space-y-3">
+              {barbers.map((barber) => (
+                <Link
+                  key={barber.id}
+                  href={`/admin/barbeiros/${barber.id}`}
+                  className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))] px-3 py-3 shadow-[0_18px_44px_rgba(0,0,0,0.22)] transition hover:border-sky-400/30 hover:bg-sky-500/10"
+                >
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-sky-400/20 bg-sky-500/10 text-xl font-semibold text-sky-200">
+                    {barber.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={barber.image}
+                        alt={barber.name || "Barbeiro"}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (barber.name || "B").slice(0, 1).toUpperCase()
+                    )}
                   </div>
-                  <p className="mt-1 truncate text-sm text-zinc-400">
-                    {barber.email || "E-mail não informado"}
-                  </p>
-                </div>
 
-                <span className="shrink-0 text-lg text-zinc-500">+</span>
-              </Link>
-            ))}
-          </div>
-        )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-white sm:text-lg">
+                        {barber.name || "Barbeiro"}
+                      </h3>
+                      <span
+                        className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                          barber.isActive
+                            ? "border-sky-400/30 bg-sky-500/10 text-sky-200"
+                            : "border-red-500/25 bg-red-500/10 text-red-200"
+                        }`}
+                      >
+                        {barber.isActive ? "Ativo" : "Off"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 text-lg text-zinc-500">+</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -143,45 +145,60 @@ export default function AdminBarbersClient({
           Acessos enviados que ainda não foram confirmados.
         </p>
         <div className="mt-4">
-        {pendingBarbers.length === 0 ? (
-          <EmptyState
-            title="Nenhum convite pendente"
-            description="Quando você enviar um novo convite, ele aparecerá aqui até a confirmação."
-          />
-        ) : (
-          <div className="space-y-3">
-            {pendingBarbers.map((barber) => (
-              <div
-                key={barber.id}
-                className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(32,43,64,0.52),rgba(18,24,39,0.90))] p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-white">{barber.name}</h3>
-                  <StatusBadge variant="warning">Pendente de confirmação</StatusBadge>
+          {pendingBarbers.length === 0 ? (
+            <EmptyState
+              title="Nenhum convite pendente"
+              description="Quando você enviar um novo convite, ele aparecerá aqui até a confirmação."
+            />
+          ) : (
+            <div className="space-y-3">
+              {pendingBarbers.map((barber) => (
+                <div
+                  key={barber.id}
+                  className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(32,43,64,0.52),rgba(18,24,39,0.90))] p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-white">
+                      {barber.name}
+                    </h3>
+                    <StatusBadge variant="warning">
+                      Pendente de confirmação
+                    </StatusBadge>
+                  </div>
+                  <p className="mt-2 break-all text-sm text-zinc-300">
+                    {barber.email}
+                  </p>
+                  <p className="text-sm text-zinc-400">
+                    {formatBrazilianPhone(barber.phone) ||
+                      "Telefone não informado"}
+                  </p>
+                  <p className="mt-3 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                    Expira em{" "}
+                    {new Date(barber.expiresAt).toLocaleString("pt-BR")}
+                  </p>
                 </div>
-                <p className="mt-2 break-all text-sm text-zinc-300">{barber.email}</p>
-                <p className="text-sm text-zinc-400">
-                  {formatBrazilianPhone(barber.phone) || "Telefone não informado"}
-                </p>
-                <p className="mt-3 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  Expira em {new Date(barber.expiresAt).toLocaleString("pt-BR")}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       <section className="dashboard-subpanel p-4">
-        <h2 className="text-xl font-bold text-white">Cadastrar novo barbeiro</h2>
+        <h2 className="text-xl font-bold text-white">
+          Cadastrar novo barbeiro
+        </h2>
         <form
           className="mt-4 grid gap-3 md:grid-cols-2"
           onSubmit={(event) => {
             event.preventDefault();
             const form = event.currentTarget;
 
-            runAction("create-barber", createBarberAction, new FormData(form), () => form.reset());
+            runAction(
+              "create-barber",
+              createBarberAction,
+              new FormData(form),
+              () => form.reset(),
+            );
           }}
         >
           <label className="space-y-2 text-sm font-medium text-zinc-300">
@@ -223,10 +240,7 @@ export default function AdminBarbersClient({
 
           <label className="space-y-2 text-sm font-medium text-zinc-300">
             <span>Telefone</span>
-            <PhoneInput
-              name="phone"
-              className="form-control"
-            />
+            <PhoneInput name="phone" className="form-control" />
           </label>
 
           <div className="md:col-span-2">
@@ -235,7 +249,9 @@ export default function AdminBarbersClient({
               disabled={isPending && pendingKey === "create-barber"}
               className="btn-primary w-full sm:w-auto"
             >
-              {isPending && pendingKey === "create-barber" ? "Enviando..." : "Enviar acesso"}
+              {isPending && pendingKey === "create-barber"
+                ? "Enviando..."
+                : "Enviar acesso"}
             </button>
           </div>
         </form>

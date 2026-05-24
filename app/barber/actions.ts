@@ -21,6 +21,11 @@ import {
 } from "@/lib/appointmentEmails";
 import { notifyBarberNoShow } from "@/lib/barberEmails";
 import {
+  notifyAdminsAppointmentCancelled,
+  notifyAdminsAppointmentNoShow,
+  notifyAdminsLowStockExtras,
+} from "@/lib/appNotifications";
+import {
   mutationError,
   mutationSuccess,
   type MutationResult,
@@ -184,7 +189,8 @@ async function getQuickFitInPreviewForBarber({
     }
 
     const existingStart = getScheduleMinutes(new Date(appointment.date));
-    const existingEnd = existingStart + getAppointmentOccupiedDuration(appointment);
+    const existingEnd =
+      existingStart + getAppointmentOccupiedDuration(appointment);
 
     return startMinutes < existingEnd && endMinutes > existingStart;
   });
@@ -201,7 +207,8 @@ async function getQuickFitInPreviewForBarber({
           customerName: conflict.customer?.name || "Cliente",
           startTime: formatScheduleTime(new Date(conflict.date)),
           endTime: minutesToTime(
-            getScheduleMinutes(new Date(conflict.date)) + getAppointmentOccupiedDuration(conflict)
+            getScheduleMinutes(new Date(conflict.date)) +
+              getAppointmentOccupiedDuration(conflict),
           ),
         }
       : null,
@@ -225,9 +232,11 @@ async function requireBarber() {
 }
 
 function isValidTimeRange(startTime: string, endTime: string) {
-  return /^\d{2}:\d{2}$/.test(startTime) &&
+  return (
+    /^\d{2}:\d{2}$/.test(startTime) &&
     /^\d{2}:\d{2}$/.test(endTime) &&
-    startTime < endTime;
+    startTime < endTime
+  );
 }
 
 function revalidateBarberViews() {
@@ -303,7 +312,7 @@ function parseItemDeliveryDecisions(formData: FormData) {
 }
 
 export async function updateOwnBarberPhotoAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult | MutationResult<{ image: string }>> {
   const barber = await requireBarber();
   const file = formData.get("photo");
@@ -339,13 +348,15 @@ export async function updateOwnBarberPhotoAction(
     return mutationSuccess("Foto atualizada com sucesso.", { image });
   } catch (error) {
     return mutationError(
-      error instanceof Error ? error.message : "Nao foi possivel atualizar a foto."
+      error instanceof Error
+        ? error.message
+        : "Nao foi possivel atualizar a foto.",
     );
   }
 }
 
 export async function updateOwnBarberContactAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const name = normalizeCustomerName(formData.get("name")?.toString() || "");
@@ -363,7 +374,9 @@ export async function updateOwnBarberContactAction(
   });
 
   if (!rateLimit.allowed) {
-    return mutationError("Muitas alteracoes em pouco tempo. Aguarde e tente novamente.");
+    return mutationError(
+      "Muitas alteracoes em pouco tempo. Aguarde e tente novamente.",
+    );
   }
 
   if (name.length < 2 || name.length > 80) {
@@ -375,7 +388,9 @@ export async function updateOwnBarberContactAction(
   }
 
   if (rawPhone.trim() && !isValidBrazilianPhone(phone)) {
-    return mutationError(`Use um telefone no formato ${BRAZILIAN_PHONE_EXAMPLE}.`);
+    return mutationError(
+      `Use um telefone no formato ${BRAZILIAN_PHONE_EXAMPLE}.`,
+    );
   }
 
   const emailOwner = await prisma.user.findFirst({
@@ -423,15 +438,15 @@ export async function updateOwnBarberContactAction(
 }
 
 export async function updateAppointmentStatusAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const appointmentId = String(formData.get("appointmentId") || "");
   const status = normalizeAppointmentStatus(
-    String(formData.get("status") || "")
+    String(formData.get("status") || ""),
   );
   const cancellationReason = String(
-    formData.get("cancellationReason") || ""
+    formData.get("cancellationReason") || "",
   ).trim();
   const paymentMethod = normalizePaymentMethod(formData.get("paymentMethod"));
   const itemDeliveryDecisions =
@@ -480,14 +495,20 @@ export async function updateAppointmentStatusAction(
 
     if (status === "COMPLETED" && previousStatus !== "COMPLETED") {
       await notifyCustomerAppointmentCompleted(appointmentId);
+      await notifyAdminsLowStockExtras({ shopId: barber.shopId });
     }
 
     if (status === "NO_SHOW" && previousStatus !== "NO_SHOW") {
       await notifyBarberNoShow(appointmentId);
+      await notifyAdminsAppointmentNoShow(appointmentId);
     }
 
     if (status === "CANCELLED" && previousStatus !== "CANCELLED") {
-      await notifyCustomerAppointmentCancelled(appointmentId, cancellationReason);
+      await notifyCustomerAppointmentCancelled(
+        appointmentId,
+        cancellationReason,
+      );
+      await notifyAdminsAppointmentCancelled(appointmentId, cancellationReason);
     }
   });
 
@@ -495,10 +516,12 @@ export async function updateAppointmentStatusAction(
 }
 
 export async function setAppointmentItemDeliveryStatusAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
-  const appointmentItemId = String(formData.get("appointmentItemId") || "").trim();
+  const appointmentItemId = String(
+    formData.get("appointmentItemId") || "",
+  ).trim();
   const isDelivered = String(formData.get("isDelivered") || "") === "true";
 
   if (!appointmentItemId) {
@@ -519,7 +542,7 @@ export async function setAppointmentItemDeliveryStatusAction(
     return mutationSuccess(
       result.delivered
         ? `${result.productName} marcado como entregue.`
-        : `${result.productName} marcado como não entregue.`
+        : `${result.productName} marcado como não entregue.`,
     );
   } catch (error) {
     if (error instanceof AppointmentMutationError) {
@@ -531,7 +554,7 @@ export async function setAppointmentItemDeliveryStatusAction(
 }
 
 export async function editOpenBarberAppointmentAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const appointmentId = String(formData.get("appointmentId") || "").trim();
@@ -553,7 +576,9 @@ export async function editOpenBarberAppointmentAction(
     extras.length > 12 ||
     notes.length > 400
   ) {
-    return mutationError("Selecione servicos, extras e observacoes corretamente.");
+    return mutationError(
+      "Selecione servicos, extras e observacoes corretamente.",
+    );
   }
 
   try {
@@ -577,7 +602,7 @@ export async function editOpenBarberAppointmentAction(
 }
 
 export async function editCompletedBarberFinanceAppointmentAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const appointmentId = String(formData.get("appointmentId") || "").trim();
@@ -599,7 +624,9 @@ export async function editCompletedBarberFinanceAppointmentAction(
     extras.length > 12 ||
     notes.length > 400
   ) {
-    return mutationError("Selecione servicos, extras e observacoes corretamente.");
+    return mutationError(
+      "Selecione servicos, extras e observacoes corretamente.",
+    );
   }
 
   try {
@@ -624,11 +651,13 @@ export async function editCompletedBarberFinanceAppointmentAction(
 }
 
 export async function createWalkInAppointmentAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const customerId = String(formData.get("customerId") || "").trim();
-  const customerName = normalizeCustomerName(String(formData.get("customerName") || ""));
+  const customerName = normalizeCustomerName(
+    String(formData.get("customerName") || ""),
+  );
   const rawCustomerPhone = String(formData.get("customerPhone") || "");
   const customerPhone = normalizeBrazilianPhoneForSubmit(rawCustomerPhone);
   const hasRawCustomerPhone = Boolean(rawCustomerPhone.trim());
@@ -637,17 +666,19 @@ export async function createWalkInAppointmentAction(
     .map((value) => String(value).trim())
     .filter(Boolean);
   const legacyServiceId = String(formData.get("serviceId") || "").trim();
-  const selectedServiceIds = serviceIds.length > 0 ? serviceIds : [legacyServiceId].filter(Boolean);
+  const selectedServiceIds =
+    serviceIds.length > 0 ? serviceIds : [legacyServiceId].filter(Boolean);
   const selectedExtras = formData
     .getAll("extraProductIds")
     .map((value) => String(value).trim())
     .filter(Boolean)
     .map((extraProductId) => ({ extraProductId, quantity: 1 }));
-  const fitInMode = String(formData.get("fitInMode") || "standard") === "quick"
-    ? "quick"
-    : "standard";
+  const fitInMode =
+    String(formData.get("fitInMode") || "standard") === "quick"
+      ? "quick"
+      : "standard";
   const manualDurationMinutes = normalizeQuickFitInDuration(
-    formData.get("manualDurationMinutes")
+    formData.get("manualDurationMinutes"),
   );
   let date = String(formData.get("date") || "").trim();
   let startTime = String(formData.get("startTime") || "").trim();
@@ -663,7 +694,9 @@ export async function createWalkInAppointmentAction(
     startTime = minutesToTime(getCurrentScheduleMinutes(now));
 
     if (toMinutes(startTime) + manualDurationMinutes > 24 * 60) {
-      return mutationError("A duracao informada ultrapassa o dia de atendimento.");
+      return mutationError(
+        "A duracao informada ultrapassa o dia de atendimento.",
+      );
     }
   }
 
@@ -675,12 +708,16 @@ export async function createWalkInAppointmentAction(
   });
 
   if (!rateLimit.allowed) {
-    return mutationError("Muitos encaixes em pouco tempo. Aguarde e tente novamente.");
+    return mutationError(
+      "Muitos encaixes em pouco tempo. Aguarde e tente novamente.",
+    );
   }
 
   if (
     (!customerId && !isValidCustomerFullName(customerName)) ||
-    (!customerId && hasRawCustomerPhone && !isValidBrazilianPhone(rawCustomerPhone)) ||
+    (!customerId &&
+      hasRawCustomerPhone &&
+      !isValidBrazilianPhone(rawCustomerPhone)) ||
     (hasRawCustomerPhone && !customerPhone) ||
     customerName.length > 80 ||
     selectedServiceIds.length === 0 ||
@@ -691,7 +728,7 @@ export async function createWalkInAppointmentAction(
     extraNotes.length > 200
   ) {
     return mutationError(
-      "Preencha nome completo, telefone valido quando informado, servicos, data e horario corretamente."
+      "Preencha nome completo, telefone valido quando informado, servicos, data e horario corretamente.",
     );
   }
 
@@ -710,7 +747,9 @@ export async function createWalkInAppointmentAction(
   });
 
   if (services.length !== selectedServiceIds.length) {
-    return mutationError("Um ou mais servicos estao indisponiveis para encaixe.");
+    return mutationError(
+      "Um ou mais servicos estao indisponiveis para encaixe.",
+    );
   }
 
   try {
@@ -723,7 +762,9 @@ export async function createWalkInAppointmentAction(
       const availableSlots = flattenAvailableSlots(availability.periodSlots);
 
       if (!availableSlots.includes(startTime)) {
-        return mutationError("Escolha um dos horarios disponiveis para esse encaixe.");
+        return mutationError(
+          "Escolha um dos horarios disponiveis para esse encaixe.",
+        );
       }
     }
   } catch (error) {
@@ -768,7 +809,8 @@ export async function createWalkInAppointmentAction(
       date,
       time: startTime,
       conflictMode: fitInMode === "quick" ? "SAME_START_ONLY" : "OVERLAP",
-      manualDurationMinutes: fitInMode === "quick" ? manualDurationMinutes : null,
+      manualDurationMinutes:
+        fitInMode === "quick" ? manualDurationMinutes : null,
       notes: formatManualFitInNotes({
         customerName: displayCustomerName,
         customerPhone: displayCustomerPhone,
@@ -790,7 +832,7 @@ export async function createWalkInAppointmentAction(
   return mutationSuccess(
     fitInMode === "quick"
       ? "Encaixe rapido criado com sucesso!"
-      : "Encaixe criado com sucesso!"
+      : "Encaixe criado com sucesso!",
   );
 }
 
@@ -804,7 +846,7 @@ export async function getQuickFitInPreviewAction({
 
   if (!normalizedDuration) {
     return mutationError(
-      "Informe uma duracao entre 5 e 240 minutos."
+      "Informe uma duracao entre 5 e 240 minutos.",
     ) as MutationResult<QuickFitInPreviewPayload>;
   }
 
@@ -815,13 +857,13 @@ export async function getQuickFitInPreviewAction({
         shopId: barber.shopId,
         barberId: barber.id,
         durationMinutes: normalizedDuration,
-      })
+      }),
     );
   } catch (error) {
     return mutationError(
       error instanceof Error
         ? error.message
-        : "Nao foi possivel calcular o encaixe rapido."
+        : "Nao foi possivel calcular o encaixe rapido.",
     ) as MutationResult<QuickFitInPreviewPayload>;
   }
 }
@@ -844,7 +886,9 @@ export async function getWalkInAvailableSlotsAction({
     selectedServiceIds.length === 0 ||
     selectedServiceIds.length > 8
   ) {
-    return walkInSlotsError("Selecione servicos e data para carregar os horarios.");
+    return walkInSlotsError(
+      "Selecione servicos e data para carregar os horarios.",
+    );
   }
 
   const services = await prisma.service.findMany({
@@ -862,7 +906,9 @@ export async function getWalkInAvailableSlotsAction({
   });
 
   if (services.length !== selectedServiceIds.length) {
-    return walkInSlotsError("Um ou mais servicos estao indisponiveis para encaixe.");
+    return walkInSlotsError(
+      "Um ou mais servicos estao indisponiveis para encaixe.",
+    );
   }
 
   try {
@@ -886,7 +932,7 @@ export async function getWalkInAvailableSlotsAction({
 }
 
 export async function saveBarberAvailabilityAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const weekDay = Number(formData.get("weekDay") || -1);
@@ -924,7 +970,7 @@ export async function saveBarberAvailabilityAction(
 }
 
 export async function saveWeeklyBarberAvailabilityAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
 
@@ -968,8 +1014,8 @@ export async function saveWeeklyBarberAvailabilityAction(
             endTime: entry.endTime,
             isActive: entry.isActive,
           },
-        })
-      )
+        }),
+      ),
     );
   } catch (error) {
     if (error instanceof Error) {
@@ -980,28 +1026,22 @@ export async function saveWeeklyBarberAvailabilityAction(
   }
 
   revalidateBarberViews();
-  return mutationSuccess(
-    "Disponibilidade da semana salva com sucesso."
-  );
+  return mutationSuccess("Disponibilidade da semana salva com sucesso.");
 }
 
 export async function createBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const startDateTime = createScheduleDateTimeInput(
-    String(formData.get("startDateTime") || "")
+    String(formData.get("startDateTime") || ""),
   );
   const endDateTime = createScheduleDateTimeInput(
-    String(formData.get("endDateTime") || "")
+    String(formData.get("endDateTime") || ""),
   );
   const reason = String(formData.get("reason") || "").trim();
 
-  if (
-    !startDateTime ||
-    !endDateTime ||
-    startDateTime >= endDateTime
-  ) {
+  if (!startDateTime || !endDateTime || startDateTime >= endDateTime) {
     return mutationError("Periodo de bloqueio invalido.");
   }
 
@@ -1018,8 +1058,46 @@ export async function createBarberBlockAction(
   return mutationSuccess("Bloqueio criado com sucesso.");
 }
 
+export async function updateBarberBlockAction(
+  formData: FormData,
+): Promise<MutationResult> {
+  const barber = await requireBarber();
+  const blockId = String(formData.get("blockId") || "").trim();
+  const startDateTime = createScheduleDateTimeInput(
+    String(formData.get("startDateTime") || ""),
+  );
+  const endDateTime = createScheduleDateTimeInput(
+    String(formData.get("endDateTime") || ""),
+  );
+  const reason = String(formData.get("reason") || "").trim();
+
+  if (!startDateTime || !endDateTime || startDateTime >= endDateTime) {
+    return mutationError("Periodo de bloqueio invalido.");
+  }
+
+  const block = await prisma.barberBlock.findUnique({
+    where: { id: blockId },
+  });
+
+  if (!block || block.barberId !== barber.id) {
+    return mutationError("Bloqueio nao encontrado para este barbeiro.");
+  }
+
+  await prisma.barberBlock.update({
+    where: { id: block.id },
+    data: {
+      startDateTime,
+      endDateTime,
+      reason: reason || null,
+    },
+  });
+
+  revalidateBarberViews();
+  return mutationSuccess("Bloqueio atualizado.");
+}
+
 export async function createRecurringBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const weekDay = Number(formData.get("weekDay") || -1);
@@ -1043,13 +1121,11 @@ export async function createRecurringBarberBlockAction(
   });
 
   revalidateBarberViews();
-  return mutationSuccess(
-    "Bloqueio recorrente criado com sucesso."
-  );
+  return mutationSuccess("Bloqueio recorrente criado com sucesso.");
 }
 
 export async function deleteRecurringBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const recurringBlockId = String(formData.get("recurringBlockId") || "");
@@ -1060,7 +1136,7 @@ export async function deleteRecurringBarberBlockAction(
 
   if (!recurringBlock || recurringBlock.barberId !== barber.id) {
     return mutationError(
-      "Bloqueio recorrente nao encontrado para este barbeiro."
+      "Bloqueio recorrente nao encontrado para este barbeiro.",
     );
   }
 
@@ -1072,8 +1148,44 @@ export async function deleteRecurringBarberBlockAction(
   return mutationSuccess("Bloqueio recorrente removido.");
 }
 
+export async function updateRecurringBarberBlockAction(
+  formData: FormData,
+): Promise<MutationResult> {
+  const barber = await requireBarber();
+  const recurringBlockId = String(formData.get("recurringBlockId") || "");
+  const weekDay = Number(formData.get("weekDay") || -1);
+  const startTime = String(formData.get("startTime") || "");
+  const endTime = String(formData.get("endTime") || "");
+  const reason = String(formData.get("reason") || "").trim();
+
+  if (weekDay < 0 || weekDay > 6 || !isValidTimeRange(startTime, endTime)) {
+    return mutationError("Pausa fixa invalida.");
+  }
+
+  const recurringBlock = await prisma.recurringBarberBlock.findUnique({
+    where: { id: recurringBlockId },
+  });
+
+  if (!recurringBlock || recurringBlock.barberId !== barber.id) {
+    return mutationError("Pausa fixa nao encontrada para este barbeiro.");
+  }
+
+  await prisma.recurringBarberBlock.update({
+    where: { id: recurringBlock.id },
+    data: {
+      weekDay,
+      startTime,
+      endTime,
+      reason: reason || null,
+    },
+  });
+
+  revalidateBarberViews();
+  return mutationSuccess("Pausa fixa atualizada.");
+}
+
 export async function deleteBarberBlockAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const blockId = String(formData.get("blockId") || "");
@@ -1095,7 +1207,7 @@ export async function deleteBarberBlockAction(
 }
 
 export async function saveClientNoteAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<MutationResult> {
   const barber = await requireBarber();
   const customerId = String(formData.get("customerId") || "");

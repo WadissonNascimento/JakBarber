@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock3, Moon, PauseCircle, Pencil, Save, SunMedium, X } from "lucide-react";
+import {
+  Clock3,
+  Moon,
+  PauseCircle,
+  Pencil,
+  Save,
+  SunMedium,
+  Trash2,
+  X,
+} from "lucide-react";
 import { PremiumTimePicker } from "@/components/ui/PremiumFilters";
 import { weekDays } from "@/lib/barberSchedule";
 
@@ -26,7 +35,10 @@ type WeeklyAvailabilityFormProps = {
     reason: string | null;
   }>;
   onSaveDay: (formData: FormData) => void;
+  onUpdateRecurringBlock: (formData: FormData) => void;
+  onDeleteRecurringBlock: (formData: FormData) => void;
   savingWeekDay?: number | null;
+  savingRecurringBlockId?: string | null;
 };
 
 type DayState = {
@@ -47,10 +59,10 @@ function formatBlockTime(value: Date | string) {
 }
 
 function buildDays(
-  availabilities: WeeklyAvailabilityFormProps["availabilities"]
+  availabilities: WeeklyAvailabilityFormProps["availabilities"],
 ) {
   const availabilityMap = new Map(
-    availabilities.map((item) => [item.weekDay, item] as const)
+    availabilities.map((item) => [item.weekDay, item] as const),
   );
 
   return weekDays.map((day) => ({
@@ -67,10 +79,16 @@ export function WeeklyAvailabilityForm({
   blocks,
   recurringBlocks,
   onSaveDay,
+  onUpdateRecurringBlock,
+  onDeleteRecurringBlock,
   savingWeekDay = null,
+  savingRecurringBlockId = null,
 }: WeeklyAvailabilityFormProps) {
   const [days, setDays] = useState<DayState[]>(() => buildDays(availabilities));
   const [editingDay, setEditingDay] = useState<number | null>(null);
+  const [editingRecurringBlockId, setEditingRecurringBlockId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     setDays(buildDays(availabilities));
@@ -78,12 +96,12 @@ export function WeeklyAvailabilityForm({
 
   function updateDay(
     weekDay: number,
-    patch: Partial<Pick<DayState, "startTime" | "endTime" | "isActive">>
+    patch: Partial<Pick<DayState, "startTime" | "endTime" | "isActive">>,
   ) {
     setDays((current) =>
       current.map((day) =>
-        day.weekDay === weekDay ? { ...day, ...patch } : day
-      )
+        day.weekDay === weekDay ? { ...day, ...patch } : day,
+      ),
     );
   }
 
@@ -108,10 +126,10 @@ export function WeeklyAvailabilityForm({
           const isEditing = editingDay === day.weekDay;
           const isSaving = savingWeekDay === day.weekDay;
           const dayRecurringBlocks = recurringBlocks.filter(
-            (block) => block.weekDay === day.weekDay
+            (block) => block.weekDay === day.weekDay,
           );
           const dayBlocks = blocks.filter(
-            (block) => new Date(block.startDateTime).getDay() === day.weekDay
+            (block) => new Date(block.startDateTime).getDay() === day.weekDay,
           );
           const pausesCount = dayRecurringBlocks.length + dayBlocks.length;
 
@@ -178,14 +196,19 @@ export function WeeklyAvailabilityForm({
                   <button
                     type="button"
                     disabled={isSaving}
-                    onClick={() =>
+                    onClick={() => {
+                      setEditingRecurringBlockId(null);
                       setEditingDay((current) =>
-                        current === day.weekDay ? null : day.weekDay
-                      )
-                    }
+                        current === day.weekDay ? null : day.weekDay,
+                      );
+                    }}
                     className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-white transition hover:bg-white/5 disabled:opacity-60"
                   >
-                    {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                    {isEditing ? (
+                      <X className="h-4 w-4" />
+                    ) : (
+                      <Pencil className="h-4 w-4" />
+                    )}
                     {isEditing ? "Fechar" : "Editar"}
                   </button>
                 </div>
@@ -255,10 +278,27 @@ export function WeeklyAvailabilityForm({
                   </p>
                   <div className="mt-2 space-y-2">
                     {dayRecurringBlocks.map((block) => (
-                      <p key={block.id} className="text-sm text-zinc-300">
-                        Fixa: {block.startTime} ate {block.endTime}
-                        {block.reason ? ` - ${block.reason}` : ""}
-                      </p>
+                      <RecurringBlockRow
+                        key={block.id}
+                        block={block}
+                        isEditing={editingRecurringBlockId === block.id}
+                        isSaving={savingRecurringBlockId === block.id}
+                        onEdit={() => {
+                          setEditingDay(null);
+                          setEditingRecurringBlockId((current) =>
+                            current === block.id ? null : block.id,
+                          );
+                        }}
+                        onCancelEdit={() => setEditingRecurringBlockId(null)}
+                        onUpdate={(formData) => {
+                          onUpdateRecurringBlock(formData);
+                          setEditingRecurringBlockId(null);
+                        }}
+                        onDelete={(formData) => {
+                          onDeleteRecurringBlock(formData);
+                          setEditingRecurringBlockId(null);
+                        }}
+                      />
                     ))}
                     {dayBlocks.map((block) => (
                       <p key={block.id} className="text-sm text-zinc-300">
@@ -275,5 +315,143 @@ export function WeeklyAvailabilityForm({
         })}
       </div>
     </section>
+  );
+}
+
+function RecurringBlockRow({
+  block,
+  isEditing,
+  isSaving,
+  onEdit,
+  onCancelEdit,
+  onUpdate,
+  onDelete,
+}: {
+  block: WeeklyAvailabilityFormProps["recurringBlocks"][number];
+  isEditing: boolean;
+  isSaving: boolean;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onUpdate: (formData: FormData) => void;
+  onDelete: (formData: FormData) => void;
+}) {
+  const [startTime, setStartTime] = useState(block.startTime);
+  const [endTime, setEndTime] = useState(block.endTime);
+  const [reason, setReason] = useState(block.reason || "");
+
+  useEffect(() => {
+    setStartTime(block.startTime);
+    setEndTime(block.endTime);
+    setReason(block.reason || "");
+  }, [block.startTime, block.endTime, block.reason]);
+
+  function buildFormData() {
+    const formData = new FormData();
+    formData.set("recurringBlockId", block.id);
+    formData.set("weekDay", String(block.weekDay));
+    formData.set("startTime", startTime);
+    formData.set("endTime", endTime);
+    formData.set("reason", reason);
+    return formData;
+  }
+
+  if (isEditing) {
+    return (
+      <div className="rounded-2xl border border-[var(--brand)]/30 bg-[var(--brand-muted)] p-2.5">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--brand-strong)]">
+          Editar pausa fixa
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Inicio
+            </span>
+            <PremiumTimePicker
+              value={startTime}
+              onChange={setStartTime}
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+              Fim
+            </span>
+            <PremiumTimePicker value={endTime} onChange={setEndTime} required />
+          </label>
+        </div>
+
+        <label className="mt-2 block">
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+            Motivo
+          </span>
+          <input
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Ex.: almoco"
+            className="min-h-9 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-1.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60"
+          />
+        </label>
+
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onUpdate(buildFormData())}
+            disabled={isSaving}
+            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-3 py-1.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-60"
+          >
+            <Save className="h-4 w-4" />
+            Salvar
+          </button>
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            disabled={isSaving}
+            className="min-h-9 rounded-xl border border-white/10 px-3 py-1.5 text-sm font-bold text-white transition hover:bg-white/5 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.035] p-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-zinc-200">
+            Fixa: {block.startTime} ate {block.endTime}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-zinc-500">
+            {block.reason || "Sem motivo informado"}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={isSaving}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-zinc-200 transition hover:bg-white/5 disabled:opacity-60"
+            aria-label="Editar pausa fixa"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!window.confirm("Remover esta pausa fixa?")) return;
+              const formData = new FormData();
+              formData.set("recurringBlockId", block.id);
+              onDelete(formData);
+            }}
+            disabled={isSaving}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 text-red-200 transition hover:bg-red-500/10 disabled:opacity-60"
+            aria-label="Remover pausa fixa"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

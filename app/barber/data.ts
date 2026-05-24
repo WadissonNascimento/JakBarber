@@ -25,6 +25,7 @@ import {
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
 import { toMoneyNumber, type MoneyValue } from "@/lib/money";
+import { buildAgendaBlockItems } from "@/lib/agendaBlocks";
 
 export type BarberDashboardFilters = {
   view?: "day" | "today" | "upcoming" | "all";
@@ -583,7 +584,7 @@ export async function getBarberAgendaData(
     )
   );
 
-  const [services, extras] = await Promise.all([
+  const [services, extras, blocks, recurringBlocks] = await Promise.all([
     prisma.service.findMany({
       where: {
         ...(shopId ? { shopId } : {}),
@@ -633,10 +634,46 @@ export async function getBarberAgendaData(
         stock: true,
       },
     }),
+    prisma.barberBlock.findMany({
+      where: {
+        ...(shopId ? { shopId } : {}),
+        barberId,
+        startDateTime: {
+          lte: selectedEnd,
+        },
+        endDateTime: {
+          gte: selectedStart,
+        },
+      },
+      orderBy: {
+        startDateTime: "asc",
+      },
+    }),
+    prisma.recurringBarberBlock.findMany({
+      where: {
+        ...(shopId ? { shopId } : {}),
+        barberId,
+        isActive: true,
+      },
+      orderBy: [
+        {
+          weekDay: "asc",
+        },
+        {
+          startTime: "asc",
+        },
+      ],
+    }),
   ]);
 
   return {
     appointments,
+    blocks: buildAgendaBlockItems({
+      dateFrom: getScheduleDateValue(selectedStart),
+      dateTo: getScheduleDateValue(selectedEnd),
+      blocks,
+      recurringBlocks,
+    }),
     services: serializeServicesForClient(services),
     extras: extras.map((extra) => ({
       ...extra,
@@ -671,6 +708,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
     clientNotes,
     shopCustomers,
     todayTips,
+    appNotifications,
   ] = await Promise.all([
     prisma.appointment.findMany({
       where: {
@@ -772,6 +810,27 @@ export async function getBarberTodayDashboardData(barberId: string) {
         end: todayEnd,
       },
     }),
+    prisma.appNotification.findMany({
+      where: {
+        recipientUserId: barberId,
+        ...(shopId ? { shopId } : {}),
+      },
+      select: {
+        id: true,
+        type: true,
+        eyebrow: true,
+        title: true,
+        body: true,
+        actionUrl: true,
+        metadata: true,
+        readAt: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 20,
+    }),
   ]);
 
   const normalizedTodayAppointments = todayAppointments.map((appointment) => ({
@@ -856,6 +915,7 @@ export async function getBarberTodayDashboardData(barberId: string) {
       price: toMoneyNumber(extra.price),
     })),
     clients: buildShopClientsDirectory(clientNotes, shopCustomers),
+    appNotifications,
   };
 }
 

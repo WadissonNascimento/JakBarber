@@ -13,7 +13,10 @@ import {
 import FeedbackMessage from "@/components/FeedbackMessage";
 import EmptyState from "@/components/ui/EmptyState";
 import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
-import { PremiumDateTimePicker, PremiumTimePicker } from "@/components/ui/PremiumFilters";
+import {
+  PremiumDateTimePicker,
+  PremiumTimePicker,
+} from "@/components/ui/PremiumFilters";
 import SectionCard from "@/components/ui/SectionCard";
 import { weekDays } from "@/lib/barberSchedule";
 import { WeeklyAvailabilityForm } from "./WeeklyAvailabilityForm";
@@ -21,7 +24,9 @@ import {
   createBarberBlockAction,
   createRecurringBarberBlockAction,
   deleteBarberBlockAction,
+  deleteRecurringBarberBlockAction,
   saveBarberAvailabilityAction,
+  updateRecurringBarberBlockAction,
 } from "../actions";
 import type { getBarberDashboardData } from "../data";
 
@@ -101,6 +106,9 @@ export function AvailabilitySection({
   createBlockAction = createBarberBlockAction,
   createRecurringBlockAction = createRecurringBarberBlockAction,
   deleteBlockAction = deleteBarberBlockAction,
+  updateRecurringBlockAction = updateRecurringBarberBlockAction,
+  deleteRecurringBlockAction = deleteRecurringBarberBlockAction,
+  allowOneOffBlocks = false,
 }: {
   availabilities: BarberDashboardData["availabilities"];
   blocks: BarberDashboardData["blocks"];
@@ -110,6 +118,9 @@ export function AvailabilitySection({
   createBlockAction?: AvailabilityMutationAction;
   createRecurringBlockAction?: AvailabilityMutationAction;
   deleteBlockAction?: AvailabilityMutationAction;
+  updateRecurringBlockAction?: AvailabilityMutationAction;
+  deleteRecurringBlockAction?: AvailabilityMutationAction;
+  allowOneOffBlocks?: boolean;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<{
@@ -123,7 +134,7 @@ export function AvailabilitySection({
     key: string,
     action: AvailabilityMutationAction,
     formData: FormData,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) {
     if (targetBarberId) {
       formData.set("barberId", targetBarberId);
@@ -145,10 +156,7 @@ export function AvailabilitySection({
   }
 
   return (
-    <SectionCard
-      title="Central de disponibilidade"
-      className="rounded-[30px]"
-    >
+    <SectionCard title="Central de disponibilidade" className="rounded-[30px]">
       <div className="space-y-4">
         <FeedbackMessage message={feedback.message} tone={feedback.tone} />
 
@@ -165,56 +173,81 @@ export function AvailabilitySection({
             runAction(
               `availability-day-${String(formData.get("weekDay") || "")}`,
               saveAvailabilityAction,
-              formData
+              formData,
+            )
+          }
+          savingRecurringBlockId={
+            pendingKey?.startsWith("recurring-block-")
+              ? pendingKey.replace("recurring-block-", "")
+              : null
+          }
+          onUpdateRecurringBlock={(formData) =>
+            runAction(
+              `recurring-block-${String(formData.get("recurringBlockId") || "")}`,
+              updateRecurringBlockAction,
+              formData,
+            )
+          }
+          onDeleteRecurringBlock={(formData) =>
+            runAction(
+              `recurring-block-${String(formData.get("recurringBlockId") || "")}`,
+              deleteRecurringBlockAction,
+              formData,
             )
           }
         />
 
-        <MobilePanel
-          title="Bloquear período"
-          description="Folga, almoço, curso ou pausa de um dia específico."
-          icon={<Plus className="h-5 w-5" />}
-        >
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const form = event.currentTarget;
-
-              runAction(
-                "create-block",
-                createBlockAction,
-                new FormData(form),
-                () => form.reset()
-              );
-            }}
+        {allowOneOffBlocks ? (
+          <MobilePanel
+            title="Bloquear período"
+            description="Folga, almoço, curso ou pausa de um dia específico."
+            icon={<Plus className="h-5 w-5" />}
           >
-            <PremiumDateTimePicker name="startDateTime" label="Início" required />
-            <PremiumDateTimePicker name="endDateTime" label="Fim" required />
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
 
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
-                Motivo
-              </span>
-              <input
-                name="reason"
-                placeholder="Ex.: almoço, curso, folga"
-                className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60"
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={isPending && pendingKey === "create-block"}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white shadow-[0_16px_34px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                runAction(
+                  "create-block",
+                  createBlockAction,
+                  new FormData(form),
+                  () => form.reset(),
+                );
+              }}
             >
-              <CalendarOff className="h-4 w-4" />
-              {isPending && pendingKey === "create-block"
-                ? "Bloqueando..."
-                : "Bloquear horário"}
-            </button>
-          </form>
-        </MobilePanel>
+              <PremiumDateTimePicker
+                name="startDateTime"
+                label="Início"
+                required
+              />
+              <PremiumDateTimePicker name="endDateTime" label="Fim" required />
+
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                  Motivo
+                </span>
+                <input
+                  name="reason"
+                  placeholder="Ex.: almoço, curso, folga"
+                  className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[var(--brand)]/60"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={isPending && pendingKey === "create-block"}
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white shadow-[0_16px_34px_rgba(37,99,235,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CalendarOff className="h-4 w-4" />
+                {isPending && pendingKey === "create-block"
+                  ? "Bloqueando..."
+                  : "Bloquear horário"}
+              </button>
+            </form>
+          </MobilePanel>
+        ) : null}
 
         <MobilePanel
           title="Pausa fixa semanal"
@@ -231,7 +264,7 @@ export function AvailabilitySection({
                 "recurring-block",
                 createRecurringBlockAction,
                 new FormData(form),
-                () => form.reset()
+                () => form.reset(),
               );
             }}
           >
@@ -261,20 +294,14 @@ export function AvailabilitySection({
                 <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
                   Início
                 </span>
-                <PremiumTimePicker
-                  name="startTime"
-                  required
-                />
+                <PremiumTimePicker name="startTime" required />
               </label>
 
               <label className="block">
                 <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
                   Fim
                 </span>
-                <PremiumTimePicker
-                  name="endTime"
-                  required
-                />
+                <PremiumTimePicker name="endTime" required />
               </label>
             </div>
 
@@ -302,58 +329,67 @@ export function AvailabilitySection({
           </form>
         </MobilePanel>
 
-        <MobilePanel
-          title="Bloqueios futuros"
-          description="Pausas pontuais já cadastradas."
-          icon={<ListChecks className="h-5 w-5" />}
-          count={blocks.length}
-        >
-          <div className="space-y-3">
-            {blocks.length === 0 ? (
-              <EmptyState
-                title="Nenhum bloqueio futuro"
-                description="Quando você criar uma folga ou pausa pontual, ela aparece aqui."
-              />
-            ) : (
-              blocks.map((block) => (
-                <div
-                  key={block.id}
-                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-white">
-                        {formatDateTime(block.startDateTime)} até{" "}
-                        {formatDateTime(block.endDateTime)}
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        {block.reason || "Sem motivo informado"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isPending && pendingKey === `block-${block.id}`}
-                      onClick={() => {
-                        if (!window.confirm("Remover este bloqueio de horário?")) {
-                          return;
+        {allowOneOffBlocks ? (
+          <MobilePanel
+            title="Bloqueios futuros"
+            description="Pausas pontuais já cadastradas."
+            icon={<ListChecks className="h-5 w-5" />}
+            count={blocks.length}
+          >
+            <div className="space-y-3">
+              {blocks.length === 0 ? (
+                <EmptyState
+                  title="Nenhum bloqueio futuro"
+                  description="Quando você criar uma folga ou pausa pontual, ela aparece aqui."
+                />
+              ) : (
+                blocks.map((block) => (
+                  <div
+                    key={block.id}
+                    className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {formatDateTime(block.startDateTime)} até{" "}
+                          {formatDateTime(block.endDateTime)}
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-400">
+                          {block.reason || "Sem motivo informado"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          isPending && pendingKey === `block-${block.id}`
                         }
+                        onClick={() => {
+                          if (
+                            !window.confirm("Remover este bloqueio de horário?")
+                          ) {
+                            return;
+                          }
 
-                        const formData = new FormData();
-                        formData.set("blockId", block.id);
-                        runAction(`block-${block.id}`, deleteBlockAction, formData);
-                      }}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-400/35 text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label="Remover bloqueio"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                          const formData = new FormData();
+                          formData.set("blockId", block.id);
+                          runAction(
+                            `block-${block.id}`,
+                            deleteBlockAction,
+                            formData,
+                          );
+                        }}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-400/35 text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label="Remover bloqueio"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        </MobilePanel>
-
+                ))
+              )}
+            </div>
+          </MobilePanel>
+        ) : null}
       </div>
     </SectionCard>
   );

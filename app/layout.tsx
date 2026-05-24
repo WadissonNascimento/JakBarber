@@ -1,6 +1,7 @@
 import "./globals.css";
 import AppChrome from "@/components/AppChrome";
 import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
+import PushNotificationManager from "@/components/PushNotificationManager";
 import RequiredCustomerPhoneModal from "@/components/RequiredCustomerPhoneModal";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
@@ -369,6 +370,11 @@ export default async function RootLayout({
           {children}
         </AppChrome>
         {shouldCompleteCustomerPhone ? <RequiredCustomerPhoneModal /> : null}
+        {role ? (
+          <PushNotificationManager
+            publicKey={process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || null}
+          />
+        ) : null}
       </body>
     </html>
   );

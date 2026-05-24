@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { CalendarX2, PencilLine, Save, Trash2, X } from "lucide-react";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import EmptyState from "@/components/ui/EmptyState";
 import { PremiumDatePicker, PremiumSelect } from "@/components/ui/PremiumFilters";
@@ -11,20 +12,35 @@ import {
   getAppointmentServiceMetaLine,
 } from "@/lib/appointmentServices";
 import { toMoneyNumber } from "@/lib/money";
-import { getCurrentScheduleDate } from "@/lib/scheduleTime";
+import {
+  getCurrentScheduleDate,
+  getScheduleDayOfWeek,
+} from "@/lib/scheduleTime";
 import { buildAppointmentContactWhatsAppUrl } from "@/lib/whatsapp";
 import { getManualFitInCustomerDisplay } from "@/lib/manualFitIn";
-import type { getBarberDashboardData } from "../data";
+import type { getBarberAgendaData } from "../data";
 import BarberAppointmentActions from "./BarberAppointmentActions";
 import BarberAppointmentCard from "./BarberAppointmentCard";
+import {
+  deleteBarberBlockAction,
+  deleteRecurringBarberBlockAction,
+  updateBarberBlockAction,
+  updateRecurringBarberBlockAction,
+} from "../actions";
 
-type BarberDashboardData = Awaited<ReturnType<typeof getBarberDashboardData>>;
+type BarberAgendaData = Awaited<ReturnType<typeof getBarberAgendaData>>;
+type BlockMutationAction = (formData: FormData) => Promise<{
+  ok: boolean;
+  message: string;
+  tone: "success" | "error" | "info";
+}>;
 
 type AppointmentsSectionProps = {
-  appointments: BarberDashboardData["appointments"];
-  services: BarberDashboardData["services"];
-  extras: BarberDashboardData["walkInExtras"];
-  filters: BarberDashboardData["filters"];
+  appointments: BarberAgendaData["appointments"];
+  blocks: BarberAgendaData["blocks"];
+  services: BarberAgendaData["services"];
+  extras: BarberAgendaData["extras"];
+  filters: BarberAgendaData["filters"];
   barberName: string;
   shopName: string;
 };
@@ -71,6 +87,7 @@ function formatAgendaDay(dateString: string) {
 
 export function AppointmentsSection({
   appointments,
+  blocks,
   services,
   extras,
   filters,
@@ -85,6 +102,8 @@ export function AppointmentsSection({
   }>({ message: null, tone: "success" });
   const [visibleAppointments, setVisibleAppointments] = useState(appointments);
   const [isFilterPending, startFilterTransition] = useTransition();
+  const [isBlockPending, startBlockTransition] = useTransition();
+  const [pendingBlockKey, setPendingBlockKey] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState(filters.status);
   const [selectedDate, setSelectedDate] = useState(filters.date);
   const agendaDays = useMemo(
@@ -115,6 +134,24 @@ export function AppointmentsSection({
       null
     );
   }, [visibleAppointments]);
+  const timelineItems = useMemo(
+    () =>
+      [
+        ...visibleAppointments.map((appointment) => ({
+          type: "appointment" as const,
+          id: appointment.id,
+          sortTime: new Date(appointment.date).getTime(),
+          appointment,
+        })),
+        ...blocks.map((block) => ({
+          type: "block" as const,
+          id: block.id,
+          sortTime: new Date(block.startDateTime).getTime(),
+          block,
+        })),
+      ].sort((left, right) => left.sortTime - right.sortTime),
+    [blocks, visibleAppointments]
+  );
 
   useEffect(() => {
     setSelectedStatus(filterDefaults.status);
@@ -136,6 +173,27 @@ export function AppointmentsSection({
       return current.map((appointment) =>
         appointment.id === appointmentId ? { ...appointment, status } : appointment
       );
+    });
+  }
+
+  function runBlockAction(
+    key: string,
+    action: BlockMutationAction,
+    formData: FormData,
+    onSuccess?: () => void
+  ) {
+    setPendingBlockKey(key);
+
+    startBlockTransition(async () => {
+      const result = await action(formData);
+      setFeedback({ message: result.message, tone: result.tone });
+
+      if (result.ok) {
+        onSuccess?.();
+        router.refresh();
+      }
+
+      setPendingBlockKey(null);
     });
   }
 
@@ -262,13 +320,26 @@ export function AppointmentsSection({
       </div>
 
       <div className="mt-6 space-y-4">
-        {visibleAppointments.length === 0 ? (
+        {timelineItems.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento encontrado"
             description="Ajuste os filtros acima para ver outros horários ou volte mais tarde."
           />
         ) : (
-          visibleAppointments.map((appointment) => {
+          timelineItems.map((item) => {
+            if (item.type === "block") {
+              return (
+                <BarberAgendaBlockCard
+                  key={item.id}
+                  block={item.block}
+                  isPending={isBlockPending}
+                  pendingKey={pendingBlockKey}
+                  onRunAction={runBlockAction}
+                />
+              );
+            }
+
+            const appointment = item.appointment;
             const serviceName = getAppointmentDisplayName(appointment.services);
             const serviceMeta = getAppointmentServiceMetaLine(appointment.services);
             const appointmentCustomer = appointment.isManualFitIn
@@ -354,5 +425,189 @@ export function AppointmentsSection({
         )}
       </div>
     </SectionCard>
+  );
+}
+
+function BarberAgendaBlockCard({
+  block,
+  isPending,
+  pendingKey,
+  onRunAction,
+}: {
+  block: BarberAgendaData["blocks"][number];
+  isPending: boolean;
+  pendingKey: string | null;
+  onRunAction: (
+    key: string,
+    action: BlockMutationAction,
+    formData: FormData,
+    onSuccess?: () => void
+  ) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const actionKey = `${block.kind}-${block.sourceId}`;
+  const isThisPending = isPending && pendingKey === actionKey;
+  const weekDay = getScheduleDayOfWeek(block.date) ?? 0;
+
+  function buildDeleteFormData() {
+    const formData = new FormData();
+
+    if (block.kind === "recurring") {
+      formData.set("recurringBlockId", block.sourceId);
+    } else {
+      formData.set("blockId", block.sourceId);
+    }
+
+    return formData;
+  }
+
+  function handleDelete() {
+    if (!window.confirm("Excluir este bloqueio da agenda?")) {
+      return;
+    }
+
+    onRunAction(
+      actionKey,
+      block.kind === "recurring"
+        ? deleteRecurringBarberBlockAction
+        : deleteBarberBlockAction,
+      buildDeleteFormData()
+    );
+  }
+
+  return (
+    <article className="relative overflow-hidden rounded-2xl border border-rose-300/20 bg-rose-500/[0.055] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.14)]">
+      <div className="absolute right-3 top-3 rounded-full border border-rose-200/25 bg-rose-400/10 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-rose-100">
+        Bloqueado
+      </div>
+
+      <div className="min-w-0 pr-24">
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-rose-100/80">
+          <CalendarX2 className="h-3 w-3" />
+          Pausa
+        </p>
+        <p className="mt-1 text-2xl font-black leading-none text-white">
+          {block.startTime} - {block.endTime}
+        </p>
+      </div>
+
+      <div className="mt-2 grid gap-1.5 text-sm">
+        <p className="font-semibold text-white">Motivo: {block.reason}</p>
+        <p className="text-xs leading-5 text-zinc-300">
+          Esse horario so aceita encaixes rapidos pelo admin ou barbeiro.
+        </p>
+      </div>
+
+      {isEditing ? (
+        <form
+          className="mt-3 rounded-2xl border border-rose-200/15 bg-black/20 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+
+            if (block.kind === "recurring") {
+              formData.set("recurringBlockId", block.sourceId);
+              formData.set("weekDay", String(weekDay));
+            } else {
+              formData.set("blockId", block.sourceId);
+              formData.set(
+                "startDateTime",
+                `${block.date}T${String(formData.get("startTime") || "")}`
+              );
+              formData.set(
+                "endDateTime",
+                `${block.date}T${String(formData.get("endTime") || "")}`
+              );
+            }
+
+            onRunAction(
+              actionKey,
+              block.kind === "recurring"
+                ? updateRecurringBarberBlockAction
+                : updateBarberBlockAction,
+              formData,
+              () => setIsEditing(false)
+            );
+          }}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.16em] text-rose-100/70">
+                Inicio
+              </span>
+              <input
+                name="startTime"
+                type="time"
+                defaultValue={block.startTime}
+                required
+                className="min-h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-sm font-bold text-white outline-none focus:border-rose-200/50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.16em] text-rose-100/70">
+                Fim
+              </span>
+              <input
+                name="endTime"
+                type="time"
+                defaultValue={block.endTime}
+                required
+                className="min-h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-sm font-bold text-white outline-none focus:border-rose-200/50"
+              />
+            </label>
+          </div>
+
+          <label className="mt-2 block">
+            <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.16em] text-rose-100/70">
+              Motivo
+            </span>
+            <input
+              name="reason"
+              defaultValue={block.reason}
+              className="min-h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-sm font-semibold text-white outline-none placeholder:text-zinc-600 focus:border-rose-200/50"
+            />
+          </label>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] text-sm font-bold text-white"
+            >
+              <X className="h-4 w-4" />
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isThisPending}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" />
+              {isThisPending ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08]"
+          >
+            <PencilLine className="h-4 w-4" />
+            Editar
+          </button>
+          <button
+            type="button"
+            disabled={isThisPending}
+            onClick={handleDelete}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-500/10 text-sm font-bold text-rose-100 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Trash2 className="h-4 w-4" />
+            {isThisPending ? "Excluindo..." : "Excluir"}
+          </button>
+        </div>
+      )}
+    </article>
   );
 }

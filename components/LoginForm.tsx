@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import AuthFormMessage from "@/components/AuthFormMessage";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
@@ -15,6 +19,9 @@ export default function LoginForm({
   googleSignInEnabled?: boolean;
   redirectTo?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
+
   return (
     <div className="surface-card-strong w-full max-w-md rounded-[32px] p-6 shadow-2xl sm:p-8">
       <div className="mb-8 text-center">
@@ -59,14 +66,33 @@ export default function LoginForm({
           >
             Senha
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-white outline-none placeholder:text-zinc-400"
-            placeholder="Digite sua senha"
-          />
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-4 pr-14 text-white outline-none placeholder:text-zinc-400"
+              placeholder="Digite sua senha"
+            />
+            {password ? (
+              <button
+                type="button"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-xl text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Eye className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
+            ) : null}
+          </div>
           <div className="mt-3 text-right text-sm">
             <Link
               href="/forgot-password"

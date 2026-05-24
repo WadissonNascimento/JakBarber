@@ -842,9 +842,9 @@ export default function AdminWalkInAppointmentButton({
                             <button
                               type="button"
                               onClick={chooseQuickFitIn}
-                              className="flex min-h-[86px] items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-left transition hover:border-amber-300/40 hover:bg-amber-300/15"
+                              className="flex min-h-[86px] items-center gap-3 rounded-2xl border border-[var(--brand-strong)]/25 bg-[var(--brand)]/10 px-4 py-3 text-left transition hover:border-[var(--brand-strong)]/45 hover:bg-[var(--brand)]/15"
                             >
-                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
+                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-strong)]/30 bg-[var(--brand)]/10 text-[var(--brand-strong)]">
                                 <Clock3 className="h-5 w-5" />
                               </span>
                               <span className="min-w-0">
@@ -945,7 +945,7 @@ export default function AdminWalkInAppointmentButton({
                         <div className="space-y-4">
                           <StepTitle title="Tempo do encaixe rapido" />
 
-                          <div className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
+                          <div className="rounded-3xl border border-[var(--brand-strong)]/25 bg-[var(--brand)]/10 p-4">
                             <p className="text-sm leading-6 text-zinc-200">
                               O agendamento sera criado usando a hora atual. Se bater em outro
                               atendimento, voce confere o aviso antes de continuar.
@@ -1369,10 +1369,10 @@ function QuickConflictPopup({
         onClick={onClose}
       />
 
-      <div className="relative z-[11110] w-full max-w-sm rounded-[28px] border border-amber-300/25 bg-[#050b16] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+      <div className="relative z-[11110] w-full max-w-sm rounded-[28px] border border-[var(--brand-strong)]/25 bg-[#050b16] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-amber-200">
+            <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
               Conflito de agenda
             </p>
             <h3 className="mt-1 text-2xl font-black text-white">
@@ -1415,7 +1415,7 @@ function QuickConflictPopup({
           <button
             type="button"
             onClick={onConfirm}
-            className="min-h-11 rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-zinc-950 transition hover:brightness-110"
+            className="min-h-11 rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-black text-white transition hover:brightness-110"
           >
             Continuar mesmo assim
           </button>

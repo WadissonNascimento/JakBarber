@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getAdminAgendaReport } from "@/lib/adminReports";
+import { buildAgendaBlockItems } from "@/lib/agendaBlocks";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -75,7 +76,14 @@ export default async function AdminAgendaPage({
   const initialFilters = getInitialAgendaFilters(resolvedSearchParams);
   const shopId = session.user.shopId;
 
-  const [report, barbers, services, extras] = await Promise.all([
+  const fromRange = getScheduleDayRange(initialFilters.dateFrom)!;
+  const toRange = getScheduleDayRange(initialFilters.dateTo)!;
+  const barberFilter = initialFilters.barberId
+    ? { barberId: initialFilters.barberId }
+    : {};
+
+  const [report, barbers, services, extras, blocks, recurringBlocks] =
+    await Promise.all([
     getAdminAgendaReport({
       shopId,
       barberId: initialFilters.barberId || undefined,
@@ -114,22 +122,74 @@ export default async function AdminAgendaPage({
         name: "asc",
       },
     }),
-    prisma.extraProduct.findMany({
-      where: {
-        shopId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        stock: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    }),
-  ]);
+      prisma.extraProduct.findMany({
+        where: {
+          shopId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          stock: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      }),
+      prisma.barberBlock.findMany({
+        where: {
+          shopId,
+          ...barberFilter,
+          barber: {
+            role: "BARBER",
+            isActive: true,
+          },
+          startDateTime: {
+            lte: toRange.end,
+          },
+          endDateTime: {
+            gte: fromRange.start,
+          },
+        },
+        include: {
+          barber: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          startDateTime: "asc",
+        },
+      }),
+      prisma.recurringBarberBlock.findMany({
+        where: {
+          shopId,
+          ...barberFilter,
+          barber: {
+            role: "BARBER",
+            isActive: true,
+          },
+          isActive: true,
+        },
+        include: {
+          barber: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          {
+            weekDay: "asc",
+          },
+          {
+            startTime: "asc",
+          },
+        ],
+      }),
+    ]);
 
   return (
     <AdminAgendaClient
@@ -172,6 +232,12 @@ export default async function AdminAgendaPage({
             subtotal: toMoneyNumber(item.subtotal),
           })),
         };
+      })}
+      blocks={buildAgendaBlockItems({
+        dateFrom: initialFilters.dateFrom,
+        dateTo: initialFilters.dateTo,
+        blocks,
+        recurringBlocks,
       })}
       barbers={barbers}
       services={services.map((service) => ({

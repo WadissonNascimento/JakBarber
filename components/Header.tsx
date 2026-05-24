@@ -3,21 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Boxes,
+  Bell,
   CalendarDays,
   Clock,
   CreditCard,
   Home,
+  Landmark,
   LogIn,
   Menu,
   MessageSquareText,
   Scissors,
   Settings,
   ShoppingBag,
+  Store,
   UserPlus,
   Users,
   UserRound,
-  WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -43,17 +44,19 @@ function getHeaderLinks(role: HeaderRole): {
       homeHref: "/admin",
       eyebrow: "Admin",
       primary: [
-        { href: "/admin", label: "Início" },
+        { href: "/admin", label: "Inicio" },
         { href: "/admin/agenda", label: "Agenda" },
         { href: "/admin/barbeiros", label: "Equipe" },
-        { href: "/admin/financeiro", label: "Financeiro" },
+        { href: "/admin?notifications=1", label: "Notificacoes" },
       ],
       secondary: [
-        { href: "/admin/servicos", label: "Serviços" },
-        { href: "/admin/maquinas", label: "Maquinas" },
+        { href: "/admin/perfil", label: "Configurar perfil" },
+        { href: "/admin/financeiro", label: "Financeiro" },
+        { href: "/admin/servicos", label: "Servicos" },
         { href: "/admin/extras", label: "Extras" },
+        { href: "/admin/maquinas", label: "Maquinas" },
+        { href: "/admin/avaliacoes", label: "Avaliacoes" },
         { href: "/admin/configuracoes", label: "Configuracoes" },
-        { href: "/admin/avaliacoes", label: "Avaliações" },
       ],
     };
   }
@@ -68,7 +71,7 @@ function getHeaderLinks(role: HeaderRole): {
         { href: "/barber/clientes", label: "Clientes" },
         { href: "/barber/disponibilidade", label: "Pausas" },
       ],
-      secondary: [{ href: "/barber/servicos", label: "Meus serviços" }],
+      secondary: [{ href: "/barber?notifications=1", label: "Notificacoes" }],
     };
   }
 
@@ -81,7 +84,10 @@ function getHeaderLinks(role: HeaderRole): {
         { href: "/customer/agendamentos", label: "Meus horários" },
         { href: "/maquinas", label: "Maquinas" },
       ],
-      secondary: [{ href: "/meu-perfil", label: "Meu perfil" }],
+      secondary: [
+        { href: "/customer/notificacoes", label: "Notificacoes" },
+        { href: "/meu-perfil", label: "Meu perfil" },
+      ],
     };
   }
 
@@ -114,16 +120,20 @@ const navIcons: Record<string, LucideIcon> = {
   "/admin/barbeiros": Users,
   "/admin/configuracoes": Settings,
   "/admin/extras": ShoppingBag,
-  "/admin/financeiro": WalletCards,
-  "/admin/maquinas": Boxes,
+  "/admin/financeiro": Landmark,
+  "/admin/maquinas": Store,
+  "/admin?notifications=1": Bell,
+  "/admin/perfil": UserRound,
   "/admin/servicos": Scissors,
   "/agendar": CalendarDays,
   "/barber": Clock,
   "/barber/agenda": CalendarDays,
   "/barber/clientes": Users,
   "/barber/disponibilidade": Clock,
+  "/barber?notifications=1": Bell,
   "/barber/servicos": Scissors,
   "/customer/agendamentos": CalendarDays,
+  "/customer/notificacoes": Bell,
   "/login": LogIn,
   "/meu-perfil": UserRound,
   "/maquinas": ShoppingBag,

@@ -11,6 +11,7 @@ import {
   normalizeProductImageUrl,
   uploadExtraProductImage,
 } from "@/lib/extraProductImages";
+import { notifyAdminsLowStockExtras } from "@/lib/appNotifications";
 
 async function ensureExtraAccess() {
   const session = await auth();
@@ -178,6 +179,19 @@ export async function updateExtraProductFromForm(formData: FormData) {
       quantity: Math.abs(difference),
       reason: "Ajuste manual de estoque",
     });
+
+    if (stock <= 3) {
+      const updatedExtra = await prisma.extraProduct.findUnique({
+        where: { id: extraProductId },
+        select: {
+          shopId: true,
+        },
+      });
+
+      if (updatedExtra?.shopId) {
+        await notifyAdminsLowStockExtras({ shopId: updatedExtra.shopId });
+      }
+    }
   }
 
   revalidateExtraViews();

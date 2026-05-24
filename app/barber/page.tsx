@@ -1,13 +1,6 @@
 import BarberTodayDashboard from "./_components/BarberTodayDashboard";
-import BarberProfileSettings from "./_components/BarberProfileSettings";
-import AccountPasswordForm from "@/components/AccountPasswordForm";
-import { updateOwnAccountPasswordAction } from "@/app/accountPasswordActions";
 import { getBarberTodayDashboardData } from "./data";
 import { requireActiveBarber } from "./guard";
-import {
-  updateOwnBarberContactAction,
-  updateOwnBarberPhotoAction,
-} from "./actions";
 
 export default async function BarberPage() {
   const { barber } = await requireActiveBarber();
@@ -29,25 +22,6 @@ export default async function BarberPage() {
           </div>
         </div>
 
-        <div className="mb-4 max-w-xl">
-          <BarberProfileSettings
-            photoAction={updateOwnBarberPhotoAction}
-            contactAction={updateOwnBarberContactAction}
-            currentImage={barber.image}
-            name={barberName}
-            email={barber.email}
-            phone={barber.phone}
-          />
-        </div>
-
-        <div className="mb-4 max-w-xl">
-          <AccountPasswordForm
-            action={updateOwnAccountPasswordAction}
-            title="Senha do painel"
-            description="Atualize a senha usada para entrar no painel do barbeiro."
-          />
-        </div>
-
         <BarberTodayDashboard
           barberName={barberName}
           shopName={shopName}
@@ -55,6 +29,7 @@ export default async function BarberPage() {
           walkInServices={dashboard.walkInServices}
           walkInExtras={dashboard.walkInExtras}
           clients={dashboard.clients}
+          appNotifications={dashboard.appNotifications}
         />
       </div>
     </div>

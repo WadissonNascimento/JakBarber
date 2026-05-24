@@ -10,7 +10,9 @@ import {
   createAdminBarberBlockAction,
   createAdminRecurringBarberBlockAction,
   deleteAdminBarberBlockAction,
+  deleteAdminRecurringBarberBlockAction,
   saveAdminBarberAvailabilityAction,
+  updateAdminRecurringBarberBlockAction,
 } from "../../actions";
 
 type AdminBarberAvailabilityRouteParams = {
@@ -72,6 +74,9 @@ export default async function AdminBarberAvailabilityPage({
           createBlockAction={createAdminBarberBlockAction}
           createRecurringBlockAction={createAdminRecurringBarberBlockAction}
           deleteBlockAction={deleteAdminBarberBlockAction}
+          updateRecurringBlockAction={updateAdminRecurringBarberBlockAction}
+          deleteRecurringBlockAction={deleteAdminRecurringBarberBlockAction}
+          allowOneOffBlocks
         />
       </div>
     </DashboardShell>

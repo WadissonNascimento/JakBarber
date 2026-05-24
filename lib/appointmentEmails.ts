@@ -7,6 +7,7 @@ import {
   getAppointmentGrandTotal,
   getAppointmentServiceMetaLine,
 } from "@/lib/appointmentServices";
+import { createAppNotificationSafely } from "@/lib/appNotifications";
 import { getShopAppUrl } from "@/lib/appUrl";
 import {
   sendAppointmentCancelledEmail,
@@ -21,6 +22,8 @@ import {
   formatScheduleDate,
   formatScheduleTime,
   getCurrentScheduleDate,
+  getCurrentScheduleDateValue,
+  getScheduleDayRange,
 } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import type { MoneyValue } from "@/lib/money";
@@ -226,11 +229,83 @@ async function sendCustomerAppointmentEmailSafely(
       return false;
     }
 
+    if (payload.shopId && payload.recipientUserId) {
+      await createAppNotificationSafely({
+        shopId: payload.shopId,
+        recipientUserId: payload.recipientUserId,
+        type: `customer.${kind}`,
+        eventKey: `customer:${kind}:${appointmentId}`,
+        eyebrow: "Atendimento",
+        title: getCustomerNotificationTitle(kind),
+        body: getCustomerNotificationBody(kind, payload),
+        actionUrl: payload.actionUrl,
+        metadata: {
+          appointmentId,
+          appointmentCode: payload.appointmentCode,
+          barberName: payload.barberName,
+          serviceName: payload.serviceName,
+          date: payload.dateLabel,
+          time: payload.timeLabel,
+          status: getCustomerNotificationStatus(kind),
+          reason: payload.cancellationReason,
+        },
+      });
+    }
     await send(payload);
     return true;
   } catch (error) {
     logAppointmentEmailFailure(kind, appointmentId, error);
     return false;
+  }
+}
+
+function getCustomerNotificationTitle(kind: string) {
+  switch (kind) {
+    case "confirmacao":
+      return "Agendamento confirmado";
+    case "conclusao":
+      return "Atendimento concluido";
+    case "cancelamento":
+      return "Agendamento cancelado";
+    case "reagendamento":
+      return "Agendamento reagendado";
+    case "lembrete":
+      return "Seu horario esta chegando";
+    default:
+      return "Atualizacao do atendimento";
+  }
+}
+
+function getCustomerNotificationBody(
+  kind: string,
+  payload: AppointmentCustomerEmailPayload
+) {
+  switch (kind) {
+    case "confirmacao":
+      return `${payload.serviceName} com ${payload.barberName} foi confirmado para ${payload.timeLabel}.`;
+    case "conclusao":
+      return `Seu atendimento de ${payload.serviceName} foi concluido. Avalie sua experiencia.`;
+    case "cancelamento":
+      return `Seu agendamento de ${payload.serviceName} foi cancelado.`;
+    case "reagendamento":
+      return `Seu agendamento de ${payload.serviceName} foi reagendado.`;
+    case "lembrete":
+      return `Lembrete: ${payload.serviceName} com ${payload.barberName} as ${payload.timeLabel}.`;
+    default:
+      return `Houve uma atualizacao no seu atendimento de ${payload.serviceName}.`;
+  }
+}
+
+function getCustomerNotificationStatus(kind: string) {
+  switch (kind) {
+    case "cancelamento":
+      return "CANCELLED";
+    case "conclusao":
+      return "COMPLETED";
+    case "lembrete":
+      return "LEMBRETE";
+    default:
+      return "CONFIRMED";
   }
 }
 
@@ -351,6 +426,27 @@ export async function sendDueAppointmentReminderEmails({
     }
 
     try {
+      if (payload.shopId && payload.recipientUserId) {
+        await createAppNotificationSafely({
+          shopId: payload.shopId,
+          recipientUserId: payload.recipientUserId,
+          type: "customer.lembrete",
+          eventKey: `customer:lembrete:${appointment.id}`,
+          eyebrow: "Lembrete",
+          title: getCustomerNotificationTitle("lembrete"),
+          body: getCustomerNotificationBody("lembrete", payload),
+          actionUrl: payload.actionUrl,
+          metadata: {
+            appointmentId: appointment.id,
+            appointmentCode: payload.appointmentCode,
+            barberName: payload.barberName,
+            serviceName: payload.serviceName,
+            date: payload.dateLabel,
+            time: payload.timeLabel,
+            status: "LEMBRETE",
+          },
+        });
+      }
       await sendAppointmentReminderEmail(payload);
       sent += 1;
     } catch (error) {
@@ -380,5 +476,90 @@ export async function sendDueAppointmentReminderEmails({
     skipped,
     windowStart,
     windowEnd,
+  };
+}
+
+export async function sendCustomerAppointmentDayReminderNotifications({
+  now = new Date(),
+  take = 200,
+}: {
+  now?: Date;
+  take?: number;
+} = {}) {
+  const dateValue = getCurrentScheduleDateValue(now);
+  const range = getScheduleDayRange(dateValue);
+
+  if (!range) {
+    return {
+      checked: 0,
+      created: 0,
+      skipped: 0,
+      date: dateValue,
+    };
+  }
+
+  const appointments = await basePrisma.appointment.findMany({
+    where: {
+      status: {
+        in: ACTIVE_REMINDER_STATUSES,
+      },
+      date: {
+        gte: range.start,
+        lte: range.end,
+      },
+      customer: {
+        email: {
+          not: null,
+        },
+      },
+    },
+    include: appointmentEmailInclude,
+    orderBy: {
+      date: "asc",
+    },
+    take,
+  });
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const appointment of appointments) {
+    const payload = buildAppointmentEmailPayload(appointment);
+
+    if (!payload?.shopId || !payload.recipientUserId) {
+      skipped += 1;
+      continue;
+    }
+
+    const notification = await createAppNotificationSafely({
+      shopId: payload.shopId,
+      recipientUserId: payload.recipientUserId,
+      type: "customer.lembrete_dia",
+      eventKey: `customer:lembrete_dia:${appointment.id}:${dateValue}`,
+      eyebrow: "Lembrete",
+      title: "Voce tem horario hoje",
+      body: `Hoje as ${payload.timeLabel}: ${payload.serviceName} com ${payload.barberName}.`,
+      actionUrl: payload.actionUrl,
+      metadata: {
+        appointmentId: appointment.id,
+        appointmentCode: payload.appointmentCode,
+        barberName: payload.barberName,
+        serviceName: payload.serviceName,
+        date: payload.dateLabel,
+        time: payload.timeLabel,
+        status: "LEMBRETE",
+      },
+    });
+
+    if (notification) {
+      created += 1;
+    }
+  }
+
+  return {
+    checked: appointments.length,
+    created,
+    skipped,
+    date: dateValue,
   };
 }

@@ -6,19 +6,24 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
+  CalendarX2,
   ChevronDown,
   Clock3,
   ClipboardList,
   PencilLine,
   RotateCcw,
+  Save,
   ShoppingBag,
+  Trash2,
   UsersRound,
   UserX,
+  X,
   XCircle,
 } from "lucide-react";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
+import FeedbackMessage from "@/components/FeedbackMessage";
 import OperationalFeedbackDialog, {
   type OperationalFeedbackState,
 } from "@/components/ui/OperationalFeedbackDialog";
@@ -49,7 +54,15 @@ import {
   formatScheduleTime,
   getCurrentScheduleDateValue,
   getScheduleDateValue,
+  getScheduleDayOfWeek,
 } from "@/lib/scheduleTime";
+import type { AgendaBlockItem } from "@/lib/agendaBlocks";
+import {
+  deleteAdminAgendaBlockAction,
+  deleteAdminAgendaRecurringBlockAction,
+  updateAdminAgendaBlockAction,
+  updateAdminAgendaRecurringBlockAction,
+} from "./actions";
 
 export type AdminAgendaAppointment = {
   id: string;
@@ -102,6 +115,13 @@ export type AdminAgendaExtra = {
   stock: number;
 };
 
+export type AdminAgendaBlock = AgendaBlockItem;
+type BlockMutationAction = (formData: FormData) => Promise<{
+  ok: boolean;
+  message: string;
+  tone: "success" | "error" | "info";
+}>;
+
 type AdminAgendaFilters = {
   dateFrom: string;
   dateTo: string;
@@ -111,6 +131,7 @@ type AdminAgendaFilters = {
 
 export default function AdminAgendaClient({
   appointments,
+  blocks,
   barbers,
   services,
   extras,
@@ -119,6 +140,7 @@ export default function AdminAgendaClient({
   limit = null,
 }: {
   appointments: AdminAgendaAppointment[];
+  blocks: AdminAgendaBlock[];
   barbers: AdminAgendaBarber[];
   services: AdminAgendaService[];
   extras: AdminAgendaExtra[];
@@ -136,6 +158,28 @@ export default function AdminAgendaClient({
         matchesAgendaFilters(appointment, appliedFilters)
       ),
     [appointments, appliedFilters]
+  );
+  const visibleBlocks = useMemo(
+    () => blocks.filter((block) => matchesAgendaBlockFilters(block, appliedFilters)),
+    [blocks, appliedFilters]
+  );
+  const visibleTimelineItems = useMemo(
+    () =>
+      [
+        ...visibleAppointments.map((appointment) => ({
+          type: "appointment" as const,
+          id: appointment.id,
+          sortTime: new Date(appointment.date).getTime(),
+          appointment,
+        })),
+        ...visibleBlocks.map((block) => ({
+          type: "block" as const,
+          id: block.id,
+          sortTime: new Date(block.startDateTime).getTime(),
+          block,
+        })),
+      ].sort((left, right) => left.sortTime - right.sortTime),
+    [visibleAppointments, visibleBlocks]
   );
   const visibleSummary = useMemo(
     () => getVisibleAgendaSummary(visibleAppointments),
@@ -217,7 +261,7 @@ export default function AdminAgendaClient({
             </h2>
           </div>
           <p className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-sm font-semibold text-zinc-300">
-            {visibleAppointments.length} registro(s)
+            {visibleTimelineItems.length} registro(s)
           </p>
         </div>
 
@@ -373,7 +417,7 @@ export default function AdminAgendaClient({
           />
         </div>
 
-        {visibleAppointments.length === 0 ? (
+        {visibleTimelineItems.length === 0 ? (
           <div className="mt-5">
             <EmptyState
               title={
@@ -391,15 +435,19 @@ export default function AdminAgendaClient({
         ) : (
           <>
             <div className="mt-5 grid min-w-0 max-w-full gap-3 overflow-hidden md:hidden">
-              {visibleAppointments.map((appointment) => (
-                <AppointmentMobileCard
-                  key={appointment.id}
-                  appointment={appointment}
-                  barbers={barbers}
-                  services={services}
-                  extras={extras}
-                />
-              ))}
+              {visibleTimelineItems.map((item) =>
+                item.type === "block" ? (
+                  <AgendaBlockMobileCard key={item.id} block={item.block} />
+                ) : (
+                  <AppointmentMobileCard
+                    key={item.id}
+                    appointment={item.appointment}
+                    barbers={barbers}
+                    services={services}
+                    extras={extras}
+                  />
+                )
+              )}
             </div>
 
             <div className="mt-5 hidden overflow-x-auto rounded-2xl border border-white/10 bg-black/20 md:block">
@@ -421,7 +469,12 @@ export default function AdminAgendaClient({
                 </thead>
 
                 <tbody>
-                  {visibleAppointments.map((appointment) => {
+                  {visibleTimelineItems.map((item) => {
+                    if (item.type === "block") {
+                      return <AgendaBlockTableRow key={item.id} block={item.block} />;
+                    }
+
+                    const appointment = item.appointment;
                     const date = new Date(appointment.date);
 
                     return (
@@ -534,6 +587,25 @@ function matchesAgendaFilters(
   }
 
   if (filters.barberId && appointment.barber.id !== filters.barberId) {
+    return false;
+  }
+
+  return true;
+}
+
+function matchesAgendaBlockFilters(
+  block: AdminAgendaBlock,
+  filters: AdminAgendaFilters
+) {
+  if (filters.dateFrom && block.date < filters.dateFrom) {
+    return false;
+  }
+
+  if (filters.dateTo && block.date > filters.dateTo) {
+    return false;
+  }
+
+  if (filters.barberId && block.barberId !== filters.barberId) {
     return false;
   }
 
@@ -653,6 +725,215 @@ function getVisibleAgendaSummary(appointments: AdminAgendaAppointment[]) {
       completed: 0,
       cancelled: 0,
     }
+  );
+}
+
+function AgendaBlockMobileCard({ block }: { block: AdminAgendaBlock }) {
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    message: string | null;
+    tone: "success" | "error" | "info";
+  }>({ message: null, tone: "success" });
+  const [isPending, startTransition] = useTransition();
+  const weekDay = getScheduleDayOfWeek(block.date) ?? 0;
+
+  function runAction(
+    action: BlockMutationAction,
+    formData: FormData,
+    onSuccess?: () => void
+  ) {
+    formData.set("barberId", block.barberId);
+
+    startTransition(async () => {
+      const result = await action(formData);
+      setFeedback({ message: result.message, tone: result.tone });
+
+      if (result.ok) {
+        onSuccess?.();
+        router.refresh();
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (!window.confirm("Excluir este bloqueio da agenda?")) {
+      return;
+    }
+
+    const formData = new FormData();
+
+    if (block.kind === "recurring") {
+      formData.set("recurringBlockId", block.sourceId);
+      runAction(deleteAdminAgendaRecurringBlockAction, formData);
+      return;
+    }
+
+    formData.set("blockId", block.sourceId);
+    runAction(deleteAdminAgendaBlockAction, formData);
+  }
+
+  return (
+    <article className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-rose-300/20 bg-rose-500/[0.055] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.14)]">
+      <span className="absolute right-3 top-3 rounded-full border border-rose-200/25 bg-rose-400/10 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-rose-100">
+        Bloqueado
+      </span>
+
+      <div className="min-w-0 pr-24">
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-rose-100/80">
+          <CalendarX2 className="h-3 w-3" />
+          Pausa
+        </p>
+        <p className="mt-1 text-2xl font-black leading-none text-white">
+          {block.startTime} - {block.endTime}
+        </p>
+      </div>
+
+      <div className="mt-2 grid gap-1.5 text-sm">
+        <p className="font-semibold text-white">Motivo: {block.reason}</p>
+        <p className="text-xs leading-5 text-zinc-300">
+          Esse horario so aceita encaixes rapidos pelo admin ou barbeiro.
+        </p>
+      </div>
+
+      <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+      {isEditing ? (
+        <form
+          className="mt-3 rounded-2xl border border-rose-200/15 bg-black/20 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+
+            if (block.kind === "recurring") {
+              formData.set("recurringBlockId", block.sourceId);
+              formData.set("weekDay", String(weekDay));
+            } else {
+              formData.set("blockId", block.sourceId);
+              formData.set(
+                "startDateTime",
+                `${block.date}T${String(formData.get("startTime") || "")}`
+              );
+              formData.set(
+                "endDateTime",
+                `${block.date}T${String(formData.get("endTime") || "")}`
+              );
+            }
+
+            runAction(
+              block.kind === "recurring"
+                ? updateAdminAgendaRecurringBlockAction
+                : updateAdminAgendaBlockAction,
+              formData,
+              () => setIsEditing(false)
+            );
+          }}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.16em] text-rose-100/70">
+                Inicio
+              </span>
+              <input
+                name="startTime"
+                type="time"
+                defaultValue={block.startTime}
+                required
+                className="min-h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-sm font-bold text-white outline-none focus:border-rose-200/50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.16em] text-rose-100/70">
+                Fim
+              </span>
+              <input
+                name="endTime"
+                type="time"
+                defaultValue={block.endTime}
+                required
+                className="min-h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-sm font-bold text-white outline-none focus:border-rose-200/50"
+              />
+            </label>
+          </div>
+
+          <label className="mt-2 block">
+            <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.16em] text-rose-100/70">
+              Motivo
+            </span>
+            <input
+              name="reason"
+              defaultValue={block.reason}
+              className="min-h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-sm font-semibold text-white outline-none placeholder:text-zinc-600 focus:border-rose-200/50"
+            />
+          </label>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] text-sm font-bold text-white"
+            >
+              <X className="h-4 w-4" />
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" />
+              {isPending ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08]"
+          >
+            <PencilLine className="h-4 w-4" />
+            Editar
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleDelete}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-300/25 bg-rose-500/10 text-sm font-bold text-rose-100 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Trash2 className="h-4 w-4" />
+            {isPending ? "Excluindo..." : "Excluir"}
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function AgendaBlockTableRow({ block }: { block: AdminAgendaBlock }) {
+  return (
+    <tr>
+      <td className="font-semibold text-[var(--brand-strong)]">Bloqueio</td>
+      <td>{formatScheduleDate(new Date(block.startDateTime))}</td>
+      <td>
+        {block.startTime} - {block.endTime}
+      </td>
+      <td>{block.barberName || "Barbeiro"}</td>
+      <td className="text-zinc-500">-</td>
+      <td>{block.reason}</td>
+      <td className="text-zinc-500">-</td>
+      <td className="text-zinc-500">-</td>
+      <td>
+        <span className="inline-flex rounded-full border border-[var(--brand)]/35 bg-[var(--brand)]/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--brand-strong)]">
+          Bloqueado
+        </span>
+      </td>
+      <td className="max-w-xs text-zinc-400">
+        Esse horario so aceita encaixes rapidos pelo admin ou barbeiro.
+      </td>
+      <td className="text-zinc-500">-</td>
+    </tr>
   );
 }
 

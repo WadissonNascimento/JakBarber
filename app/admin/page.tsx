@@ -1,23 +1,21 @@
 import {
   CalendarRange,
-  Coins,
   DollarSign,
+  Landmark,
   MessageSquareText,
   PackagePlus,
-  PackageSearch,
   PiggyBank,
   Scissors,
   Settings,
+  Store,
   UserRound,
   UsersRound,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import AccountPasswordForm from "@/components/AccountPasswordForm";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
-import AdminProfileForm from "./AdminProfileForm";
-import { updateOwnAccountPasswordAction } from "@/app/accountPasswordActions";
+import AdminNotificationsBell from "./AdminNotificationsBell";
 import {
   getCurrentScheduleDateValue,
   getScheduleDayRange,
@@ -81,16 +79,6 @@ export default async function AdminPage() {
 
   await ensureAdminBarberProfile(session.user.shopId);
   const shopId = session.user.shopId;
-  const adminProfile = await prisma.user.findUnique({
-    where: {
-      id: session.user.id,
-    },
-    select: {
-      name: true,
-      email: true,
-      phone: true,
-    },
-  });
 
   const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange();
@@ -103,6 +91,7 @@ export default async function AdminPage() {
     todayAppointmentsCount,
     canceledTodayAppointments,
     completedTodayAppointments,
+    appNotifications,
   ] = await Promise.all([
     prisma.user.count({
       where: {
@@ -187,6 +176,27 @@ export default async function AdminPage() {
         },
       },
     }),
+    prisma.appNotification.findMany({
+      where: {
+        shopId,
+        recipientUserId: session.user.id,
+      },
+      select: {
+        id: true,
+        type: true,
+        eyebrow: true,
+        title: true,
+        body: true,
+        actionUrl: true,
+        metadata: true,
+        readAt: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 20,
+    }),
   ]);
   const todayPaymentBreakdown = createEmptyPaymentBreakdown();
   const todayRevenue = completedTodayAppointments.reduce(
@@ -210,6 +220,12 @@ export default async function AdminPage() {
       description: "Agenda, encaixes e financeiro da barbearia.",
     },
     {
+      href: "/admin/perfil",
+      icon: UserRound,
+      title: "Configurar perfil",
+      description: "Dados do admin, telefone e senha do painel.",
+    },
+    {
       href: "/admin/agenda",
       icon: CalendarRange,
       title: "Agenda geral",
@@ -230,7 +246,7 @@ export default async function AdminPage() {
     },
     {
       href: "/admin/maquinas",
-      icon: PackageSearch,
+      icon: Store,
       title: "Maquinas",
       description: "Catálogo visual e maquinas ativas.",
       badge: activeProducts ? `${activeProducts}` : undefined,
@@ -256,7 +272,7 @@ export default async function AdminPage() {
     },
     {
       href: "/admin/financeiro",
-      icon: Coins,
+      icon: Landmark,
       title: "Financeiro",
       description: "Faturamento, repasses e fechamentos.",
       badge: openPayouts ? `${openPayouts}` : undefined,
@@ -273,16 +289,19 @@ export default async function AdminPage() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-6xl px-4 py-5 text-white sm:px-6 sm:py-8">
         <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur sm:p-6">
-          <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-              Admin
-            </p>
-            <h1 className="text-3xl font-bold text-white sm:text-4xl">
-              Hoje na barbearia
-            </h1>
-            <p className="text-sm text-zinc-400">
-              Agenda, equipe e dinheiro do dia em um lugar so.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+                Admin
+              </p>
+              <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
+                Hoje na barbearia
+              </h1>
+              <p className="mt-2 text-sm text-zinc-400">
+                Agenda, equipe e dinheiro do dia em um lugar so.
+              </p>
+            </div>
+            <AdminNotificationsBell notifications={appNotifications} />
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-3">
@@ -306,19 +325,6 @@ export default async function AdminPage() {
               details={getPaymentBreakdownDetails(todayPaymentBreakdown)}
             />
           </div>
-        </section>
-
-        <section className="mt-4 grid max-w-5xl gap-4 lg:grid-cols-2">
-          <AdminProfileForm
-            name={adminProfile?.name || ""}
-            email={adminProfile?.email || ""}
-            phone={adminProfile?.phone || null}
-          />
-          <AccountPasswordForm
-            action={updateOwnAccountPasswordAction}
-            title="Senha do admin"
-            description="Atualize a senha usada para entrar no painel administrativo."
-          />
         </section>
 
         <section className="mt-10">

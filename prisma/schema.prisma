@@ -65,6 +65,8 @@ model Shop {
   barberTips               BarberTip[]
   homeImages               HomeImage[]
   emailDeliveryLogs        EmailDeliveryLog[]
+  appNotifications         AppNotification[]
+  pushSubscriptions        PushSubscription[]
   emailSettings            ShopEmailSettings?
   accounts                 Account[]
 
@@ -118,6 +120,8 @@ model User {
   customerProfile          CustomerProfile?          @relation("CustomerProfileOwner")
   preferredByProfiles      CustomerProfile[]         @relation("PreferredBarber")
   emailDeliveryLogs        EmailDeliveryLog[]        @relation("EmailDeliveryRecipient")
+  appNotifications         AppNotification[]         @relation("AppNotificationRecipient")
+  pushSubscriptions        PushSubscription[]        @relation("PushSubscriptionUser")
   emailChangeRequests      EmailChangeRequest[]
 
   @@unique([id, shopId])
@@ -188,6 +192,52 @@ model EmailDeliveryLog {
   @@unique([shopId, template, eventKey, recipientEmail])
   @@index([shopId, recipientUserId, createdAt])
   @@index([shopId, status, createdAt])
+}
+
+model AppNotification {
+  id              String    @id @default(cuid())
+  shopId          String    @default("shop_jak_barber")
+  recipientUserId String
+  type            String
+  eventKey        String
+  eyebrow         String?
+  title           String
+  body            String
+  actionUrl       String?
+  metadata        Json?
+  readAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  shop      Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  recipient User @relation("AppNotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, recipientUserId, eventKey])
+  @@index([shopId, recipientUserId, readAt, createdAt])
+  @@index([shopId, type, createdAt])
+}
+
+model PushSubscription {
+  id            String    @id @default(cuid())
+  shopId        String    @default("shop_jak_barber")
+  userId        String
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?
+  isActive      Boolean   @default(true)
+  failureCount  Int       @default(0)
+  lastSuccessAt DateTime?
+  lastFailureAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user User @relation("PushSubscriptionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, userId, isActive])
+  @@index([shopId, isActive, updatedAt])
 }
 
 model RateLimitBucket {

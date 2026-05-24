@@ -27,6 +27,8 @@ const SHOP_SCOPED_MODELS = new Set([
   "BarberTip",
   "HomeImage",
   "EmailDeliveryLog",
+  "AppNotification",
+  "PushSubscription",
 ]);
 
 const ID_SCOPED_MODELS = new Set([
@@ -55,6 +57,8 @@ const ID_SCOPED_MODELS = new Set([
   "BarberTip",
   "HomeImage",
   "EmailDeliveryLog",
+  "AppNotification",
+  "PushSubscription",
 ]);
 
 function mergeWhereWithShop(
