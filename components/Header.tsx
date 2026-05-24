@@ -45,18 +45,14 @@ function getHeaderLinks(role: HeaderRole): {
       eyebrow: "Admin",
       primary: [
         { href: "/admin", label: "Inicio" },
-        { href: "/admin/agenda", label: "Agenda" },
+        { href: "/admin/agenda", label: "Agenda geral" },
         { href: "/admin/barbeiros", label: "Equipe" },
-        { href: "/admin?notifications=1", label: "Notificacoes" },
+        { href: "/admin/financeiro", label: "Financeiro" },
       ],
       secondary: [
-        { href: "/admin/perfil", label: "Configurar perfil" },
-        { href: "/admin/financeiro", label: "Financeiro" },
         { href: "/admin/servicos", label: "Servicos" },
         { href: "/admin/extras", label: "Extras" },
         { href: "/admin/maquinas", label: "Maquinas" },
-        { href: "/admin/avaliacoes", label: "Avaliacoes" },
-        { href: "/admin/configuracoes", label: "Configuracoes" },
       ],
     };
   }

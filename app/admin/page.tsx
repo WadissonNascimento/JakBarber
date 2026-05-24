@@ -220,12 +220,6 @@ export default async function AdminPage() {
       description: "Agenda, encaixes e financeiro da barbearia.",
     },
     {
-      href: "/admin/perfil",
-      icon: UserRound,
-      title: "Configurar perfil",
-      description: "Dados do admin, telefone e senha do painel.",
-    },
-    {
       href: "/admin/agenda",
       icon: CalendarRange,
       title: "Agenda geral",
@@ -237,6 +231,13 @@ export default async function AdminPage() {
       title: "Equipe",
       description: "Barbeiros, acessos e status.",
       badge: activeBarbers ? `${activeBarbers}` : undefined,
+    },
+    {
+      href: "/admin/financeiro",
+      icon: Landmark,
+      title: "Financeiro",
+      description: "Faturamento, repasses e fechamentos.",
+      badge: openPayouts ? `${openPayouts}` : undefined,
     },
     {
       href: "/admin/servicos",
@@ -271,19 +272,35 @@ export default async function AdminPage() {
       description: "WhatsApp, e-mail, Instagram e fotos da home.",
     },
     {
-      href: "/admin/financeiro",
-      icon: Landmark,
-      title: "Financeiro",
-      description: "Faturamento, repasses e fechamentos.",
-      badge: openPayouts ? `${openPayouts}` : undefined,
-    },
-    {
       href: "/admin/caixinhas",
       icon: PiggyBank,
       title: "Caixinhas dos barbeiros",
       description: "Resumo e detalhes das caixinhas registradas.",
     },
+    {
+      href: "/admin/perfil",
+      icon: UserRound,
+      title: "Configurar perfil",
+      description: "Dados do admin, telefone e senha do painel.",
+    },
   ];
+  const routineOrder = [
+    "/barber",
+    "/admin/agenda",
+    "/admin/barbeiros",
+    "/admin/financeiro",
+    "/admin/servicos",
+    "/admin/extras",
+    "/admin/maquinas",
+    "/admin/caixinhas",
+    "/admin/configuracoes",
+    "/admin/avaliacoes",
+    "/admin/perfil",
+  ];
+  const sortedEntries = [...entries].sort(
+    (left, right) =>
+      routineOrder.indexOf(left.href) - routineOrder.indexOf(right.href)
+  );
 
   return (
     <div className="min-h-screen">
@@ -336,7 +353,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {entries.map((entry) => (
+            {sortedEntries.map((entry) => (
               <DashboardEntryCard
                 key={entry.href}
                 href={entry.href}
