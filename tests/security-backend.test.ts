@@ -102,12 +102,15 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   const wrSession = read("lib/wrSession.ts");
   const createRoute = read("app/wr/tenants/novo/submit/route.ts");
   const appChrome = read("components/AppChrome.tsx");
+  const loginSubmit = read("app/login/submit/route.ts");
+  const adminLoginSubmit = read("app/admin/login/submit/route.ts");
 
   assert.match(auth, /isWrTechAppHost\(host\)/);
   assert.match(auth, /isExplicitWrCredentials/);
   assert.match(auth, /path === "\/wr\/login\/submit"/);
   assert.match(auth, /role:\s*"WR_ADMIN"/);
   assert.match(auth, /scope:\s*"wr_auth:credentials"/);
+  assert.match(proxy, /isWrTechAppHostRequest && !pathname\.startsWith\("\/wr"\)/);
   assert.match(proxy, /pathname\.startsWith\("\/wr"\).*role !== "WR_ADMIN"/s);
   assert.match(proxy, /"\/wr\/:path\*"/);
   assert.match(redirect, /role === "WR_ADMIN"[\s\S]*return "\/wr"/);
@@ -122,6 +125,8 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   const wrLoginSubmit = read("app/wr/login/submit/route.ts");
   assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);
   assert.match(appChrome, /pathname === "\/wr" \|\| pathname\.startsWith\("\/wr\/"\)/);
+  assert.match(loginSubmit, /isWrTechAppRequest\(\)/);
+  assert.match(adminLoginSubmit, /isWrTechAppRequest\(\)/);
 });
 
 test("service role storage helpers are server-only and not imported from client components", () => {

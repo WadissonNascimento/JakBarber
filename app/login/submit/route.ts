@@ -6,6 +6,7 @@ import { getPostLoginRedirect } from "@/lib/authRedirect";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getCurrentShopId } from "@/lib/shop";
+import { isWrTechAppRequest } from "@/lib/wrTechInstitutionalServer";
 import {
   getShopEmailRateLimitIdentifier,
   normalizeIdentityEmail,
@@ -60,6 +61,10 @@ async function getLoginFailureMessage(shopId: string, email: string, password: s
 }
 
 export async function POST(request: NextRequest) {
+  if (await isWrTechAppRequest()) {
+    return NextResponse.redirect(new URL("/wr/login", request.url), 303);
+  }
+
   const formData = await request.formData();
   const shopId = await getCurrentShopId();
   const email = normalizeIdentityEmail(formData.get("email")?.toString());

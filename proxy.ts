@@ -2,7 +2,10 @@ import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { NextResponse } from "next/server";
 import { getPostLoginRedirect } from "@/lib/authRedirect";
-import { isWrTechInstitutionalHost } from "@/lib/wrTechInstitutional";
+import {
+  isWrTechAppHost,
+  isWrTechInstitutionalHost,
+} from "@/lib/wrTechInstitutional";
 
 const { auth } = NextAuth(authConfig);
 const SHOP_ADMIN_ROLES = ["ADMIN", "SHOP_ADMIN"];
@@ -15,15 +18,20 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const pathname = req.nextUrl.pathname;
   const role = req.auth?.user?.role;
+  const requestHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
   const isHomePage = pathname === "/";
+  const isWrTechAppHostRequest = isWrTechAppHost(requestHost);
   const isWrTechInstitutionalHome =
-    isHomePage &&
-    isWrTechInstitutionalHost(
-      req.headers.get("x-forwarded-host") || req.headers.get("host")
-    );
+    isHomePage && isWrTechInstitutionalHost(requestHost);
 
   if (isWrTechInstitutionalHome) {
     return NextResponse.next();
+  }
+
+  if (isWrTechAppHostRequest && !pathname.startsWith("/wr")) {
+    return NextResponse.redirect(
+      new URL(isLoggedIn && role === "WR_ADMIN" ? "/wr" : "/wr/login", req.url)
+    );
   }
 
   if (
