@@ -1,5 +1,6 @@
 import "./globals.css";
 import AppChrome from "@/components/AppChrome";
+import AppVersionRefresh from "@/components/AppVersionRefresh";
 import ClientRuntimeGuard from "@/components/ClientRuntimeGuard";
 import PushNotificationManager from "@/components/PushNotificationManager";
 import RequiredCustomerPhoneModal from "@/components/RequiredCustomerPhoneModal";
@@ -274,6 +275,7 @@ export default async function RootLayout({
           data-site="wr-tech-app"
         >
           <ClientRuntimeGuard />
+          <AppVersionRefresh />
           {children}
         </body>
       </html>
@@ -288,6 +290,7 @@ export default async function RootLayout({
           data-site="wr-tech-solutions"
         >
           <ClientRuntimeGuard />
+          <AppVersionRefresh />
           {children}
         </body>
       </html>
@@ -372,6 +375,7 @@ export default async function RootLayout({
         style={tenantBrandStyle}
       >
         <ClientRuntimeGuard />
+        <AppVersionRefresh />
         <AppChrome
           shopId={shop.id}
           brandName={brandName}
