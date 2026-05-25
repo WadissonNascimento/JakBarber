@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getDomainReadiness } from "@/lib/domainReadiness";
 import { basePrisma } from "@/lib/prisma-core";
 import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
 import WrShell from "../WrShell";
@@ -29,6 +30,12 @@ export default async function WrTenantsPage() {
     }),
     isWrTenantCreationEnabled(),
   ]);
+  const shopsWithDomainStatus = await Promise.all(
+    shops.map(async (shop) => ({
+      ...shop,
+      domainReadiness: await getDomainReadiness(shop.primaryDomain),
+    }))
+  );
 
   return (
     <WrShell userName={user.name}>
@@ -53,7 +60,7 @@ export default async function WrTenantsPage() {
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
         <div className="grid gap-0 divide-y divide-white/10">
-          {shops.map((shop) => (
+          {shopsWithDomainStatus.map((shop) => (
             <article
               key={shop.id}
               className="grid gap-4 p-5 md:grid-cols-[1.2fr_1fr_0.8fr]"
@@ -81,7 +88,28 @@ export default async function WrTenantsPage() {
 
               <div className="text-sm text-slate-300">
                 <p>Slug: {shop.slug}</p>
-                <p>Dominio: {shop.primaryDomain || "nao configurado"}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span>Dominio: {shop.primaryDomain || "nao configurado"}</span>
+                  <span
+                    className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
+                      shop.domainReadiness.tone === "success"
+                        ? "bg-emerald-400/15 text-emerald-200"
+                        : shop.domainReadiness.tone === "danger"
+                          ? "bg-red-400/15 text-red-200"
+                          : shop.domainReadiness.tone === "warning"
+                            ? "bg-amber-400/15 text-amber-200"
+                            : "bg-white/10 text-slate-300"
+                    }`}
+                    title={shop.domainReadiness.message}
+                  >
+                    {shop.domainReadiness.label}
+                  </span>
+                </div>
+                {shop.domainReadiness.status === "wrong_target" ? (
+                  <p className="mt-1 text-xs text-amber-200">
+                    IP atual: {shop.domainReadiness.resolvedIpv4s.join(", ") || "nenhum"}
+                  </p>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs text-slate-400">

@@ -133,6 +133,30 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(adminLoginSubmit, /isWrTechAppRequest\(\)/);
 });
 
+test("custom domain readiness is read-only and visible only in WR tenant tooling", () => {
+  const domainReadiness = read("lib/domainReadiness.ts");
+  const tenantsPage = read("app/wr/tenants/page.tsx");
+  const domainScript = read("scripts/check-domain-readiness.ts");
+  const packageJson = read("package.json");
+
+  assert.match(domainReadiness, /resolve4/);
+  assert.match(domainReadiness, /DOMAIN_EXPECTED_IPV4S/);
+  assert.match(domainReadiness, /DEFAULT_EXPECTED_IPV4S = \["2\.24\.65\.212"\]/);
+  assert.match(domainReadiness, /isLocalOrReservedDomain/);
+  assert.match(domainReadiness, /DNS aponta fora/);
+  assert.doesNotMatch(domainReadiness, /basePrisma\./);
+  assert.doesNotMatch(domainReadiness, /shop\.update|shop\.create|user\.create/);
+
+  assert.match(tenantsPage, /getDomainReadiness/);
+  assert.match(tenantsPage, /domainReadiness\.label/);
+
+  assert.match(domainScript, /mode:\s*"read_only"/);
+  assert.match(domainScript, /basePrisma\.shop\.findFirst/);
+  assert.doesNotMatch(domainScript, /basePrisma\.shop\.(create|update|delete)/);
+  assert.doesNotMatch(domainScript, /certbot|nginx|systemctl|pm2 restart/);
+  assert.match(packageJson, /"domain:check"/);
+});
+
 test("service role storage helpers are server-only and not imported from client components", () => {
   assert.match(read("lib/productImages.ts"), /import "server-only"/);
   assert.match(read("lib/extraProductImages.ts"), /import "server-only"/);
