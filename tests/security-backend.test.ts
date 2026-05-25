@@ -110,6 +110,7 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(auth, /path === "\/wr\/login\/submit"/);
   assert.match(auth, /role:\s*"WR_ADMIN"/);
   assert.match(auth, /scope:\s*"wr_auth:credentials"/);
+  assert.match(auth, /user\.role === "WR_ADMIN"/);
   assert.match(proxy, /isWrTechAppHostRequest && !pathname\.startsWith\("\/wr"\)/);
   assert.match(proxy, /pathname\.startsWith\("\/wr"\).*role !== "WR_ADMIN"/s);
   assert.match(proxy, /"\/wr\/:path\*"/);
@@ -127,6 +128,7 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(wrLoginSubmit, /NextResponse\.json\(\{ ok: true, redirectTo: "\/wr" \}/);
   assert.match(appChrome, /pathname === "\/wr" \|\| pathname\.startsWith\("\/wr\/"\)/);
   assert.match(loginSubmit, /isWrTechAppRequest\(\)/);
+  assert.match(loginSubmit, /role:\s*"WR_ADMIN"/);
   assert.match(adminLoginSubmit, /isWrTechAppRequest\(\)/);
 });
 

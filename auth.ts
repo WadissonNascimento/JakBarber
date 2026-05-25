@@ -161,7 +161,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { shopId, email },
         });
 
-        if (!user || !user.isActive || !user.passwordHash) {
+        if (
+          !user ||
+          !user.isActive ||
+          !user.passwordHash ||
+          user.role === "WR_ADMIN"
+        ) {
           logSecurityEvent("login_failed", {
             reason: "user_not_found_or_inactive",
             email,

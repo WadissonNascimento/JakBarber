@@ -48,10 +48,11 @@ async function getLoginFailureMessage(shopId: string, email: string, password: s
       id: true,
       isActive: true,
       passwordHash: true,
+      role: true,
     },
   });
 
-  if (!user || !user.isActive || !user.passwordHash) {
+  if (!user || !user.isActive || !user.passwordHash || user.role === "WR_ADMIN") {
     return "Usuario nao encontrado ou e-mail incorreto.";
   }
 
@@ -111,6 +112,9 @@ export async function POST(request: NextRequest) {
     where: {
       shopId,
       email,
+      NOT: {
+        role: "WR_ADMIN",
+      },
     },
     select: {
       role: true,
