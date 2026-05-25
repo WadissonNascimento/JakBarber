@@ -225,7 +225,12 @@ function getConfiguredHost() {
 }
 
 function isLocalHost(host: string | null | undefined) {
-  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "[::1]"
+  );
 }
 
 function getDomainCandidates(host: string) {
@@ -242,14 +247,14 @@ function getDomainCandidates(host: string) {
 
 function canUseDefaultShopFallback(host: string | null) {
   if (!host) {
-    return true;
+    return process.env.NODE_ENV !== "production";
   }
 
   if (isWrTechAppHost(host)) {
     return false;
   }
 
-  if (process.env.NODE_ENV !== "production" && isLocalHost(host)) {
+  if (process.env.NODE_ENV !== "production" || isLocalHost(host)) {
     return true;
   }
 
