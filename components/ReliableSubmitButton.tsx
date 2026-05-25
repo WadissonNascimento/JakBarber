@@ -35,19 +35,24 @@ export default function ReliableSubmitButton({
     setSubmitting(true);
 
     try {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 15000);
       const response = await fetch(form.action, {
         method: form.method || "post",
         body: new FormData(form),
         credentials: "same-origin",
+        signal: controller.signal,
         headers: {
           Accept: "application/json",
           "X-Requested-With": "fetch",
         },
       });
+      window.clearTimeout(timeout);
       const contentType = response.headers.get("content-type") || "";
 
       if (contentType.includes("application/json")) {
         const data = (await response.json()) as {
+          error?: string;
           redirectTo?: string;
         };
 

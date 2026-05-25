@@ -5,9 +5,23 @@ import { normalizeIdentityEmail } from "@/lib/userIdentity";
 
 export const dynamic = "force-dynamic";
 
+function wantsJson(request: NextRequest) {
+  return (
+    request.headers.get("accept")?.includes("application/json") ||
+    request.headers.get("x-requested-with") === "fetch"
+  );
+}
+
 function wrLoginError(request: NextRequest, message: string) {
   const url = new URL("/wr/login", request.url);
   url.searchParams.set("error", message);
+
+  if (wantsJson(request)) {
+    return NextResponse.json(
+      { ok: false, error: message, redirectTo: `${url.pathname}${url.search}` },
+      { status: 401 }
+    );
+  }
 
   return NextResponse.redirect(url, 303);
 }
@@ -35,6 +49,10 @@ export async function POST(request: NextRequest) {
     }
 
     throw error;
+  }
+
+  if (wantsJson(request)) {
+    return NextResponse.json({ ok: true, redirectTo: "/wr" });
   }
 
   return NextResponse.redirect(new URL("/wr", request.url), 303);

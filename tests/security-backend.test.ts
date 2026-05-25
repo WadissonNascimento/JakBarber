@@ -124,6 +124,7 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
 
   const wrLoginSubmit = read("app/wr/login/submit/route.ts");
   assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);
+  assert.match(wrLoginSubmit, /NextResponse\.json\(\{ ok: true, redirectTo: "\/wr" \}/);
   assert.match(appChrome, /pathname === "\/wr" \|\| pathname\.startsWith\("\/wr\/"\)/);
   assert.match(loginSubmit, /isWrTechAppRequest\(\)/);
   assert.match(adminLoginSubmit, /isWrTechAppRequest\(\)/);
