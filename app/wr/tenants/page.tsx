@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  getDomainActivationStatus,
+  isWrDomainActivationEnabled,
+} from "@/lib/domainActivation";
 import { getDomainReadiness } from "@/lib/domainReadiness";
 import { basePrisma } from "@/lib/prisma-core";
 import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
@@ -6,8 +10,37 @@ import WrShell from "../WrShell";
 
 export const dynamic = "force-dynamic";
 
-export default async function WrTenantsPage() {
-  const [{ user }, shops, creationEnabled] = await Promise.all([
+type WrTenantsPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function getFlashParam(
+  params: Record<string, string | string[] | undefined> | undefined,
+  key: "notice" | "error",
+) {
+  const value = params?.[key];
+
+  return typeof value === "string" ? value : null;
+}
+
+function statusBadgeClass(tone: "muted" | "warning" | "success" | "danger") {
+  if (tone === "success") {
+    return "bg-emerald-400/15 text-emerald-200";
+  }
+
+  if (tone === "danger") {
+    return "bg-red-400/15 text-red-200";
+  }
+
+  if (tone === "warning") {
+    return "bg-amber-400/15 text-amber-200";
+  }
+
+  return "bg-white/10 text-slate-300";
+}
+
+export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps) {
+  const [{ user }, shops, creationEnabled, activationEnabled, params] = await Promise.all([
     requireWrAdminSession(),
     basePrisma.shop.findMany({
       select: {
@@ -29,12 +62,21 @@ export default async function WrTenantsPage() {
       orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
     }),
     isWrTenantCreationEnabled(),
+    isWrDomainActivationEnabled(),
+    searchParams,
   ]);
+  const notice = getFlashParam(params, "notice");
+  const error = getFlashParam(params, "error");
   const shopsWithDomainStatus = await Promise.all(
-    shops.map(async (shop) => ({
-      ...shop,
-      domainReadiness: await getDomainReadiness(shop.primaryDomain),
-    }))
+    shops.map(async (shop) => {
+      const domainReadiness = await getDomainReadiness(shop.primaryDomain);
+
+      return {
+        ...shop,
+        domainReadiness,
+        domainActivation: await getDomainActivationStatus(shop.primaryDomain, domainReadiness),
+      };
+    })
   );
 
   return (
@@ -57,6 +99,17 @@ export default async function WrTenantsPage() {
           Nova barbearia
         </Link>
       </div>
+
+      {notice ? (
+        <div className="mb-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100">
+          {notice}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm font-bold text-red-100">
+          {error}
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
         <div className="grid gap-0 divide-y divide-white/10">
@@ -91,24 +144,46 @@ export default async function WrTenantsPage() {
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span>Dominio: {shop.primaryDomain || "nao configurado"}</span>
                   <span
-                    className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
-                      shop.domainReadiness.tone === "success"
-                        ? "bg-emerald-400/15 text-emerald-200"
-                        : shop.domainReadiness.tone === "danger"
-                          ? "bg-red-400/15 text-red-200"
-                          : shop.domainReadiness.tone === "warning"
-                            ? "bg-amber-400/15 text-amber-200"
-                            : "bg-white/10 text-slate-300"
-                    }`}
+                    className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusBadgeClass(shop.domainReadiness.tone)}`}
                     title={shop.domainReadiness.message}
                   >
                     {shop.domainReadiness.label}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusBadgeClass(shop.domainActivation.tone)}`}
+                    title={shop.domainActivation.message}
+                  >
+                    {shop.domainActivation.label}
                   </span>
                 </div>
                 {shop.domainReadiness.status === "wrong_target" ? (
                   <p className="mt-1 text-xs text-amber-200">
                     IP atual: {shop.domainReadiness.resolvedIpv4s.join(", ") || "nenhum"}
                   </p>
+                ) : null}
+                {shop.domainActivation.canActivate ? (
+                  <form
+                    action={`/wr/tenants/${shop.id}/domain/activate`}
+                    method="post"
+                    className="mt-3"
+                  >
+                    <button
+                      type="submit"
+                      disabled={!activationEnabled}
+                      className={`rounded-lg px-3 py-2 text-xs font-black ${
+                        activationEnabled
+                          ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300"
+                          : "border border-white/10 text-slate-500"
+                      }`}
+                      title={
+                        activationEnabled
+                          ? shop.domainActivation.message
+                          : "Ativacao via painel bloqueada neste ambiente."
+                      }
+                    >
+                      Ativar SSL
+                    </button>
+                  </form>
                 ) : null}
               </div>
 

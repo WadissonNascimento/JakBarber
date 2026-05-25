@@ -96,3 +96,21 @@ DOMAIN_ACTIVATION_ENABLED=1 npm run domain:activate -- --domain dominio-do-clien
 O script valida DNS, valida `/api/domain-allow`, emite certificado se ainda nao
 existir, cria o bloco Nginx, roda `nginx -t` e recarrega Nginx. Se qualquer
 validacao falhar, ele para antes de alterar a configuracao.
+
+## Ativacao pelo painel WR
+
+O painel WR tambem exibe o status de SSL por tenant. Quando o dominio esta com
+DNS pronto e ainda nao tem certificado/configuracao ativa, aparece o estado
+`Pronto SSL`.
+
+Por seguranca, o botao do painel so executa Certbot/Nginx quando a flag abaixo
+estiver ativa no ambiente do processo:
+
+```bash
+WR_DOMAIN_ACTIVATION_ENABLED=1
+```
+
+Com a flag desligada, o painel continua mostrando status, mas nao executa
+alteracoes de infraestrutura. A rota de ativacao exige sessao `WR_ADMIN`, busca
+o dominio pelo `shopId` ativo e reutiliza o script `domain:activate` com a mesma
+trava `DOMAIN_ACTIVATION_ENABLED=1`.

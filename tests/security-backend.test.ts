@@ -139,6 +139,8 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   const domainAllow = read("app/api/domain-allow/route.ts");
   const domainScript = read("scripts/check-domain-readiness.ts");
   const domainActivateScript = read("scripts/activate-custom-domain.ts");
+  const domainActivation = read("lib/domainActivation.ts");
+  const domainActivationRoute = read("app/wr/tenants/[shopId]/domain/activate/route.ts");
   const customDomainDocs = read("docs/custom-domains.md");
   const packageJson = read("package.json");
   const shop = read("lib/shop.ts");
@@ -152,7 +154,10 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   assert.doesNotMatch(domainReadiness, /shop\.update|shop\.create|user\.create/);
 
   assert.match(tenantsPage, /getDomainReadiness/);
+  assert.match(tenantsPage, /getDomainActivationStatus/);
   assert.match(tenantsPage, /domainReadiness\.label/);
+  assert.match(tenantsPage, /domainActivation\.label/);
+  assert.match(tenantsPage, /Ativar SSL/);
 
   assert.match(shop, /export function getDomainCandidates/);
   assert.match(domainAllow, /basePrisma\.shop\.findFirst/);
@@ -175,10 +180,24 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   assert.match(domainActivateScript, /nginx/);
   assert.match(domainActivateScript, /systemctl/);
   assert.doesNotMatch(domainActivateScript, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
+  assert.match(domainActivation, /import "server-only"/);
+  assert.match(domainActivation, /WR_DOMAIN_ACTIVATION_ENABLED === "1"/);
+  assert.match(domainActivation, /DOMAIN_ACTIVATION_ENABLED: "1"/);
+  assert.match(domainActivation, /npm/);
+  assert.match(domainActivation, /domain:activate/);
+  assert.match(domainActivation, /getDomainReadiness\(normalizedDomain\)/);
+  assert.match(domainActivation, /findExistingNginxConfigForDomain/);
+  assert.doesNotMatch(domainActivation, /basePrisma\./);
+  assert.match(domainActivationRoute, /requireWrAdminSession\(\)/);
+  assert.match(domainActivationRoute, /basePrisma\.shop\.findFirst/);
+  assert.match(domainActivationRoute, /isActive:\s*true/);
+  assert.match(domainActivationRoute, /activateCustomDomainFromPanel\(shop\.primaryDomain\)/);
+  assert.doesNotMatch(domainActivationRoute, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
   assert.match(customDomainDocs, /\/api\/domain-allow/);
   assert.match(customDomainDocs, /server_name _/);
   assert.match(customDomainDocs, /proxy_set_header Host \$host/);
   assert.match(customDomainDocs, /domain:activate/);
+  assert.match(customDomainDocs, /WR_DOMAIN_ACTIVATION_ENABLED=1/);
   assert.match(packageJson, /"domain:check"/);
   assert.match(packageJson, /"domain:activate"/);
 });
