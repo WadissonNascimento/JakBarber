@@ -26,7 +26,7 @@ test("customer appointment flows send notification emails from backend actions",
 
   assert.match(barberActions, /previousStatus/);
   assert.match(barberActions, /notifyCustomerAppointmentCompleted\(appointmentId\)/);
-  assert.match(barberActions, /Somente o admin pode cancelar agendamentos/);
+  assert.match(barberActions, /notifyCustomerAppointmentCancelled\(/);
   assert.match(
     adminAgendaActions,
     /notifyCustomerAppointmentCancelled\(appointmentId,\s*cancellationReason\)/

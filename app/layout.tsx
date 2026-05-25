@@ -301,6 +301,7 @@ export default async function RootLayout({
   const shop = await getCurrentShop();
   const role =
     session?.user?.role === "ADMIN" ||
+    session?.user?.role === "SHOP_ADMIN" ||
     session?.user?.role === "BARBER" ||
     session?.user?.role === "CUSTOMER"
       ? session.user.role

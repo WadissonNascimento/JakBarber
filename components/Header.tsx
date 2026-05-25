@@ -26,7 +26,7 @@ import { useId, useRef } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { JAKBARBER_PWA_VERSION } from "@/lib/pwaAssets";
 
-type HeaderRole = "ADMIN" | "BARBER" | "CUSTOMER" | null;
+type HeaderRole = "ADMIN" | "SHOP_ADMIN" | "BARBER" | "CUSTOMER" | null;
 
 type NavLink = {
   href: string;
@@ -39,7 +39,7 @@ function getHeaderLinks(role: HeaderRole): {
   primary: NavLink[];
   secondary: NavLink[];
 } {
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "SHOP_ADMIN") {
     return {
       homeHref: "/admin",
       eyebrow: "Admin",

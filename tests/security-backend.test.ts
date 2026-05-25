@@ -10,7 +10,7 @@ function read(path: string) {
 test("customer booking endpoint binds created appointments to the authenticated user", () => {
   const route = read("app/api/booking/appointments/route.ts");
 
-  assert.match(route, /session\.user\.role !== "CUSTOMER"/);
+  assert.match(route, /getTenantSession\(\{\s*roles:\s*CUSTOMER_ROLES/s);
   assert.match(route, /scope:\s*"booking:create"/);
   assert.match(route, /customerId:\s*session\.user\.id/);
   assert.doesNotMatch(route, /customerId:\s*body\.customerId/);
@@ -76,13 +76,22 @@ test("barber tip action stores tips only for the authenticated barber", () => {
 });
 
 test("admin-only pages and export routes enforce admin role", () => {
+  const proxy = read("proxy.ts");
+  const layout = read("app/layout.tsx");
+  const header = read("components/Header.tsx");
+
+  assert.match(proxy, /SHOP_ADMIN_ROLES = \["ADMIN", "SHOP_ADMIN"\]/);
+  assert.match(proxy, /isShopAdminRole\(role\)/);
+  assert.match(layout, /session\?\.user\?\.role === "SHOP_ADMIN"/);
+  assert.match(header, /role === "ADMIN" \|\| role === "SHOP_ADMIN"/);
+
   for (const file of [
     "app/admin/page.tsx",
     "app/admin/financeiro/page.tsx",
     "app/admin/agenda/export/route.ts",
     "app/admin/caixinhas/page.tsx",
   ]) {
-    assert.match(read(file), /role !== "ADMIN"/, file);
+    assert.match(read(file), /roles:\s*SHOP_ADMIN_ROLES/, file);
   }
 });
 

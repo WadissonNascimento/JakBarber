@@ -5,6 +5,11 @@ import { getPostLoginRedirect } from "@/lib/authRedirect";
 import { isWrTechInstitutionalHost } from "@/lib/wrTechInstitutional";
 
 const { auth } = NextAuth(authConfig);
+const SHOP_ADMIN_ROLES = ["ADMIN", "SHOP_ADMIN"];
+
+function isShopAdminRole(role?: string | null) {
+  return SHOP_ADMIN_ROLES.includes(role || "");
+}
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
@@ -72,18 +77,22 @@ export default auth((req) => {
   if (
     isLoggedIn &&
     (isPainelRoot || isHomePage) &&
-    (role === "ADMIN" || role === "BARBER")
+    (isShopAdminRole(role) || role === "BARBER")
   ) {
     return NextResponse.redirect(
       new URL(getPostLoginRedirect(role), req.url)
     );
   }
 
-  if (pathname.startsWith("/admin") && !isAuthPage && role !== "ADMIN") {
+  if (pathname.startsWith("/admin") && !isAuthPage && !isShopAdminRole(role)) {
     return NextResponse.redirect(new URL("/painel", req.url));
   }
 
-  if (pathname.startsWith("/barber") && role !== "BARBER" && role !== "ADMIN") {
+  if (
+    pathname.startsWith("/barber") &&
+    role !== "BARBER" &&
+    !isShopAdminRole(role)
+  ) {
     return NextResponse.redirect(new URL("/painel", req.url));
   }
 

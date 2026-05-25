@@ -1,0 +1,129 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  normalizeCreateTenantShopInput,
+  normalizeTenantDomain,
+  normalizeTenantSlug,
+  SHOP_ADMIN_ROLE,
+  WR_ADMIN_ROLE,
+} from "@/lib/tenantProvisioning";
+import { assertSafeDevTenantProvisioningEnvironment } from "@/lib/tenantProvisioningSafety";
+
+test("tenant provisioning normalizes slug and domain safely", () => {
+  assert.equal(normalizeTenantSlug("Barbearia Sao Joao!"), "barbearia-sao-joao");
+  assert.equal(
+    normalizeTenantDomain("https://www.nova-barbearia.com.br/admin?x=1"),
+    "nova-barbearia.com.br"
+  );
+});
+
+test("tenant provisioning rejects invalid domains", () => {
+  assert.throws(() => normalizeTenantDomain("localhost:3000"));
+  assert.throws(() => normalizeTenantDomain("https://bad_domain"));
+});
+
+test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () => {
+  const normalized = normalizeCreateTenantShopInput({
+    name: "Black Zone",
+    primaryDomain: "www.blackzone.example.com",
+    admin: {
+      name: "Admin Black Zone",
+      email: "ADMIN@BLACKZONE.EXAMPLE.COM",
+      password: "Admin2026",
+    },
+    defaultServices: [
+      {
+        name: "Corte",
+        price: 45,
+        duration: 40,
+      },
+    ],
+  });
+
+  assert.equal(normalized.shopId, "shop_black_zone");
+  assert.equal(normalized.shop.slug, "black-zone");
+  assert.equal(normalized.shop.primaryDomain, "blackzone.example.com");
+  assert.equal(normalized.admin.email, "admin@blackzone.example.com");
+  assert.equal(normalized.defaultServices.length, 1);
+  assert.equal(SHOP_ADMIN_ROLE, "SHOP_ADMIN");
+  assert.equal(WR_ADMIN_ROLE, "WR_ADMIN");
+});
+
+test("tenant provisioning dev script blocks production-like environments", () => {
+  assert.throws(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {
+        NODE_ENV: "production",
+        TENANT_PROVISIONING_TARGET: "dev",
+      },
+      cwd: "C:\\Users\\wadis\\barbearia-app",
+      execute: true,
+      confirmedDevDb: true,
+    })
+  );
+
+  assert.throws(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {
+        APP_URL: "https://jakbarbercompany.com",
+        TENANT_PROVISIONING_TARGET: "dev",
+      },
+      cwd: "C:\\Users\\wadis\\barbearia-app",
+      execute: true,
+      confirmedDevDb: true,
+    })
+  );
+
+  assert.throws(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {
+        TENANT_PROVISIONING_TARGET: "dev",
+      },
+      cwd: "/var/www/jakbarber",
+      execute: true,
+      confirmedDevDb: true,
+    })
+  );
+});
+
+test("tenant provisioning dev script requires explicit execution confirmation", () => {
+  assert.doesNotThrow(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {},
+      cwd: "C:\\Users\\wadis\\barbearia-app",
+      execute: false,
+      confirmedDevDb: false,
+    })
+  );
+
+  assert.throws(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {},
+      cwd: "C:\\Users\\wadis\\barbearia-app",
+      execute: true,
+      confirmedDevDb: true,
+    })
+  );
+
+  assert.throws(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {
+        TENANT_PROVISIONING_TARGET: "dev",
+      },
+      cwd: "C:\\Users\\wadis\\barbearia-app",
+      execute: true,
+      confirmedDevDb: false,
+    })
+  );
+
+  assert.doesNotThrow(() =>
+    assertSafeDevTenantProvisioningEnvironment({
+      env: {
+        TENANT_PROVISIONING_TARGET: "dev",
+      },
+      cwd: "C:\\Users\\wadis\\barbearia-app",
+      execute: true,
+      confirmedDevDb: true,
+    })
+  );
+});

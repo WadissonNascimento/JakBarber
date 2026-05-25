@@ -10,7 +10,7 @@ type AppChromeProps = {
   brandName: string;
   logoPath: string;
   publicEyebrow: string;
-  role: "ADMIN" | "BARBER" | "CUSTOMER" | null;
+  role: "ADMIN" | "SHOP_ADMIN" | "BARBER" | "CUSTOMER" | null;
   userName: string | null;
   whatsappNumber: string;
   instagramUrl: string;
