@@ -138,6 +138,7 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   const tenantsPage = read("app/wr/tenants/page.tsx");
   const domainAllow = read("app/api/domain-allow/route.ts");
   const domainScript = read("scripts/check-domain-readiness.ts");
+  const domainActivateScript = read("scripts/activate-custom-domain.ts");
   const customDomainDocs = read("docs/custom-domains.md");
   const packageJson = read("package.json");
   const shop = read("lib/shop.ts");
@@ -165,10 +166,21 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   assert.match(domainScript, /basePrisma\.shop\.findFirst/);
   assert.doesNotMatch(domainScript, /basePrisma\.shop\.(create|update|delete)/);
   assert.doesNotMatch(domainScript, /certbot|nginx|systemctl|pm2 restart/);
+  assert.match(domainActivateScript, /DOMAIN_ACTIVATION_ENABLED !== "1"/);
+  assert.match(domainActivateScript, /args\.execute === true/);
+  assert.match(domainActivateScript, /assertDomainAllowed\(domain\)/);
+  assert.match(domainActivateScript, /getDomainReadiness\(domain\)/);
+  assert.match(domainActivateScript, /readiness\.status !== "ready"/);
+  assert.match(domainActivateScript, /certbot/);
+  assert.match(domainActivateScript, /nginx/);
+  assert.match(domainActivateScript, /systemctl/);
+  assert.doesNotMatch(domainActivateScript, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
   assert.match(customDomainDocs, /\/api\/domain-allow/);
   assert.match(customDomainDocs, /server_name _/);
   assert.match(customDomainDocs, /proxy_set_header Host \$host/);
+  assert.match(customDomainDocs, /domain:activate/);
   assert.match(packageJson, /"domain:check"/);
+  assert.match(packageJson, /"domain:activate"/);
 });
 
 test("service role storage helpers are server-only and not imported from client components", () => {

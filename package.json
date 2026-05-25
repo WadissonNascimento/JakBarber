@@ -15,7 +15,8 @@
     "pm2:start": "pm2 start ecosystem.config.cjs --update-env",
     "images:reprocess-test": "tsx scripts/reprocess-test-product-images.ts",
     "tenant:provision:dev": "tsx scripts/provision-dev-tenant.ts",
-    "domain:check": "tsx scripts/check-domain-readiness.ts"
+    "domain:check": "tsx scripts/check-domain-readiness.ts",
+    "domain:activate": "tsx scripts/activate-custom-domain.ts"
   },
   "overrides": {
     "postcss": "8.5.14"

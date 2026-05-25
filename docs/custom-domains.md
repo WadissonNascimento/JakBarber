@@ -75,3 +75,24 @@ Enquanto nao houver automacao completa, use este criterio:
 Para automacao real de SSL sob demanda, a opcao mais limpa e colocar Caddy ou
 Traefik na frente usando `/api/domain-allow` como endpoint de autorizacao. Assim
 o proxy so emite certificado quando o dominio ja esta cadastrado e ativo.
+
+## Ativacao assistida
+
+Depois que o dominio ja estiver com `DNS OK` e autorizado por
+`/api/domain-allow`, use o script assistido. Por padrao ele roda em dry-run:
+
+```bash
+cd /var/www/jakbarber
+npm run domain:activate -- --domain dominio-do-cliente.com
+```
+
+Para executar de verdade:
+
+```bash
+cd /var/www/jakbarber
+DOMAIN_ACTIVATION_ENABLED=1 npm run domain:activate -- --domain dominio-do-cliente.com --execute
+```
+
+O script valida DNS, valida `/api/domain-allow`, emite certificado se ainda nao
+existir, cria o bloco Nginx, roda `nginx -t` e recarrega Nginx. Se qualquer
+validacao falhar, ele para antes de alterar a configuracao.
