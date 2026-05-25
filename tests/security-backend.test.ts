@@ -101,6 +101,8 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   const redirect = read("lib/authRedirect.ts");
   const wrSession = read("lib/wrSession.ts");
   const createRoute = read("app/wr/tenants/novo/submit/route.ts");
+  const createPage = read("app/wr/tenants/novo/page.tsx");
+  const createForm = read("app/wr/tenants/novo/NewTenantForm.tsx");
   const appChrome = read("components/AppChrome.tsx");
   const loginSubmit = read("app/login/submit/route.ts");
   const adminLoginSubmit = read("app/admin/login/submit/route.ts");
@@ -121,8 +123,15 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(createRoute, /requireWrAdminSession\(\)/);
   assert.match(createRoute, /isWrTenantCreationEnabled\(\)/);
   assert.match(createRoute, /createTenantShop\(/);
+  assert.match(createRoute, /x-wr-fetch/);
+  assert.match(createRoute, /redirectTo:\s*"\/wr\/tenants"/);
   assert.doesNotMatch(createRoute, /basePrisma\.shop\.create/);
   assert.doesNotMatch(createRoute, /role:\s*"ADMIN"/);
+  assert.match(createPage, /<NewTenantForm/);
+  assert.match(createForm, /"use client"/);
+  assert.match(createForm, /router\.replace\(body\.redirectTo/);
+  assert.match(createForm, /setIsSubmitting\(true\)/);
+  assert.match(createForm, /Criando\.\.\./);
 
   const wrLoginSubmit = read("app/wr/login/submit/route.ts");
   assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);

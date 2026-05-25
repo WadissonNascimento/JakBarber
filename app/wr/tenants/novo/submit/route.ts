@@ -9,11 +9,27 @@ import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSessio
 
 export const dynamic = "force-dynamic";
 
+function wantsJson(request: NextRequest) {
+  return request.headers.get("x-wr-fetch") === "1";
+}
+
 function errorRedirect(request: NextRequest, message: string) {
+  if (wantsJson(request)) {
+    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+  }
+
   const url = new URL("/wr/tenants/novo", request.url);
   url.searchParams.set("error", message);
 
   return NextResponse.redirect(url, 303);
+}
+
+function successRedirect(request: NextRequest) {
+  if (wantsJson(request)) {
+    return NextResponse.json({ ok: true, redirectTo: "/wr/tenants" });
+  }
+
+  return NextResponse.redirect(new URL("/wr/tenants", request.url), 303);
 }
 
 function getOptionalString(formData: FormData, key: string) {
@@ -78,5 +94,5 @@ export async function POST(request: NextRequest) {
   revalidatePath("/wr");
   revalidatePath("/wr/tenants");
 
-  return NextResponse.redirect(new URL("/wr/tenants", request.url), 303);
+  return successRedirect(request);
 }
