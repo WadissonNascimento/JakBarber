@@ -233,7 +233,7 @@ function isLocalHost(host: string | null | undefined) {
   );
 }
 
-function getDomainCandidates(host: string) {
+export function getDomainCandidates(host: string) {
   const candidates = new Set([host]);
 
   if (host.startsWith("www.")) {

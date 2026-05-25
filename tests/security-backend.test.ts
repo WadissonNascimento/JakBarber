@@ -136,8 +136,11 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
 test("custom domain readiness is read-only and visible only in WR tenant tooling", () => {
   const domainReadiness = read("lib/domainReadiness.ts");
   const tenantsPage = read("app/wr/tenants/page.tsx");
+  const domainAllow = read("app/api/domain-allow/route.ts");
   const domainScript = read("scripts/check-domain-readiness.ts");
+  const customDomainDocs = read("docs/custom-domains.md");
   const packageJson = read("package.json");
+  const shop = read("lib/shop.ts");
 
   assert.match(domainReadiness, /resolve4/);
   assert.match(domainReadiness, /DOMAIN_EXPECTED_IPV4S/);
@@ -150,10 +153,21 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   assert.match(tenantsPage, /getDomainReadiness/);
   assert.match(tenantsPage, /domainReadiness\.label/);
 
+  assert.match(shop, /export function getDomainCandidates/);
+  assert.match(domainAllow, /basePrisma\.shop\.findFirst/);
+  assert.match(domainAllow, /isActive:\s*true/);
+  assert.match(domainAllow, /getDomainCandidates\(domain\)/);
+  assert.match(domainAllow, /isLocalOrReservedDomain\(domain\)/);
+  assert.match(domainAllow, /isWrTechAppHost\(domain\)/);
+  assert.doesNotMatch(domainAllow, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
+
   assert.match(domainScript, /mode:\s*"read_only"/);
   assert.match(domainScript, /basePrisma\.shop\.findFirst/);
   assert.doesNotMatch(domainScript, /basePrisma\.shop\.(create|update|delete)/);
   assert.doesNotMatch(domainScript, /certbot|nginx|systemctl|pm2 restart/);
+  assert.match(customDomainDocs, /\/api\/domain-allow/);
+  assert.match(customDomainDocs, /server_name _/);
+  assert.match(customDomainDocs, /proxy_set_header Host \$host/);
   assert.match(packageJson, /"domain:check"/);
 });
 
