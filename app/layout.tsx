@@ -48,6 +48,8 @@ const headingFont = Space_Grotesk({
   variable: "--font-heading",
 });
 
+type TenantBrandStyle = CSSProperties & Record<`--${string}`, string>;
+
 export async function generateMetadata(): Promise<Metadata> {
   if (await isWrTechAppRequest()) {
     const title = "WR Tech Solutions | Plataforma";
@@ -328,9 +330,9 @@ export default async function RootLayout({
 
   const brandName = shop.name || "Barbearia";
   const logoPath = shop.logoPath || "";
-  const tenantBrandStyle =
+  const tenantBrandStyle: TenantBrandStyle =
     shop.id === "shop_rodrigo_style"
-      ? ({
+      ? {
           "--app-bg": "#f8f5ef",
           "--app-gradient-start": "#fafaf7",
           "--app-gradient-mid": "#f8f5ef",
@@ -355,8 +357,12 @@ export default async function RootLayout({
           "--site-header-control-bg": "#ffffff",
           "--site-header-control-border": "#d8cfbf",
           "--site-header-control-text": "#0b0b0b",
-        } as CSSProperties)
-      : undefined;
+        }
+      : {
+          "--brand": shop.brandColor || "#14b8a6",
+          "--brand-strong": shop.brandColorStrong || "#99f6e4",
+          "--brand-muted": shop.brandColorMuted || "rgba(20, 184, 166, 0.18)",
+        };
   const customerPhone =
     role === "CUSTOMER" && session?.user?.id
       ? (

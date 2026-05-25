@@ -123,6 +123,8 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(createRoute, /requireWrAdminSession\(\)/);
   assert.match(createRoute, /isWrTenantCreationEnabled\(\)/);
   assert.match(createRoute, /createTenantShop\(/);
+  assert.match(createRoute, /logoPath:\s*getOptionalString\(formData, "logoPath"\)/);
+  assert.match(createRoute, /brandColor:\s*getOptionalString\(formData, "brandColor"\)/);
   assert.match(createRoute, /x-wr-fetch/);
   assert.match(createRoute, /redirectTo:\s*"\/wr\/tenants"/);
   assert.doesNotMatch(createRoute, /basePrisma\.shop\.create/);
@@ -132,6 +134,9 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(createForm, /router\.replace\(body\.redirectTo/);
   assert.match(createForm, /setIsSubmitting\(true\)/);
   assert.match(createForm, /Criando\.\.\./);
+  assert.match(createForm, /name="logoPath"/);
+  assert.match(createForm, /name="brandColor"/);
+  assert.match(createForm, /Preview/);
 
   const wrLoginSubmit = read("app/wr/login/submit/route.ts");
   assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);

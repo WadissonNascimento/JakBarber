@@ -7,9 +7,9 @@ import { normalizeIdentityEmail } from "@/lib/userIdentity";
 export const WR_ADMIN_ROLE = "WR_ADMIN";
 export const SHOP_ADMIN_ROLE = "SHOP_ADMIN";
 
-const DEFAULT_BRAND_COLOR = "#0ea5e9";
-const DEFAULT_BRAND_COLOR_STRONG = "#7dd3fc";
-const DEFAULT_BRAND_COLOR_MUTED = "rgba(14, 165, 233, 0.18)";
+const DEFAULT_BRAND_COLOR = "#14b8a6";
+const DEFAULT_BRAND_COLOR_STRONG = "#99f6e4";
+const DEFAULT_BRAND_COLOR_MUTED = "rgba(20, 184, 166, 0.18)";
 const DEFAULT_BUSINESS_HOURS = "Horario sob consulta";
 
 export type CreateTenantShopInput = {
@@ -141,6 +141,58 @@ function normalizeHexColor(value: string | null | undefined, fallback: string) {
   return color;
 }
 
+function hexToRgb(color: string) {
+  const normalized = color.replace("#", "");
+
+  return {
+    r: Number.parseInt(normalized.slice(0, 2), 16),
+    g: Number.parseInt(normalized.slice(2, 4), 16),
+    b: Number.parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function toHex(value: number) {
+  return Math.round(value).toString(16).padStart(2, "0");
+}
+
+function mixHexColor(color: string, target: string, amount: number) {
+  const from = hexToRgb(color);
+  const to = hexToRgb(target);
+
+  return `#${toHex(from.r + (to.r - from.r) * amount)}${toHex(
+    from.g + (to.g - from.g) * amount
+  )}${toHex(from.b + (to.b - from.b) * amount)}`;
+}
+
+function buildMutedColor(color: string) {
+  const { r, g, b } = hexToRgb(color);
+  return `rgba(${r}, ${g}, ${b}, 0.18)`;
+}
+
+function normalizeAssetPathOrUrl(value: string | null | undefined, fieldName: string) {
+  const asset = nullableTrimmed(value);
+
+  if (!asset) {
+    return null;
+  }
+
+  if (asset.startsWith("/")) {
+    return asset;
+  }
+
+  try {
+    const url = new URL(asset);
+
+    if (url.protocol !== "https:") {
+      throw new Error("Protocolo invalido.");
+    }
+
+    return url.toString();
+  } catch {
+    throw new TenantProvisioningError(`${fieldName} invalido. Use caminho /arquivo.png ou URL https.`);
+  }
+}
+
 function normalizeOptionalEmail(value: string | null | undefined, fieldName: string) {
   const email = normalizeIdentityEmail(value);
 
@@ -197,6 +249,7 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
   const adminName = requiredTrimmed(input.admin?.name, "Nome do admin");
   const adminEmail = normalizeIdentityEmail(input.admin?.email);
   const adminPassword = String(input.admin?.password || "");
+  const brandColor = normalizeHexColor(input.brandColor, DEFAULT_BRAND_COLOR);
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
     throw new TenantProvisioningError("E-mail do admin invalido.");
@@ -218,14 +271,13 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
       instagramUrl: nullableTrimmed(input.instagramUrl),
       addressLine: nullableTrimmed(input.addressLine),
       businessHours: nullableTrimmed(input.businessHours) || DEFAULT_BUSINESS_HOURS,
-      logoPath: nullableTrimmed(input.logoPath),
-      faviconPath: nullableTrimmed(input.faviconPath),
-      brandColor: normalizeHexColor(input.brandColor, DEFAULT_BRAND_COLOR),
-      brandColorStrong: normalizeHexColor(
-        input.brandColorStrong,
-        DEFAULT_BRAND_COLOR_STRONG
-      ),
-      brandColorMuted: nullableTrimmed(input.brandColorMuted) || DEFAULT_BRAND_COLOR_MUTED,
+      logoPath: normalizeAssetPathOrUrl(input.logoPath, "Logo"),
+      faviconPath: normalizeAssetPathOrUrl(input.faviconPath, "Favicon"),
+      brandColor,
+      brandColorStrong: input.brandColorStrong
+        ? normalizeHexColor(input.brandColorStrong, DEFAULT_BRAND_COLOR_STRONG)
+        : mixHexColor(brandColor, "#ffffff", 0.45),
+      brandColorMuted: nullableTrimmed(input.brandColorMuted) || buildMutedColor(brandColor),
     },
     emailSettings: input.emailSettings
       ? {

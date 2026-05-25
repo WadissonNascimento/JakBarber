@@ -12,6 +12,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [brandColor, setBrandColor] = useState("#14b8a6");
 
   async function submitTenant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,6 +91,62 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
               placeholder="blackzone.com.br"
             />
           </label>
+
+          <section className="grid gap-4 rounded-xl border border-white/10 bg-black/20 p-4 md:grid-cols-[1fr_1fr]">
+            <div className="grid gap-4">
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Logo</span>
+                <input
+                  name="logoPath"
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  placeholder="/uploads/logo-cliente.png ou https://..."
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Cor principal</span>
+                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+                  <input
+                    name="brandColor"
+                    type="color"
+                    value={brandColor}
+                    onChange={(event) => setBrandColor(event.target.value)}
+                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 p-1"
+                  />
+                  <input
+                    value={brandColor}
+                    readOnly
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                Preview
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <span
+                  className="flex h-12 w-12 items-center justify-center rounded-xl text-sm font-black text-white"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  Aa
+                </span>
+                <div>
+                  <p className="font-black text-white">Nome da barbearia</p>
+                  <p className="text-xs text-slate-400">Tema aplicado no tenant</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="mt-4 min-h-11 w-full rounded-xl px-4 py-2 text-sm font-black text-white"
+                style={{ backgroundColor: brandColor }}
+              >
+                Agendar horario
+              </button>
+            </div>
+          </section>
 
           <div className="grid gap-4 md:grid-cols-3">
             <label className="grid gap-2 text-sm">

@@ -26,6 +26,8 @@ test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () =>
   const normalized = normalizeCreateTenantShopInput({
     name: "Black Zone",
     primaryDomain: "www.blackzone.example.com",
+    logoPath: "/uploads/black-zone/logo.webp",
+    brandColor: "#22c55e",
     admin: {
       name: "Admin Black Zone",
       email: "ADMIN@BLACKZONE.EXAMPLE.COM",
@@ -43,10 +45,40 @@ test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () =>
   assert.equal(normalized.shopId, "shop_black_zone");
   assert.equal(normalized.shop.slug, "black-zone");
   assert.equal(normalized.shop.primaryDomain, "blackzone.example.com");
+  assert.equal(normalized.shop.logoPath, "/uploads/black-zone/logo.webp");
+  assert.equal(normalized.shop.brandColor, "#22c55e");
+  assert.match(normalized.shop.brandColorStrong, /^#[0-9a-f]{6}$/);
+  assert.equal(normalized.shop.brandColorMuted, "rgba(34, 197, 94, 0.18)");
   assert.equal(normalized.admin.email, "admin@blackzone.example.com");
   assert.equal(normalized.defaultServices.length, 1);
   assert.equal(SHOP_ADMIN_ROLE, "SHOP_ADMIN");
   assert.equal(WR_ADMIN_ROLE, "WR_ADMIN");
+});
+
+test("tenant provisioning rejects unsafe branding assets and colors", () => {
+  assert.throws(() =>
+    normalizeCreateTenantShopInput({
+      name: "Unsafe Brand",
+      logoPath: "http://unsafe.example.com/logo.png",
+      admin: {
+        name: "Admin Unsafe",
+        email: "admin@unsafe.example.com",
+        password: "Admin2026",
+      },
+    })
+  );
+
+  assert.throws(() =>
+    normalizeCreateTenantShopInput({
+      name: "Bad Color",
+      brandColor: "blue",
+      admin: {
+        name: "Admin Color",
+        email: "admin@color.example.com",
+        password: "Admin2026",
+      },
+    })
+  );
 });
 
 test("tenant provisioning dev script blocks production-like environments", () => {

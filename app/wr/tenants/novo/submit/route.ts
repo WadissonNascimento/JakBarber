@@ -74,6 +74,8 @@ export async function POST(request: NextRequest) {
         name: String(formData.get("name") || ""),
         slug: getOptionalString(formData, "slug"),
         primaryDomain: getOptionalString(formData, "domain"),
+        logoPath: getOptionalString(formData, "logoPath"),
+        brandColor: getOptionalString(formData, "brandColor"),
         admin: {
           name: String(formData.get("adminName") || ""),
           email: String(formData.get("adminEmail") || ""),
