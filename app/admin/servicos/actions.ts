@@ -1,22 +1,20 @@
 "use server";
 
-import { auth } from "@/auth";
 import {
   mutationError,
   mutationSuccess,
   type MutationResult,
 } from "@/lib/mutationResult";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
-  const session = await auth();
+  const { user } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  return session.user;
+  return user;
 }
 
 function revalidateServiceViews() {

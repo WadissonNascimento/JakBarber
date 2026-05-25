@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import {
@@ -60,6 +59,11 @@ import {
   getScheduleMinutes,
 } from "@/lib/scheduleTime";
 import { enforceRateLimit } from "@/lib/security";
+import {
+  BARBER_ROLES,
+  requireTenantSession,
+  SHOP_ADMIN_ROLES,
+} from "@/lib/tenantSession";
 import { isUniqueConstraintError } from "@/lib/userIdentity";
 import {
   isValidCustomerFullName,
@@ -216,13 +220,11 @@ async function getQuickFitInPreviewForBarber({
 }
 
 async function requireBarber() {
-  const session = await auth();
+  const { user } = await requireTenantSession({
+    roles: [...BARBER_ROLES, ...SHOP_ADMIN_ROLES],
+  });
 
-  if (!session?.user?.id) {
-    throw new Error("Nao autorizado.");
-  }
-
-  const barber = await getActiveBarberForSession(session.user);
+  const barber = await getActiveBarberForSession(user);
 
   if (!barber) {
     throw new Error("Barbeiro inativo ou nao autorizado.");

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
 import { basePrisma } from "@/lib/prisma-core";
+import {
+  BARBER_ROLES,
+  CUSTOMER_ROLES,
+  getTenantSession,
+  SHOP_ADMIN_ROLES,
+} from "@/lib/tenantSession";
 
 const pushSubscriptionSchema = z.object({
   endpoint: z.string().url(),
@@ -20,19 +25,22 @@ function isPushConfigured() {
 }
 
 async function getAuthenticatedUser() {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: [...SHOP_ADMIN_ROLES, ...BARBER_ROLES, ...CUSTOMER_ROLES],
+  });
 
-  if (!session?.user?.id || !session.user.shopId) {
+  if (!tenantSession) {
     return null;
   }
+  const { session, shopId } = tenantSession;
 
   return basePrisma.user.findFirst({
     where: {
       id: session.user.id,
-      shopId: session.user.shopId,
+      shopId,
       isActive: true,
       role: {
-        in: ["ADMIN", "BARBER", "CUSTOMER"],
+        in: [...SHOP_ADMIN_ROLES, ...BARBER_ROLES, ...CUSTOMER_ROLES],
       },
     },
     select: {

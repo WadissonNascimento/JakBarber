@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   CalendarDays,
   Scissors,
   Star,
   UserRound,
 } from "lucide-react";
-import { auth } from "@/auth";
 import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
@@ -26,6 +24,7 @@ import { paymentMethodLabel } from "@/lib/paymentMethods";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import type { MoneyValue } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { CUSTOMER_ROLES, requireTenantSession } from "@/lib/tenantSession";
 import {
   formatScheduleDate,
   formatScheduleTime,
@@ -65,15 +64,9 @@ type ProfileAppointment = {
 };
 
 export default async function MeuPerfilPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "CUSTOMER") {
-    redirect("/painel");
-  }
+  const { session } = await requireTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
   const [customer, appointmentStats, recentAppointments, pendingEmailChange] = await Promise.all([
     prisma.user.findUnique({

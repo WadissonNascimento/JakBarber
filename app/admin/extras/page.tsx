@@ -1,17 +1,15 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { normalizeProductImageUrl } from "@/lib/extraProductImages";
 import { toMoneyNumber } from "@/lib/money";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import AdminExtrasClient from "./AdminExtrasClient";
 
 export default async function AdminExtrasPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
+  await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const extras = await prisma.extraProduct.findMany({
     orderBy: [{ category: "asc" }, { name: "asc" }],

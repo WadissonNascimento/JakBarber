@@ -1,22 +1,18 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import AdminReviewsClient from "./AdminReviewsClient";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 export default async function AdminReviewsPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const reviews = await prisma.review.findMany({
+    where: {
+      shopId,
+    },
     include: {
       customer: {
         select: {

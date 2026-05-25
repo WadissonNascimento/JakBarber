@@ -16,6 +16,7 @@ import {
 const ADMIN_EMAIL_ERROR = "Usuario nao encontrado ou e-mail incorreto.";
 const ADMIN_PASSWORD_ERROR = "Senha incorreta.";
 const ADMIN_PERMISSION_ERROR = "Usuario sem permissao de administrador.";
+const ADMIN_LOGIN_ROLES = ["ADMIN", "SHOP_ADMIN"];
 
 async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
   const shopId = await getCurrentShopId();
@@ -49,7 +50,7 @@ async function runAdminLogin(formData: FormData): Promise<FormFeedbackState> {
     return { error: ADMIN_EMAIL_ERROR, success: null };
   }
 
-  if (!user.isActive || user.role !== "ADMIN") {
+  if (!user.isActive || !ADMIN_LOGIN_ROLES.includes(user.role)) {
     logSecurityEvent("admin_login_failed", {
       reason: !user.isActive ? "inactive" : "not_admin",
       userId: user.id,

@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import ServiceCommissionListClient from "./ServiceCommissionListClient";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +16,14 @@ type AdminBarberRouteParams = {
 export default async function BarberServicesPage({
   params,
 }: AdminBarberRouteParams) {
-  const session = await auth();
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
   const { barberId } = await params;
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId,
       id: barberId,
       role: "BARBER",
     },
@@ -33,6 +33,7 @@ export default async function BarberServicesPage({
 
   const services = await prisma.service.findMany({
     where: {
+      shopId,
       OR: [{ barberId: barber.id }, { barberId: null }],
     },
     include: {

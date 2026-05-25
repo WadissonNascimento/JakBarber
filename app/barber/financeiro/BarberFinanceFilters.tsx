@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PremiumDatePicker } from "@/components/ui/PremiumFilters";
 
@@ -16,6 +16,7 @@ export default function BarberFinanceFilters({
   const searchParams = useSearchParams();
   const [selectedStart, setSelectedStart] = useState(start);
   const [selectedEnd, setSelectedEnd] = useState(end);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     setSelectedStart(start);
@@ -27,7 +28,10 @@ export default function BarberFinanceFilters({
     params.set("start", selectedStart);
     params.set("end", selectedEnd);
 
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      router.refresh();
+    });
   }
 
   const canApply = Boolean(selectedStart && selectedEnd);
@@ -60,10 +64,10 @@ export default function BarberFinanceFilters({
 
       <button
         type="submit"
-        disabled={!canApply}
+        disabled={!canApply || isPending}
         className="min-h-11 w-full rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Aplicar filtro
+        {isPending ? "Filtrando..." : "Aplicar filtro"}
       </button>
     </form>
   );

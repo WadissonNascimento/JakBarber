@@ -1,20 +1,17 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import AdminHomeImagesClient from "./AdminHomeImagesClient";
 
 export default async function AdminHomeImagesPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
-  if (!session.user.shopId) redirect("/logout");
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const images = await prisma.homeImage.findMany({
     where: {
-      shopId: session.user.shopId,
+      shopId,
       isActive: true,
     },
     orderBy: [{ position: "asc" }, { createdAt: "asc" }],

@@ -1,6 +1,5 @@
 import { revalidatePath } from "next/cache";
 import { after, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import {
   AppointmentMutationError,
   createCustomerAppointment,
@@ -22,6 +21,7 @@ import {
   rateLimitResponse,
   readJsonWithLimit,
 } from "@/lib/security";
+import { CUSTOMER_ROLES, getTenantSession } from "@/lib/tenantSession";
 
 function revalidateBookingPaths(customerId: string) {
   revalidatePath("/customer/agendamentos");
@@ -71,15 +71,18 @@ async function runBookingNotifications({
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     logSecurityEvent("access_denied", {
       route: "/api/booking/appointments",
-      role: session?.user?.role || "anonymous",
+      role: "anonymous",
     });
     return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
   }
+  const { session } = tenantSession;
 
   const customer = await prisma.user.findUnique({
     where: {

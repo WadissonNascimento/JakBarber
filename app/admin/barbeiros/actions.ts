@@ -3,7 +3,6 @@
 import bcrypt from "bcryptjs";
 import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { sendVerificationCodeEmail } from "@/lib/mail";
 import { getShopAppUrl } from "@/lib/appUrl";
 import {
@@ -14,16 +13,18 @@ import {
 import { deleteLocalBarberPhoto, saveBarberPhoto } from "@/lib/barberPhoto";
 import { prisma } from "@/lib/prisma";
 import { createScheduleDateTimeInput } from "@/lib/scheduleTime";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import { isUniqueConstraintError } from "@/lib/userIdentity";
 
 async function requireAdmin() {
-  const session = await auth();
+  const { user, shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  return session.user;
+  return {
+    ...user,
+    shopId,
+  };
 }
 
 function generateVerificationCode() {

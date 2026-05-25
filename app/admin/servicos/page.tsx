@@ -1,21 +1,14 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { toMoneyNumber } from "@/lib/money";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import AdminServicesClient from "./AdminServicesClient";
 
 export default async function AdminServicosPage() {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
+  await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const services = await prisma.service.findMany({
     include: {

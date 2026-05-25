@@ -54,11 +54,7 @@ export async function createBarberTipAction(
   });
   const note = sanitizeTextareaInput(String(formData.get("note") || ""), 500);
   const amount = parseTipAmount(formData.get("amount"));
-  const shopId = session.user.shopId;
-
-  if (!shopId) {
-    return mutationError("Loja do barbeiro nao encontrada.");
-  }
+  const shopId = barber.shopId;
 
   if (!clientName) {
     return mutationError("Informe o cliente que deu a caixinha.");

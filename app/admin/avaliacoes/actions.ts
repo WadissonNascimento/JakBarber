@@ -1,20 +1,18 @@
 "use server";
 
-import { auth } from "@/auth";
 import {
   mutationError,
   mutationSuccess,
   type MutationResult,
 } from "@/lib/mutationResult";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
-  const session = await auth();
-
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
+  return requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 }
 
 function revalidateReviewViews() {
@@ -27,7 +25,7 @@ function revalidateReviewViews() {
 export async function toggleReviewVisibilityAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const { shopId } = await requireAdmin();
 
   const reviewId = String(formData.get("reviewId") || "").trim();
 
@@ -35,9 +33,10 @@ export async function toggleReviewVisibilityAction(
     return mutationError("Avaliacao invalida.");
   }
 
-  const review = await prisma.review.findUnique({
+  const review = await prisma.review.findFirst({
     where: {
       id: reviewId,
+      shopId,
     },
     select: {
       isVisible: true,
@@ -48,9 +47,10 @@ export async function toggleReviewVisibilityAction(
     return mutationError("Avaliacao nao encontrada.");
   }
 
-  await prisma.review.update({
+  await prisma.review.updateMany({
     where: {
       id: reviewId,
+      shopId,
     },
     data: {
       isVisible: !review.isVisible,
@@ -66,7 +66,7 @@ export async function toggleReviewVisibilityAction(
 export async function deleteReviewAction(
   formData: FormData
 ): Promise<MutationResult> {
-  await requireAdmin();
+  const { shopId } = await requireAdmin();
 
   const reviewId = String(formData.get("reviewId") || "").trim();
 
@@ -74,9 +74,10 @@ export async function deleteReviewAction(
     return mutationError("Avaliacao invalida.");
   }
 
-  await prisma.review.delete({
+  await prisma.review.deleteMany({
     where: {
       id: reviewId,
+      shopId,
     },
   });
 

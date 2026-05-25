@@ -1,4 +1,3 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { toMoneyNumber } from "@/lib/money";
@@ -6,6 +5,7 @@ import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { logSecurityEvent } from "@/lib/security";
 import { getCurrentShop } from "@/lib/shop";
+import { CUSTOMER_ROLES, requireTenantSession } from "@/lib/tenantSession";
 import {
   formatScheduleTime,
   getScheduleDateValue,
@@ -64,16 +64,9 @@ export default async function AgendarPage({
   searchParams?: Promise<AgendarPageSearchParams>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
-  const session = await auth();
-  const shop = await getCurrentShop();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "CUSTOMER") {
-    redirect("/painel");
-  }
+  const { session, shop } = await requireTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
   const [barbers, services, initialExtras] = await Promise.all([
     prisma.user.findMany({

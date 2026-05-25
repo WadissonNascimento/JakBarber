@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
@@ -32,6 +31,7 @@ import {
   AdminAppointmentActions,
   type AdminAgendaAppointment,
 } from "@/app/admin/agenda/AdminAgendaClient";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 export const dynamic = "force-dynamic";
 
@@ -40,16 +40,14 @@ type AdminBarberRouteParams = {
 };
 
 export default async function BarberTodayAppointmentsPage({ params }: AdminBarberRouteParams) {
-  const session = await auth();
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
   const { barberId } = await params;
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
-  if (!session.user.shopId) redirect("/logout");
 
   const barber = await prisma.user.findFirst({
     where: {
-      shopId: session.user.shopId,
+      shopId,
       id: barberId,
       role: "BARBER",
     },
@@ -61,7 +59,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
   const [appointments, barbers, services, extras] = await Promise.all([
     prisma.appointment.findMany({
       where: {
-        shopId: session.user.shopId,
+        shopId,
         barberId: barber.id,
         date: {
           gte: start,
@@ -82,7 +80,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
     }),
     prisma.user.findMany({
       where: {
-        shopId: session.user.shopId,
+        shopId,
         role: "BARBER",
         isActive: true,
       },
@@ -98,7 +96,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
     }),
     prisma.service.findMany({
       where: {
-        shopId: session.user.shopId,
+        shopId,
         isActive: true,
       },
       select: {
@@ -114,7 +112,7 @@ export default async function BarberTodayAppointmentsPage({ params }: AdminBarbe
     }),
     prisma.extraProduct.findMany({
       where: {
-        shopId: session.user.shopId,
+        shopId,
         isActive: true,
       },
       select: {

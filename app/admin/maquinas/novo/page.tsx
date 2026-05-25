@@ -1,14 +1,12 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import NewProductForm from "../../produtos/novo/NewProductForm";
 
 export default async function NovaMaquinaPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
+  await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   return (
     <DashboardShell size="narrow">

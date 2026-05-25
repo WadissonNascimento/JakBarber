@@ -1,24 +1,13 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import AccountPasswordForm from "@/components/AccountPasswordForm";
 import { updateOwnAccountPasswordAction } from "@/app/accountPasswordActions";
 import { prisma } from "@/lib/prisma";
 import AdminProfileForm from "../AdminProfileForm";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 export default async function AdminProfilePage() {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
-
-  if (!session.user.shopId) {
-    redirect("/logout");
-  }
+  const { session } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const adminProfile = await prisma.user.findUnique({
     where: {

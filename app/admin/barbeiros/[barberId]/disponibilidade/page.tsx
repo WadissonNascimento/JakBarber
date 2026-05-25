@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { AvailabilitySection } from "@/app/barber/_components/AvailabilitySection";
 import { getBarberAvailabilityData } from "@/app/barber/data";
 import DashboardShell from "@/components/ui/DashboardShell";
@@ -14,6 +13,7 @@ import {
   saveAdminBarberAvailabilityAction,
   updateAdminRecurringBarberBlockAction,
 } from "../../actions";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 type AdminBarberAvailabilityRouteParams = {
   params: Promise<{ barberId: string }>;
@@ -24,14 +24,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminBarberAvailabilityPage({
   params,
 }: AdminBarberAvailabilityRouteParams) {
-  const session = await auth();
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
   const { barberId } = await params;
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId,
       id: barberId,
       role: "BARBER",
     },

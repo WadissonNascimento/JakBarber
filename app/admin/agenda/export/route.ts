@@ -1,10 +1,10 @@
-import { auth } from "@/auth";
 import {
   buildAgendaCsv,
   getAdminAgendaReport,
   type AdminAgendaFilters,
 } from "@/lib/adminReports";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { getTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 function getFilename() {
   const today = new Date().toISOString().slice(0, 10);
@@ -12,32 +12,18 @@ function getFilename() {
 }
 
 export async function GET(request: Request) {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user) {
+  if (!tenantSession) {
     logSecurityEvent("access_denied", { route: "/admin/agenda/export" });
     return new Response("Nao autenticado.", { status: 401 });
   }
 
-  if (session.user.role !== "ADMIN") {
-    logSecurityEvent("access_denied", {
-      route: "/admin/agenda/export",
-      role: session.user.role,
-    });
-    return new Response("Nao autorizado.", { status: 403 });
-  }
-
-  if (!session.user.shopId) {
-    logSecurityEvent("access_denied", {
-      route: "/admin/agenda/export",
-      reason: "missing_shop",
-    });
-    return new Response("Barbearia nao vinculada.", { status: 403 });
-  }
-
   const rateLimit = await enforceRateLimit({
     scope: "admin:agenda_export",
-    identifier: session.user.id,
+    identifier: tenantSession.user.id,
     limit: 20,
     windowMs: 15 * 60 * 1000,
   });
@@ -51,7 +37,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const filters: AdminAgendaFilters = {
-    shopId: session.user.shopId,
+    shopId: tenantSession.shopId,
     barberId: searchParams.get("barberId") || "",
     dateFrom: searchParams.get("dateFrom") || "",
     dateTo: searchParams.get("dateTo") || "",

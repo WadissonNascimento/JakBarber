@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import {
   mutationError,
   mutationSuccess,
@@ -13,20 +12,23 @@ import {
 } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit } from "@/lib/security";
+import { CUSTOMER_ROLES, getTenantSession } from "@/lib/tenantSession";
 import { revalidatePath } from "next/cache";
 
 export async function completeCustomerPhoneAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     return mutationError("Entre como cliente para atualizar o telefone.");
   }
 
   const rateLimit = await enforceRateLimit({
     scope: "customer:complete_phone",
-    identifier: session.user.id,
+    identifier: tenantSession.user.id,
     limit: 8,
     windowMs: 60 * 60 * 1000,
   });
@@ -44,7 +46,8 @@ export async function completeCustomerPhoneAction(
 
   const customer = await prisma.user.findFirst({
     where: {
-      id: session.user.id,
+      id: tenantSession.user.id,
+      shopId: tenantSession.shopId,
       role: "CUSTOMER",
       isActive: true,
     },

@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
 import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
@@ -31,6 +30,7 @@ import {
 } from "@/lib/passwordPolicy";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { CUSTOMER_ROLES, getTenantSession } from "@/lib/tenantSession";
 import { isUniqueConstraintError } from "@/lib/userIdentity";
 
 const MAX_EMAIL_CHANGE_ATTEMPTS = 5;
@@ -50,11 +50,14 @@ function buildEmailChangeVerifyUrl(shop: { primaryDomain?: string | null } | nul
 export async function updateCustomerProfileAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     throw new Error("Nao autorizado.");
   }
+  const { session } = tenantSession;
 
   const name = normalizeCustomerName(String(formData.get("name") || ""));
   const email = sanitizeEmailInput(formData.get("email")?.toString() || "");
@@ -238,11 +241,14 @@ export async function updateCustomerProfileAction(
 export async function verifyCustomerEmailChangeAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     throw new Error("Nao autorizado.");
   }
+  const { session } = tenantSession;
 
   const code = String(formData.get("code") || "").trim();
 
@@ -357,11 +363,14 @@ export async function verifyCustomerEmailChangeAction(
 export async function updateCustomerPasswordAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     throw new Error("Nao autorizado.");
   }
+  const { session } = tenantSession;
 
   const rateLimit = await enforceRateLimit({
     scope: "customer_password:update",

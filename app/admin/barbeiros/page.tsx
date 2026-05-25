@@ -1,25 +1,19 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { readPageFeedback } from "@/lib/pageFeedback";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import AdminBarbersClient from "./AdminBarbersClient";
 
 export default async function AdminBarbersPage({
   searchParams,
 }: {
-  searchParams?: { feedback?: string; tone?: string };
+  searchParams?: Promise<{ feedback?: string; tone?: string }>;
 }) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
+  const resolvedSearchParams = (await searchParams) || {};
+  await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const now = new Date();
   const [barbers, pendingBarbers] = await Promise.all([
@@ -47,7 +41,7 @@ export default async function AdminBarbersPage({
     }),
   ]);
 
-  const feedback = readPageFeedback(searchParams);
+  const feedback = readPageFeedback(resolvedSearchParams);
 
   return (
     <DashboardShell>

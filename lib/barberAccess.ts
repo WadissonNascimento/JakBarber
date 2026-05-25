@@ -103,7 +103,7 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
 }
 
 export async function getActiveBarberForSession(user: SessionUserLike) {
-  if (user.role === "ADMIN") {
+  if (user.role === "ADMIN" || user.role === "SHOP_ADMIN") {
     return ensureAdminBarberProfile(user.shopId);
   }
 

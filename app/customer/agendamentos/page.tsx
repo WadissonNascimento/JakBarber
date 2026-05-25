@@ -1,8 +1,7 @@
 ﻿import Link from "next/link";
-import { auth } from "@/auth";
 import { unstable_noStore as noStore } from "next/cache";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { CUSTOMER_ROLES, requireTenantSession } from "@/lib/tenantSession";
 import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import ExclusiveDetails from "@/components/ui/ExclusiveDetails";
@@ -32,15 +31,9 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 export default async function CustomerAppointmentsPage() {
   noStore();
 
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "CUSTOMER") {
-    redirect("/painel");
-  }
+  const { session } = await requireTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
   const appointments = await prisma.appointment.findMany({
       where: {

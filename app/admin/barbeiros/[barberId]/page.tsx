@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getAppointmentTotalBarberPayout } from "@/lib/appointmentServices";
 import { getBarberTipsTotal } from "@/lib/barberTips";
 import { getWeekRange } from "@/lib/financials";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import BarberProfileClient from "./BarberProfileClient";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +25,14 @@ function getDayRange(baseDate = new Date()) {
 }
 
 export default async function AdminBarberProfilePage({ params }: AdminBarberRouteParams) {
-  const session = await auth();
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
   const { barberId } = await params;
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId,
       id: barberId,
       role: "BARBER",
     },
@@ -55,11 +55,13 @@ export default async function AdminBarberProfilePage({ params }: AdminBarberRout
   const [servicesCount, todayAppointments, weekAppointments, weekTips] = await Promise.all([
     prisma.service.count({
       where: {
+        shopId,
         OR: [{ barberId: barber.id }, { barberId: null }],
       },
     }),
     prisma.appointment.findMany({
       where: {
+        shopId,
         barberId: barber.id,
         date: {
           gte: todayStart,
@@ -73,6 +75,7 @@ export default async function AdminBarberProfilePage({ params }: AdminBarberRout
     }),
     prisma.appointment.findMany({
       where: {
+        shopId,
         barberId: barber.id,
         date: {
           gte: weekStart,

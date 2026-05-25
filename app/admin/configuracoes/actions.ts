@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { clearShopRuntimeCache } from "@/lib/shop";
 import { sanitizeEmailInput, sanitizeTextInput } from "@/lib/inputSanitization";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import {
   isValidBrazilianPhone,
   normalizeBrazilianPhoneForSubmit,
@@ -19,18 +19,12 @@ type ActionResult = {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function requireAdminShop() {
-  const session = await auth();
-
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  if (!session.user.shopId) {
-    throw new Error("Barbearia do administrador nao encontrada.");
-  }
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   return {
-    shopId: session.user.shopId,
+    shopId,
   };
 }
 

@@ -1,10 +1,10 @@
 "use server";
 
 import { ProductCategory } from "@prisma/client";
-import { auth } from "@/auth";
 import { registerStockMovement } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { isProductCategoryValue } from "@/lib/productCategories";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import { revalidatePath } from "next/cache";
 import {
   deleteProductImage,
@@ -17,13 +17,11 @@ const MAX_PRODUCT_DESCRIPTION_LENGTH = 360;
 const MAX_SECONDARY_PRODUCT_IMAGES = 5;
 
 async function ensureProductAccess() {
-  const session = await auth();
+  const { user } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  return session.user;
+  return user;
 }
 
 function revalidateProductViews() {
@@ -632,5 +630,8 @@ export async function toggleProduct(id: string) {
   });
 
   revalidateProductViews();
-  return updatedProduct;
+  return {
+    id: updatedProduct.id,
+    isActive: updatedProduct.isActive,
+  };
 }

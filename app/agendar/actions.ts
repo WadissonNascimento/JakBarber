@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -12,20 +11,15 @@ import { notifyBarberNewAppointment } from "@/lib/barberEmails";
 import type { FormFeedbackState } from "@/lib/formFeedbackState";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit } from "@/lib/security";
+import { CUSTOMER_ROLES, requireTenantSession } from "@/lib/tenantSession";
 
 export async function createAppointmentAction(
   _prevState: FormFeedbackState,
   formData: FormData
 ): Promise<FormFeedbackState> {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "CUSTOMER") {
-    redirect("/painel");
-  }
+  const { session } = await requireTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
   const customer = await prisma.user.findUnique({
     where: {

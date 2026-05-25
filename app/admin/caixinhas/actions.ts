@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { toMoneyNumber } from "@/lib/money";
 import {
@@ -9,6 +8,7 @@ import {
   getCurrentScheduleDateValue,
   getScheduleDateValue,
 } from "@/lib/scheduleTime";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 export type AdminTipPeriod = "today" | "week" | "month" | "custom";
 
@@ -49,19 +49,13 @@ export type AdminTipDetailsResult = {
 const DETAIL_PAGE_SIZE = 20;
 
 async function requireAdmin() {
-  const session = await auth();
-
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  if (!session.user.shopId) {
-    throw new Error("Loja do administrador nao encontrada.");
-  }
+  const { user, shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   return {
-    userId: session.user.id,
-    shopId: session.user.shopId,
+    userId: user.id,
+    shopId,
   };
 }
 

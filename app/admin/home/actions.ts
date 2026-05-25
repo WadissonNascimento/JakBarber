@@ -1,26 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { deleteHomeImage, uploadHomeImage } from "@/lib/homeImages";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 const MAX_ACTIVE_HOME_IMAGES = 5;
 
 async function ensureHomeImageAdmin() {
-  const session = await auth();
-
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  if (!session.user.shopId) {
-    throw new Error("Loja do administrador nao encontrada.");
-  }
+  const { user, shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   return {
-    id: session.user.id,
-    shopId: session.user.shopId,
+    id: user.id,
+    shopId,
   };
 }
 

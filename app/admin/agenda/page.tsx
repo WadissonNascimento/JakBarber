@@ -1,9 +1,8 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { getAdminAgendaReport } from "@/lib/adminReports";
 import { buildAgendaBlockItems } from "@/lib/agendaBlocks";
 import { toMoneyNumber } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import {
   getCurrentScheduleDateValue,
   getScheduleDayRange,
@@ -59,22 +58,11 @@ export default async function AdminAgendaPage({
   searchParams: SearchParams | Promise<SearchParams>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
-
-  if (!session.user.shopId) {
-    redirect("/logout");
-  }
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const initialFilters = getInitialAgendaFilters(resolvedSearchParams);
-  const shopId = session.user.shopId;
 
   const fromRange = getScheduleDayRange(initialFilters.dateFrom)!;
   const toRange = getScheduleDayRange(initialFilters.dateTo)!;

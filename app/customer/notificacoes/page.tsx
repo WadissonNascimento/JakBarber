@@ -1,28 +1,15 @@
-import { auth } from "@/auth";
 import { unstable_noStore as noStore } from "next/cache";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { CUSTOMER_ROLES, requireTenantSession } from "@/lib/tenantSession";
 import DashboardShell from "@/components/ui/DashboardShell";
 import CustomerNotificationCard from "./CustomerNotificationCard";
 
 export default async function CustomerNotificationsPage() {
   noStore();
 
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "CUSTOMER") {
-    redirect("/painel");
-  }
-
-  const shopId = session.user.shopId;
-
-  if (!shopId) {
-    redirect("/login");
-  }
+  const { session, shopId } = await requireTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
   const notifications = await prisma.appNotification.findMany({
     where: {

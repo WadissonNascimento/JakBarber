@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import {
@@ -65,6 +64,7 @@ import {
   getScheduleDayRange,
   getScheduleMinutes,
 } from "@/lib/scheduleTime";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 type AdminWalkInPeriodSlots = {
   morning: string[];
@@ -230,13 +230,11 @@ async function getAdminQuickFitInPreview({
 }
 
 async function requireAdmin() {
-  const session = await auth();
+  const { user } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  return session.user;
+  return user;
 }
 
 function revalidateAgendaViews(barberId?: string | null) {

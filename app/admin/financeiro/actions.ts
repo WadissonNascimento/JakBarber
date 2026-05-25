@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import {
   mutationError,
@@ -17,15 +16,14 @@ import {
   getFinanceDashboardData,
   resolveFinanceRange,
 } from "@/lib/financeReports";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 async function requireAdmin() {
-  const session = await auth();
+  const { user } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  return session.user;
+  return user;
 }
 
 function parseSelectedExtras(formData: FormData) {

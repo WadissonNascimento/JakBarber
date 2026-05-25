@@ -1,22 +1,20 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import AdminHomeImagesClient from "../home/AdminHomeImagesClient";
 import ShopSettingsClient from "./ShopSettingsClient";
 
 export default async function AdminShopSettingsPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
-  if (!session.user.shopId) redirect("/logout");
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const [shop, images] = await Promise.all([
     prisma.shop.findUnique({
       where: {
-        id: session.user.shopId,
+        id: shopId,
       },
       select: {
         whatsappNumber: true,
@@ -30,7 +28,7 @@ export default async function AdminShopSettingsPage() {
     }),
     prisma.homeImage.findMany({
       where: {
-        shopId: session.user.shopId,
+        shopId,
         isActive: true,
       },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],

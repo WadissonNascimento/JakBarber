@@ -1,5 +1,3 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
@@ -24,6 +22,7 @@ import {
 } from "@/lib/paymentMethods";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { prisma } from "@/lib/prisma";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import FinancePeriodFilters from "./FinancePeriodFilters";
 import FinanceHistoryFilters from "./FinanceHistoryFilters";
 import GeneratePayoutsButton from "./GeneratePayoutsButton";
@@ -265,15 +264,13 @@ export default async function AdminFinanceiroPage({
     compareEnd?: string;
   }>;
 }) {
-  const session = await auth();
   const resolvedSearchParams = (await searchParams) || {};
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
-  if (!session.user.shopId) redirect("/logout");
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const data = await getFinanceDashboardData({
-    shopId: session.user.shopId,
+    shopId,
     period: resolvedSearchParams.period,
     start: resolvedSearchParams.start,
     end: resolvedSearchParams.end,
@@ -284,7 +281,7 @@ export default async function AdminFinanceiroPage({
     compareEnd: resolvedSearchParams.compareEnd,
   });
   const financeAppointments = await getAdminFinanceAppointments({
-    shopId: session.user.shopId,
+    shopId,
     start: data.filters.start,
     end: data.filters.end,
   });

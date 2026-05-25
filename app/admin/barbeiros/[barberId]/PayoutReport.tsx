@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
@@ -14,6 +13,7 @@ import {
   getScheduleDateValue,
 } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 function formatCommission(type: string, value: MoneyValue) {
   const numericValue = toMoneyNumber(value);
@@ -86,13 +86,13 @@ export default async function PayoutReport({
     end: Date;
   };
 }) {
-  const session = await auth();
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const barber = await prisma.user.findFirst({
     where: {
+      shopId,
       id: barberId,
       role: "BARBER",
     },
@@ -103,6 +103,7 @@ export default async function PayoutReport({
   const [appointments, tips] = await Promise.all([
     prisma.appointment.findMany({
       where: {
+        shopId,
         barberId: barber.id,
         date: {
           gte: range.start,

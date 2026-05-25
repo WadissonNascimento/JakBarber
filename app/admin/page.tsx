@@ -11,8 +11,6 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
 import AdminNotificationsBell from "./AdminNotificationsBell";
@@ -29,6 +27,7 @@ import {
   paymentMethodLabel,
   type PaymentBreakdown,
 } from "@/lib/paymentMethods";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 function getTodayRange() {
   return getScheduleDayRange(getCurrentScheduleDateValue())!;
@@ -63,22 +62,11 @@ function formatPaymentBreakdown(breakdown: PaymentBreakdown) {
 }
 
 export default async function AdminPage() {
-  const session = await auth();
+  const { session, shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
-
-  if (!session.user.shopId) {
-    redirect("/logout");
-  }
-
-  await ensureAdminBarberProfile(session.user.shopId);
-  const shopId = session.user.shopId;
+  await ensureAdminBarberProfile(shopId);
 
   const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange();

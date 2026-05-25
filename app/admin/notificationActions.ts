@@ -1,22 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 export async function markAdminNotificationReadAction(notificationId: string) {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
   const id = notificationId.trim();
 
-  if (!id || !session?.user || session.user.role !== "ADMIN" || !session.user.shopId) {
+  if (!id || !tenantSession) {
     return;
   }
 
   await prisma.appNotification.updateMany({
     where: {
       id,
-      shopId: session.user.shopId,
-      recipientUserId: session.user.id,
+      shopId: tenantSession.shopId,
+      recipientUserId: tenantSession.user.id,
       readAt: null,
     },
     data: {
@@ -26,4 +28,3 @@ export async function markAdminNotificationReadAction(notificationId: string) {
 
   revalidatePath("/admin");
 }
-

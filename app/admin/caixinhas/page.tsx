@@ -1,7 +1,5 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { PiggyBank } from "lucide-react";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { formatCurrency } from "@/lib/utils";
@@ -10,6 +8,7 @@ import {
   type AdminTipPeriod,
 } from "./actions";
 import AdminTipsClient from "./AdminTipsClient";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 
 type SearchParams = {
   period?: AdminTipPeriod;
@@ -36,15 +35,9 @@ function getTipsCount(
 export default async function AdminTipsPage({ searchParams }: AdminTipsPageProps) {
   noStore();
 
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/painel");
-  }
+  await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const filters = await searchParams;
   const data = await getAdminTipsSummaryAction(filters);

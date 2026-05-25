@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import {
   AppointmentMutationError,
   cancelAppointmentByCustomer,
@@ -18,19 +17,23 @@ import {
   type MutationResult,
 } from "@/lib/mutationResult";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import { CUSTOMER_ROLES, getTenantSession } from "@/lib/tenantSession";
 
 export async function cancelCustomerAppointmentAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     logSecurityEvent("access_denied", {
       action: "cancelCustomerAppointmentAction",
-      role: session?.user?.role || "anonymous",
+      role: "anonymous",
     });
     return mutationError("Entre como cliente para cancelar o agendamento.");
   }
+  const { session } = tenantSession;
 
   const appointmentId = String(formData.get("appointmentId") || "").trim();
 
@@ -91,15 +94,18 @@ export async function cancelCustomerAppointmentAction(
 export async function submitAppointmentReviewAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     logSecurityEvent("access_denied", {
       action: "submitAppointmentReviewAction",
-      role: session?.user?.role || "anonymous",
+      role: "anonymous",
     });
     return mutationError("Entre como cliente para avaliar o atendimento.");
   }
+  const { session } = tenantSession;
 
   const rateLimit = await enforceRateLimit({
     scope: "review:create",

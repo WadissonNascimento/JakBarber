@@ -1,9 +1,8 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import { getFinanceDashboardData } from "@/lib/financeReports";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import ComparisonControls from "../ComparisonControls";
 import FinancePeriodFilters from "../FinancePeriodFilters";
 
@@ -54,15 +53,13 @@ export default async function FinanceComparePage({
     compareEnd?: string;
   }>;
 }) {
-  const session = await auth();
   const resolvedSearchParams = (await searchParams) || {};
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
-  if (!session.user.shopId) redirect("/logout");
+  const { shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const data = await getFinanceDashboardData({
-    shopId: session.user.shopId,
+    shopId,
     period: resolvedSearchParams.period,
     start: resolvedSearchParams.start,
     end: resolvedSearchParams.end,

@@ -1,7 +1,6 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import {
   mutationError,
@@ -20,20 +19,23 @@ import {
 } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
+import {
+  BARBER_ROLES,
+  requireTenantSession,
+  SHOP_ADMIN_ROLES,
+} from "@/lib/tenantSession";
 import { isUniqueConstraintError } from "@/lib/userIdentity";
 
 export async function updateOwnAdminContactAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
-
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
+  const { user, shopId } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const rateLimit = await enforceRateLimit({
     scope: "admin_contact:update",
-    identifier: session.user.id,
+    identifier: user.id,
     limit: 8,
     windowMs: 60 * 60 * 1000,
   });
@@ -63,10 +65,10 @@ export async function updateOwnAdminContactAction(
 
   const emailOwner = await prisma.user.findFirst({
     where: {
-      shopId: session.user.shopId || undefined,
+      shopId,
       email,
       NOT: {
-        id: session.user.id,
+        id: user.id,
       },
     },
     select: {
@@ -81,7 +83,7 @@ export async function updateOwnAdminContactAction(
   try {
     await prisma.user.update({
       where: {
-        id: session.user.id,
+        id: user.id,
       },
       data: {
         name,
@@ -107,18 +109,13 @@ export async function updateOwnAdminContactAction(
 export async function updateOwnAccountPasswordAction(
   formData: FormData
 ): Promise<MutationResult> {
-  const session = await auth();
-
-  if (
-    !session?.user?.id ||
-    (session.user.role !== "ADMIN" && session.user.role !== "BARBER")
-  ) {
-    throw new Error("Nao autorizado.");
-  }
+  const { user: sessionUser, shopId } = await requireTenantSession({
+    roles: [...SHOP_ADMIN_ROLES, ...BARBER_ROLES],
+  });
 
   const rateLimit = await enforceRateLimit({
-    scope: `${session.user.role.toLowerCase()}_password:update`,
-    identifier: session.user.id,
+    scope: `${sessionUser.role.toLowerCase()}_password:update`,
+    identifier: sessionUser.id,
     limit: 5,
     windowMs: 15 * 60 * 1000,
   });
@@ -147,10 +144,11 @@ export async function updateOwnAccountPasswordAction(
     return mutationError("A nova senha precisa ser diferente da senha atual.");
   }
 
-  const user = await prisma.user.findFirst({
+  const account = await prisma.user.findFirst({
     where: {
-      id: session.user.id,
-      role: session.user.role,
+      id: sessionUser.id,
+      shopId,
+      role: sessionUser.role,
     },
     select: {
       id: true,
@@ -158,17 +156,17 @@ export async function updateOwnAccountPasswordAction(
     },
   });
 
-  if (!user?.passwordHash) {
+  if (!account?.passwordHash) {
     return mutationError("Nao foi possivel trocar a senha desta conta.");
   }
 
-  const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash);
+  const passwordMatches = await bcrypt.compare(currentPassword, account.passwordHash);
 
   if (!passwordMatches) {
     logSecurityEvent("staff_password_update_failed", {
       reason: "bad_current_password",
-      userId: session.user.id,
-      role: session.user.role,
+      userId: sessionUser.id,
+      role: sessionUser.role,
     });
 
     return mutationError("Senha atual invalida.");
@@ -178,7 +176,7 @@ export async function updateOwnAccountPasswordAction(
 
   await prisma.user.update({
     where: {
-      id: session.user.id,
+      id: sessionUser.id,
     },
     data: {
       passwordHash,
@@ -186,8 +184,8 @@ export async function updateOwnAccountPasswordAction(
   });
 
   logSecurityEvent("staff_password_updated", {
-    userId: session.user.id,
-    role: session.user.role,
+    userId: sessionUser.id,
+    role: sessionUser.role,
   });
 
   return mutationSuccess("Senha atualizada com sucesso.");

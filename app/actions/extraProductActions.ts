@@ -1,10 +1,10 @@
 "use server";
 
 import { ExtraCategory } from "@prisma/client";
-import { auth } from "@/auth";
 import { registerExtraStockMovement } from "@/lib/extraInventory";
 import { prisma } from "@/lib/prisma";
 import { isExtraCategoryValue } from "@/lib/extraCategories";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import { revalidatePath } from "next/cache";
 import {
   deleteExtraProductImage,
@@ -14,13 +14,11 @@ import {
 import { notifyAdminsLowStockExtras } from "@/lib/appNotifications";
 
 async function ensureExtraAccess() {
-  const session = await auth();
+  const { user } = await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("Nao autorizado.");
-  }
-
-  return session.user;
+  return user;
 }
 
 function revalidateExtraViews() {
@@ -122,7 +120,9 @@ export async function createExtraProductFromForm(formData: FormData) {
   }
 
   revalidateExtraViews();
-  return extra;
+  return {
+    id: extra.id,
+  };
 }
 
 export async function updateExtraProductFromForm(formData: FormData) {
@@ -264,7 +264,10 @@ export async function toggleExtraProduct(id: string) {
   });
 
   revalidateExtraViews();
-  return updatedExtra;
+  return {
+    id: updatedExtra.id,
+    isActive: updatedExtra.isActive,
+  };
 }
 
 export async function deleteExtraProduct(id: string) {

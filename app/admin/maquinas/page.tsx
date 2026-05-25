@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
@@ -8,13 +6,13 @@ import EmptyState from "@/components/ui/EmptyState";
 import SummaryStatsPanel from "@/components/ui/SummaryStatsPanel";
 import { normalizeProductImageUrl } from "@/lib/productImageUrl";
 import { toMoneyNumber } from "@/lib/money";
+import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import ProductCardClient from "../produtos/ProductCardClient";
 
 export default async function MaquinasAdminPage() {
-  const session = await auth();
-
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/painel");
+  await requireTenantSession({
+    roles: SHOP_ADMIN_ROLES,
+  });
 
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },

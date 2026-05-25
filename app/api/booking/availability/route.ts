@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import {
   BookingAvailabilityError,
   getBookingAvailability,
@@ -13,17 +12,21 @@ import {
   rateLimitResponse,
   readJsonWithLimit,
 } from "@/lib/security";
+import { CUSTOMER_ROLES, getTenantSession } from "@/lib/tenantSession";
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const tenantSession = await getTenantSession({
+    roles: CUSTOMER_ROLES,
+  });
 
-  if (!session?.user?.id || session.user.role !== "CUSTOMER") {
+  if (!tenantSession) {
     logSecurityEvent("access_denied", {
       route: "/api/booking/availability",
-      role: session?.user?.role || "anonymous",
+      role: "anonymous",
     });
     return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
   }
+  const { session } = tenantSession;
 
   const rateLimit = await enforceRateLimit({
     scope: "booking:availability",
