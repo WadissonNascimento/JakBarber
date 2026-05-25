@@ -107,6 +107,7 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
 
   assert.match(auth, /isWrTechAppHost\(host\)/);
   assert.match(auth, /isExplicitWrCredentials/);
+  assert.match(auth, /basePrisma\.user\.findFirst/);
   assert.match(auth, /path === "\/wr\/login\/submit"/);
   assert.match(auth, /role:\s*"WR_ADMIN"/);
   assert.match(auth, /scope:\s*"wr_auth:credentials"/);

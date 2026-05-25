@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { basePrisma } from "@/lib/prisma-core";
 import authConfig from "@/auth.config";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import {
@@ -108,7 +109,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
-          const user = await prisma.user.findFirst({
+          const user = await basePrisma.user.findFirst({
             where: {
               email,
               role: "WR_ADMIN",
