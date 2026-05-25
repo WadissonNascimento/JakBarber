@@ -95,6 +95,35 @@ test("admin-only pages and export routes enforce admin role", () => {
   }
 });
 
+test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () => {
+  const auth = read("auth.ts");
+  const proxy = read("proxy.ts");
+  const redirect = read("lib/authRedirect.ts");
+  const wrSession = read("lib/wrSession.ts");
+  const createRoute = read("app/wr/tenants/novo/submit/route.ts");
+  const appChrome = read("components/AppChrome.tsx");
+
+  assert.match(auth, /isWrTechAppHost\(host\)/);
+  assert.match(auth, /isExplicitWrCredentials/);
+  assert.match(auth, /path === "\/wr\/login\/submit"/);
+  assert.match(auth, /role:\s*"WR_ADMIN"/);
+  assert.match(auth, /scope:\s*"wr_auth:credentials"/);
+  assert.match(proxy, /pathname\.startsWith\("\/wr"\).*role !== "WR_ADMIN"/s);
+  assert.match(proxy, /"\/wr\/:path\*"/);
+  assert.match(redirect, /role === "WR_ADMIN"[\s\S]*return "\/wr"/);
+  assert.match(wrSession, /WR_ADMIN_ROLES = \["WR_ADMIN"\]/);
+  assert.match(wrSession, /WR_TENANT_CREATION_ENABLED === "1"/);
+  assert.match(createRoute, /requireWrAdminSession\(\)/);
+  assert.match(createRoute, /isWrTenantCreationEnabled\(\)/);
+  assert.match(createRoute, /createTenantShop\(/);
+  assert.doesNotMatch(createRoute, /basePrisma\.shop\.create/);
+  assert.doesNotMatch(createRoute, /role:\s*"ADMIN"/);
+
+  const wrLoginSubmit = read("app/wr/login/submit/route.ts");
+  assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);
+  assert.match(appChrome, /pathname === "\/wr" \|\| pathname\.startsWith\("\/wr\/"\)/);
+});
+
 test("service role storage helpers are server-only and not imported from client components", () => {
   assert.match(read("lib/productImages.ts"), /import "server-only"/);
   assert.match(read("lib/extraProductImages.ts"), /import "server-only"/);

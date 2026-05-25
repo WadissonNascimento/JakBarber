@@ -34,11 +34,17 @@ export default function AppChrome({
   businessHours,
 }: AppChromeProps) {
   const pathname = usePathname() || "/";
+  const hideChrome = pathname === "/wr" || pathname.startsWith("/wr/");
   const hideFooter =
+    hideChrome ||
     pathname === "/admin" ||
     pathname.startsWith("/admin/") ||
     pathname === "/barber" ||
     pathname.startsWith("/barber/");
+
+  if (hideChrome) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex min-h-screen flex-col">

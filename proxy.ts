@@ -38,6 +38,8 @@ export default auth((req) => {
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/login/submit" ||
+    pathname === "/wr/login" ||
+    pathname === "/wr/login/submit" ||
     pathname === "/admin/login" ||
     pathname === "/admin/login/submit" ||
     pathname === "/cadastro" ||
@@ -51,6 +53,18 @@ export default auth((req) => {
     pathname.startsWith("/agendar") ||
     pathname.startsWith("/meu-perfil") ||
     pathname.startsWith("/meus-pedidos");
+
+  if (!isLoggedIn && pathname.startsWith("/wr") && !isAuthPage) {
+    return NextResponse.redirect(new URL("/wr/login", req.url));
+  }
+
+  if (isLoggedIn && pathname.startsWith("/wr") && role !== "WR_ADMIN") {
+    return NextResponse.redirect(new URL("/logout", req.url));
+  }
+
+  if (isLoggedIn && isAuthPage && pathname.startsWith("/wr")) {
+    return NextResponse.redirect(new URL("/wr", req.url));
+  }
 
   if (
     !isLoggedIn &&
@@ -108,6 +122,7 @@ export const config = {
     "/",
     "/login",
     "/login/:path*",
+    "/wr/:path*",
     "/cadastro",
     "/register",
     "/register/:path*",
