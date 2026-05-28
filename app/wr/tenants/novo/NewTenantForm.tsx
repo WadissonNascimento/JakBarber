@@ -12,8 +12,6 @@ type NewTenantFormProps = {
 
 const inputClass =
   "h-11 rounded-xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/70 focus:bg-slate-950";
-const textareaClass =
-  "resize-y rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-300/70 focus:bg-slate-950";
 
 function SectionHeader({
   eyebrow,
@@ -78,9 +76,6 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [brandColor, setBrandColor] = useState("#14b8a6");
-  const [backgroundColor, setBackgroundColor] = useState("#05070b");
-  const [textColor, setTextColor] = useState("#ffffff");
   const formId = "wr-new-tenant-form";
 
   async function submitTenant(event: FormEvent<HTMLFormElement>) {
@@ -225,12 +220,11 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                   <input
                     name="brandColor"
                     type="color"
-                    value={brandColor}
-                    onChange={(event) => setBrandColor(event.target.value)}
+                    defaultValue="#14b8a6"
                     className="h-11 w-full rounded-xl border border-white/10 bg-slate-950/70 p-1"
                   />
                   <input
-                    value={brandColor}
+                    defaultValue="#14b8a6"
                     readOnly
                     className={inputClass}
                   />
@@ -241,12 +235,11 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                   <input
                     name="backgroundColor"
                     type="color"
-                    value={backgroundColor}
-                    onChange={(event) => setBackgroundColor(event.target.value)}
+                    defaultValue="#05070b"
                     className="h-11 w-full rounded-xl border border-white/10 bg-slate-950/70 p-1"
                   />
                   <input
-                    value={backgroundColor}
+                    defaultValue="#05070b"
                     readOnly
                     className={inputClass}
                   />
@@ -257,12 +250,11 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                   <input
                     name="textColor"
                     type="color"
-                    value={textColor}
-                    onChange={(event) => setTextColor(event.target.value)}
+                    defaultValue="#ffffff"
                     className="h-11 w-full rounded-xl border border-white/10 bg-slate-950/70 p-1"
                   />
                   <input
-                    value={textColor}
+                    defaultValue="#ffffff"
                     readOnly
                     className={inputClass}
                   />
@@ -314,122 +306,81 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
             </div>
           </Panel>
 
-          <Panel className="grid gap-5">
-            <SectionHeader
-              eyebrow="Site"
-              title="Conteudo da pagina publica"
-              description="Textos exibidos na home e nos resultados de busca."
-            />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Titulo Google">
-                <input
-                  name="metadataTitle"
-                  className={inputClass}
-                  placeholder="Nome da barbearia"
-                />
-              </Field>
-              <Field label="Descricao Google">
-                <textarea
-                  name="metadataDescription"
-                  rows={2}
-                  className={textareaClass}
-                  placeholder="Descricao curta para aparecer no Google"
-                />
-              </Field>
-              <Field label="Texto pequeno acima do titulo">
-                <input
-                  name="heroEyebrow"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Titulo principal">
-                <input
-                  name="heroTitle"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroTitle}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Texto principal" className="md:col-span-2">
-                <textarea
-                  name="heroSubtitle"
-                  rows={3}
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroSubtitle}
-                  className={textareaClass}
-                />
-              </Field>
-              <Field label="Botao principal">
-                <input
-                  name="primaryButtonLabel"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.primaryButtonLabel}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Botao secundario">
-                <input
-                  name="secondaryButtonLabel"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.secondaryButtonLabel}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Card 1 titulo">
-                <input
-                  name="infoOneLabel"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneLabel}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Card 1 texto">
-                <input
-                  name="infoOneValue"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneValue}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Card 2 titulo">
-                <input
-                  name="infoTwoLabel"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoLabel}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Card 2 texto">
-                <input
-                  name="infoTwoValue"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoValue}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Card 3 titulo">
-                <input
-                  name="infoThreeLabel"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeLabel}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Card 3 texto">
-                <input
-                  name="infoThreeValue"
-                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeValue}
-                  className={inputClass}
-                />
-              </Field>
-              <input type="hidden" name="primaryButtonHref" value="/agendar" />
-              <input type="hidden" name="secondaryButtonHref" value="/servicos" />
-              <input type="hidden" name="showServices" value="off" />
-              <input type="hidden" name="showBarbers" value="off" />
-              <input type="hidden" name="showReviews" value="on" />
-              <input type="hidden" name="showAbout" value="off" />
-              <input type="hidden" name="showContact" value="off" />
-              <input type="hidden" name="servicesTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.servicesTitle} />
-              <input type="hidden" name="barbersTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.barbersTitle} />
-              <input type="hidden" name="productsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.productsTitle} />
-              <input type="hidden" name="reviewsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.reviewsTitle} />
-              <input type="hidden" name="aboutTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.aboutTitle} />
-              <input type="hidden" name="contactTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.contactTitle} />
-              <input type="hidden" name="footerText" value={DEFAULT_PUBLIC_HOME_CONTENT.footerText} />
-            </div>
-          </Panel>
+          <input type="hidden" name="metadataTitle" defaultValue="Nome da barbearia" />
+          <input
+            type="hidden"
+            name="metadataDescription"
+            defaultValue="Agende seu horario online e acompanhe seus atendimentos."
+          />
+          <input
+            type="hidden"
+            name="heroEyebrow"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow}
+          />
+          <input
+            type="hidden"
+            name="heroTitle"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroTitle}
+          />
+          <input
+            type="hidden"
+            name="heroSubtitle"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroSubtitle}
+          />
+          <input
+            type="hidden"
+            name="primaryButtonLabel"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.primaryButtonLabel}
+          />
+          <input
+            type="hidden"
+            name="secondaryButtonLabel"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.secondaryButtonLabel}
+          />
+          <input
+            type="hidden"
+            name="infoOneLabel"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneLabel}
+          />
+          <input
+            type="hidden"
+            name="infoOneValue"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneValue}
+          />
+          <input
+            type="hidden"
+            name="infoTwoLabel"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoLabel}
+          />
+          <input
+            type="hidden"
+            name="infoTwoValue"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoValue}
+          />
+          <input
+            type="hidden"
+            name="infoThreeLabel"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeLabel}
+          />
+          <input
+            type="hidden"
+            name="infoThreeValue"
+            defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeValue}
+          />
+          <input type="hidden" name="primaryButtonHref" value="/agendar" />
+          <input type="hidden" name="secondaryButtonHref" value="/servicos" />
+          <input type="hidden" name="showServices" value="off" />
+          <input type="hidden" name="showBarbers" value="off" />
+          <input type="hidden" name="showReviews" value="on" />
+          <input type="hidden" name="showAbout" value="off" />
+          <input type="hidden" name="showContact" value="off" />
+          <input type="hidden" name="servicesTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.servicesTitle} />
+          <input type="hidden" name="barbersTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.barbersTitle} />
+          <input type="hidden" name="productsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.productsTitle} />
+          <input type="hidden" name="reviewsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.reviewsTitle} />
+          <input type="hidden" name="aboutTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.aboutTitle} />
+          <input type="hidden" name="contactTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.contactTitle} />
+          <input type="hidden" name="footerText" value={DEFAULT_PUBLIC_HOME_CONTENT.footerText} />
 
           <Panel className="grid gap-5">
             <SectionHeader
@@ -472,9 +423,9 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
         <WrSitePreview
           formId={formId}
           initialValues={{
-            brandColor,
-            backgroundColor,
-            textColor,
+            brandColor: "#14b8a6",
+            backgroundColor: "#05070b",
+            textColor: "#ffffff",
             fontFamily: "modern",
             ...DEFAULT_PUBLIC_HOME_CONTENT,
           }}
