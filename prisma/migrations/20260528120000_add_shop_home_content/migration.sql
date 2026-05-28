@@ -1,4 +1,4 @@
-﻿CREATE TABLE "ShopHomeContent" (
+CREATE TABLE "ShopHomeContent" (
   "id" TEXT NOT NULL,
   "shopId" TEXT NOT NULL,
   "heroEyebrow" TEXT,
