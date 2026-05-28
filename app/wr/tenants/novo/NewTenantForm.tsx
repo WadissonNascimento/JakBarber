@@ -127,7 +127,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
         onSubmit={submitTenant}
         className="grid gap-5"
       >
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_460px] xl:items-start">
+        <div className="grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)] xl:items-start">
         <fieldset disabled={!creationEnabled || isSubmitting} className="grid gap-6 disabled:opacity-55">
           <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_360px] 2xl:items-start">
             <Panel className="grid gap-5">

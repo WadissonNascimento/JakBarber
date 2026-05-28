@@ -344,6 +344,14 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
     color: values.textColor,
     fontFamily: previewFontStack(values.fontFamily),
   };
+  const previewVars = {
+    ...appStyle,
+    "--brand": values.brandColor,
+    "--brand-strong": values.brandColor,
+    "--brand-muted": `${values.brandColor}2e`,
+    "--text-primary": values.textColor,
+    "--text-secondary": values.textColor,
+  } as CSSProperties;
 
   const cardClass = "rounded-lg border border-white/10 bg-white/[0.04] p-4";
 
@@ -386,8 +394,8 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
         </div>
 
         <div
-          className="mx-auto max-w-[390px] overflow-hidden rounded-2xl border border-white/10"
-          style={appStyle}
+          className="overflow-hidden rounded-2xl border border-white/10"
+          style={previewVars}
           onClick={(event) => {
             if (event.currentTarget === event.target) {
               selectColorTarget("backgroundColor");
@@ -395,7 +403,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
           }}
         >
           <div
-            className={`flex items-center justify-between border-b border-white/10 px-4 py-4 ${
+            className={`flex items-center justify-between border-b border-white/10 px-5 py-4 ${
               activeField === "backgroundColor" ? "ring-2 ring-cyan-300/70" : ""
             }`}
             onClick={() => selectColorTarget("backgroundColor")}
@@ -444,15 +452,14 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
           </div>
 
           {activePage === "home" ? (
-            <div className="grid gap-7 px-4 pb-5 pt-6">
-              <div className="grid gap-5">
+            <main className="relative min-h-[720px] overflow-hidden text-[var(--text-primary)]">
+              <section className="grid gap-8 px-5 pb-10 pt-6 xl:grid-cols-[0.95fr_1.05fr] xl:items-center">
                 <div>
                   <EditableText
                     field="heroEyebrow"
                     values={values}
                     activeField={activeField}
-                    className="inline-block text-[10px] font-black uppercase tracking-[0.18em]"
-                    style={{ color: values.brandColor }}
+                    className="inline-block text-xs font-black uppercase tracking-[0.22em] text-[var(--brand-strong)]"
                     onPick={pickText}
                     onCommit={commitText}
                   />
@@ -460,7 +467,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                     field="heroTitle"
                     values={values}
                     activeField={activeField}
-                    className="mt-3 block text-2xl font-black leading-tight"
+                    className="mt-5 block text-4xl font-black leading-tight xl:text-5xl"
                     style={{ color: values.textColor }}
                     onPick={pickText}
                     onCommit={commitText}
@@ -470,226 +477,360 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                     values={values}
                     activeField={activeField}
                     multiline
-                    className="mt-2 block text-xs leading-5 opacity-80"
+                    className="mt-4 block max-w-xl text-sm leading-7 text-[var(--text-secondary)]"
                     onPick={pickText}
                     onCommit={commitText}
                   />
+                  <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      className={`inline-flex min-h-12 items-center justify-center rounded-lg bg-[var(--brand)] px-5 py-3 text-center text-sm font-black text-white transition hover:brightness-110 ${
+                        activeField === "brandColor" ? "ring-2 ring-cyan-300/70" : ""
+                      }`}
+                      onClick={() => selectColorTarget("brandColor")}
+                    >
+                      <EditableText
+                        field="primaryButtonLabel"
+                        values={values}
+                        activeField={activeField}
+                        className="font-black"
+                        onPick={pickText}
+                        onCommit={commitText}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-5 py-3 text-center text-sm font-bold text-[var(--text-primary)]"
+                      onClick={() => selectColorTarget("textColor")}
+                    >
+                      <EditableText
+                        field="secondaryButtonLabel"
+                        values={values}
+                        activeField={activeField}
+                        className="font-bold"
+                        onPick={pickText}
+                        onCommit={commitText}
+                      />
+                    </button>
+                  </div>
+                  <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                    {[
+                      ["infoOneLabel", "infoOneValue"],
+                      ["infoTwoLabel", "infoTwoValue"],
+                      ["infoThreeLabel", "infoThreeValue"],
+                    ].map(([labelField, valueField]) => (
+                      <button
+                        key={labelField}
+                        type="button"
+                        className="surface-card rounded-lg p-4 text-left hover:ring-1 hover:ring-cyan-300/50"
+                        onClick={() => selectColorTarget("backgroundColor")}
+                      >
+                        <EditableText
+                          field={labelField as EditableTextKey}
+                          values={values}
+                          activeField={activeField}
+                          className="inline-block text-xs text-[var(--brand-strong)]"
+                          onPick={pickText}
+                          onCommit={commitText}
+                        />
+                        <EditableText
+                          field={valueField as EditableTextKey}
+                          values={values}
+                          activeField={activeField}
+                          className="mt-2 block text-sm text-[var(--text-secondary)]"
+                          onPick={pickText}
+                          onCommit={commitText}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
                   type="button"
-                  className={`rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-left ${
+                  className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-left ${
                     activeField === "brandColor" ? "ring-2 ring-cyan-300/70" : ""
                   }`}
                   onClick={() => selectColorTarget("brandColor")}
                 >
                   <div
-                    className="h-[210px] rounded-xl opacity-80"
+                    className="relative h-[420px] overflow-hidden rounded-xl"
                     style={{
-                      background: `linear-gradient(135deg, ${values.brandColor}, transparent 58%), #0f172a`,
+                      background: `linear-gradient(145deg, ${values.brandColor}, transparent 52%), linear-gradient(315deg, #020617, #111827)`,
                     }}
-                  />
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+                  </div>
                 </button>
-
-                <div className="grid gap-2">
-                  <button
-                    type="button"
-                    className={`inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-black text-white ${
-                      activeField === "brandColor" ? "ring-2 ring-cyan-300/70" : ""
-                    }`}
-                    style={{ backgroundColor: values.brandColor }}
-                    onClick={() => selectColorTarget("brandColor")}
-                  >
-                    <EditableText
-                      field="primaryButtonLabel"
-                      values={values}
-                      activeField={activeField}
-                      className="font-black"
-                      onPick={pickText}
-                      onCommit={commitText}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-center text-xs font-bold"
-                    style={{ color: values.textColor }}
-                    onClick={() => selectColorTarget("textColor")}
-                  >
-                    <EditableText
-                      field="secondaryButtonLabel"
-                      values={values}
-                      activeField={activeField}
-                      className="font-bold"
-                      onPick={pickText}
-                      onCommit={commitText}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                {[
-                  ["infoOneLabel", "infoOneValue"],
-                  ["infoTwoLabel", "infoTwoValue"],
-                  ["infoThreeLabel", "infoThreeValue"],
-                ].map(([labelField, valueField]) => (
-                  <button
-                    key={labelField}
-                    type="button"
-                    className={`${cardClass} text-left hover:ring-1 hover:ring-cyan-300/50`}
-                    onClick={() => selectColorTarget("backgroundColor")}
-                  >
-                    <EditableText
-                      field={labelField as EditableTextKey}
-                      values={values}
-                      activeField={activeField}
-                      className="inline-block text-[10px] font-black uppercase tracking-[0.12em]"
-                      style={{ color: values.brandColor }}
-                      onPick={pickText}
-                      onCommit={commitText}
-                    />
-                    <EditableText
-                      field={valueField as EditableTextKey}
-                      values={values}
-                      activeField={activeField}
-                      className="mt-1 block text-xs opacity-80"
-                      onPick={pickText}
-                      onCommit={commitText}
-                    />
-                  </button>
-                ))}
-              </div>
+              </section>
 
               {values.showReviews ? (
-                <div className="grid gap-5">
-                  <div className={cardClass}>
-                    <p
-                      className="text-[10px] font-black uppercase tracking-[0.18em]"
-                      style={{ color: values.brandColor }}
-                    >
+                <section className="px-5 pb-10">
+                  <div className="mb-5">
+                    <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
                       Avaliacoes
                     </p>
                     <EditableText
                       field="reviewsTitle"
                       values={values}
                       activeField={activeField}
-                      className="mt-2 block text-base font-black leading-tight"
-                      style={{ color: values.textColor }}
+                      className="mt-2 block text-2xl font-black text-[var(--text-primary)]"
                       onPick={pickText}
                       onCommit={commitText}
                     />
-                    <div className="mt-3 rounded-lg border border-dashed border-white/10 bg-white/[0.03] p-3 text-xs leading-5 opacity-70">
-                      Avaliacoes reais dos clientes aparecem aqui.
-                    </div>
                   </div>
-                </div>
+                  <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.04] p-5 text-sm text-[var(--text-secondary)]">
+                    Avaliacoes reais dos clientes aparecem aqui.
+                  </div>
+                </section>
               ) : null}
 
               <EditableText
                 field="footerText"
                 values={values}
                 activeField={activeField}
-                className="block border-t border-white/10 pt-4 text-center text-[11px] text-slate-500"
+                className="mx-5 block border-t border-white/10 pb-8 pt-4 text-center text-xs text-zinc-500"
                 onPick={pickText}
                 onCommit={commitText}
               />
-            </div>
+            </main>
           ) : null}
 
           {activePage === "booking" ? (
-            <div className="grid gap-4 px-4 pb-5 pt-6">
-              <div>
-                <p
-                  className="text-[10px] font-black uppercase tracking-[0.18em]"
-                  style={{ color: values.brandColor }}
-                >
-                  Agendamento
+            <main className="page-shell max-w-5xl overflow-hidden px-5 pb-8 pt-6 text-white">
+              <div className="mb-6">
+                <h1 className="text-4xl font-bold tracking-tight">Agendar horario</h1>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
+                  Escolha o servico e toque em um horario disponivel.
                 </p>
-                <h3 className="mt-2 text-xl font-black" style={{ color: values.textColor }}>
-                  Escolha seu atendimento
-                </h3>
               </div>
-              <button type="button" className={cardClass} onClick={() => selectColorTarget("backgroundColor")}>
-                <p className="text-[10px] uppercase tracking-[0.14em] opacity-60">Servico</p>
-                <p className="mt-1 text-sm font-black">Corte</p>
-              </button>
-              <div className="grid grid-cols-3 gap-2">
-                {["09:00", "10:30", "14:00"].map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    className="rounded-lg border border-white/10 px-2 py-3 text-center text-xs font-black"
-                    onClick={() => selectColorTarget("brandColor")}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="rounded-lg px-3 py-3 text-center text-xs font-black text-white"
-                style={{ backgroundColor: values.brandColor }}
-                onClick={() => selectColorTarget("brandColor")}
-              >
-                Continuar
-              </button>
-            </div>
+
+              <section className="surface-card max-w-full overflow-hidden rounded-[24px] p-5">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-zinc-200">
+                        Barbeiro
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {["Alex", "Bruno", "Carlos"].map((barber, index) => (
+                          <button
+                            key={barber}
+                            type="button"
+                            className={`rounded-xl border px-3 py-2 text-left ${
+                              index === 0
+                                ? "border-[var(--brand)] bg-[var(--brand-muted)]"
+                                : "border-white/10 bg-black/20"
+                            }`}
+                            onClick={() => selectColorTarget("brandColor")}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-sky-500/30 via-white/10 to-black/20 text-sm font-bold text-[var(--brand-strong)]">
+                                {barber[0]}
+                              </span>
+                              <span className="text-sm font-semibold">{barber}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-zinc-200">
+                        Servicos
+                      </label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {["Corte", "Barba", "Corte + Barba", "Sobrancelha"].map(
+                          (service, index) => (
+                            <button
+                              key={service}
+                              type="button"
+                              className={`rounded-2xl border px-4 py-3 text-left ${
+                                index === 0
+                                  ? "border-[var(--brand)] bg-[var(--brand-muted)]"
+                                  : "border-white/10 bg-black/20"
+                              }`}
+                              onClick={() => selectColorTarget("brandColor")}
+                            >
+                              <p className="text-sm font-semibold">{service}</p>
+                              <p className="mt-1 text-xs text-zinc-400">R$ 45,00 - 40 min</p>
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-zinc-200">
+                        Data
+                      </label>
+                      <div className="flex gap-2 overflow-hidden">
+                        {["Hoje", "Sex", "Sab", "Dom"].map((day, index) => (
+                          <button
+                            key={day}
+                            type="button"
+                            className={`min-w-[82px] rounded-2xl border px-3 py-3 text-left ${
+                              index === 0
+                                ? "border-[var(--brand)] bg-[var(--brand-muted)]"
+                                : "border-white/10 bg-black/20"
+                            }`}
+                            onClick={() => selectColorTarget("brandColor")}
+                          >
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                              {day}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold">28/05</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                      Resumo
+                    </p>
+                    <p className="mt-3 text-lg font-black">Corte</p>
+                    <p className="mt-1 text-sm text-zinc-400">Alex - R$ 45,00</p>
+                    <button
+                      type="button"
+                      className="mt-5 w-full rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-black text-white"
+                      onClick={() => selectColorTarget("brandColor")}
+                    >
+                      Proximo passo
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <section className="surface-card mt-4 rounded-[24px] p-5">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold">Horarios disponiveis</h2>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      Escolha um horario para continuar.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                    Total atual - R$ 45,00
+                  </div>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {["Manha", "Tarde", "Noite"].map((period) => (
+                    <div key={period} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                        {period}
+                      </p>
+                      <div className="grid gap-2">
+                        {["09:00", "10:30", "14:00"].map((time) => (
+                          <button
+                            key={`${period}-${time}`}
+                            type="button"
+                            className="rounded-xl border border-white/10 px-3 py-2 text-sm font-bold"
+                            onClick={() => selectColorTarget("brandColor")}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </main>
           ) : null}
 
           {activePage === "login" ? (
-            <div className="grid gap-4 px-4 pb-5 pt-6">
-              <div>
-                <p
-                  className="text-[10px] font-black uppercase tracking-[0.18em]"
-                  style={{ color: values.brandColor }}
-                >
-                  Acesso
+            <main className="flex min-h-[650px] items-center justify-center px-4 py-8 text-white">
+              <div className="surface-card-strong w-full max-w-md rounded-[32px] p-8 shadow-2xl">
+                <div className="mb-8 text-center">
+                  <p className="mb-2 text-xs uppercase tracking-[0.35em] text-[var(--brand-strong)]">
+                    Login
+                  </p>
+                  <h1 className="text-4xl font-bold">Entrar</h1>
+                  <p className="mt-3 text-sm text-zinc-300">
+                    Entre para acessar sua conta e acompanhar seus horarios.
+                  </p>
+                </div>
+                <div className="space-y-5">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-zinc-200">
+                      Email
+                    </label>
+                    <div className="h-14 rounded-2xl border border-white/10 bg-black/20" />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-zinc-200">
+                      Senha
+                    </label>
+                    <div className="h-14 rounded-2xl border border-white/10 bg-black/20" />
+                    <p className="mt-3 text-right text-sm font-semibold text-[var(--brand-strong)]">
+                      Esqueceu a senha?
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="w-full rounded-2xl bg-[var(--brand)] px-4 py-4 text-sm font-black text-white"
+                    onClick={() => selectColorTarget("brandColor")}
+                  >
+                    Entrar
+                  </button>
+                </div>
+                <p className="mt-6 text-center text-sm text-zinc-300">
+                  Ainda nao tem conta?{" "}
+                  <span className="font-semibold text-[var(--brand-strong)]">
+                    Criar conta
+                  </span>
                 </p>
-                <h3 className="mt-2 text-xl font-black" style={{ color: values.textColor }}>
-                  Entrar na conta
-                </h3>
               </div>
-              <div className="h-11 rounded-lg border border-white/10 bg-white/[0.04]" />
-              <div className="h-11 rounded-lg border border-white/10 bg-white/[0.04]" />
-              <button
-                type="button"
-                className="rounded-lg px-3 py-3 text-center text-xs font-black text-white"
-                style={{ backgroundColor: values.brandColor }}
-                onClick={() => selectColorTarget("brandColor")}
-              >
-                Entrar
-              </button>
-            </div>
+            </main>
           ) : null}
 
           {activePage === "customer" ? (
-            <div className="grid gap-4 px-4 pb-5 pt-6">
+            <main className="page-shell max-w-5xl px-5 pb-8 pt-6 text-white">
               <div>
-                <p
-                  className="text-[10px] font-black uppercase tracking-[0.18em]"
-                  style={{ color: values.brandColor }}
-                >
-                  Area logada
+                <h1 className="break-words text-4xl font-bold text-white">
+                  Meus agendamentos
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                  Veja seus horarios e acompanhe o status de cada atendimento em uma pagina so.
                 </p>
-                <h3 className="mt-2 text-xl font-black" style={{ color: values.textColor }}>
-                  Painel do cliente
-                </h3>
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-black text-white"
+                    onClick={() => selectColorTarget("brandColor")}
+                  >
+                    Novo agendamento
+                  </button>
+                </div>
               </div>
-              {["Proximo horario", "Historico", "Notificacoes"].map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.04] p-4 text-left text-xs font-black"
-                  onClick={() => selectColorTarget("backgroundColor")}
-                >
-                  {label}
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: values.brandColor }}
-                  />
-                </button>
-              ))}
-            </div>
+              <div className="mt-5 space-y-3">
+                {["09:00", "14:30", "18:00"].map((time, index) => (
+                  <article
+                    key={time}
+                    className="group relative overflow-hidden rounded-[24px] border border-white/10 bg-black/25 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.2)]"
+                  >
+                    <span className="absolute right-4 top-4 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-black text-emerald-100">
+                      Confirmado
+                    </span>
+                    <div className="min-w-0 pr-28">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                        #{index + 1024}
+                      </p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                        Qui, 28/05
+                      </p>
+                      <p className="text-2xl font-bold text-white">{time}</p>
+                      <p className="mt-2 truncate text-base font-semibold text-white">
+                        Alex
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-sm leading-5 text-zinc-400">
+                        Corte masculino
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">40 min - R$ 45,00</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </main>
           ) : null}
         </div>
       </div>
