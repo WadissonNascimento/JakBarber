@@ -32,6 +32,7 @@ const UNCONFIGURED_SHOP_CONFIG: ShopRuntimeConfig = {
   brandColorStrong: "#7dd3fc",
   brandColorMuted: "rgba(14, 165, 233, 0.18)",
   backgroundColor: null,
+  textColor: null,
   fontFamily: null,
 };
 
@@ -55,6 +56,7 @@ export type ShopRuntimeConfig = Pick<
   | "brandColorStrong"
   | "brandColorMuted"
   | "backgroundColor"
+  | "textColor"
   | "fontFamily"
 >;
 
@@ -97,6 +99,7 @@ const shopRuntimeSelect = {
   brandColorStrong: true,
   brandColorMuted: true,
   backgroundColor: true,
+  textColor: true,
   fontFamily: true,
 } satisfies Record<keyof ShopRuntimeConfig, true>;
 

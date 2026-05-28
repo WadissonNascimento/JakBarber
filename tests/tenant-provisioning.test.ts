@@ -29,6 +29,7 @@ test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () =>
     logoPath: "/uploads/black-zone/logo.webp",
     brandColor: "#22c55e",
     backgroundColor: "#050505",
+    textColor: "#f5f5f5",
     fontFamily: "serif",
     homeContent: {
       heroTitle: "Visual Black Zone",
@@ -56,6 +57,7 @@ test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () =>
   assert.equal(normalized.shop.logoPath, "/uploads/black-zone/logo.webp");
   assert.equal(normalized.shop.brandColor, "#22c55e");
   assert.equal(normalized.shop.backgroundColor, "#050505");
+  assert.equal(normalized.shop.textColor, "#f5f5f5");
   assert.equal(normalized.shop.fontFamily, "serif");
   assert.match(normalized.shop.brandColorStrong, /^#[0-9a-f]{6}$/);
   assert.equal(normalized.shop.brandColorMuted, "rgba(34, 197, 94, 0.18)");

@@ -16,6 +16,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [brandColor, setBrandColor] = useState("#14b8a6");
   const [backgroundColor, setBackgroundColor] = useState("#05070b");
+  const [textColor, setTextColor] = useState("#ffffff");
   const formId = "wr-new-tenant-form";
 
   async function submitTenant(event: FormEvent<HTMLFormElement>) {
@@ -153,6 +154,23 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                   />
                   <input
                     value={backgroundColor}
+                    readOnly
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  />
+                </div>
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Cor da letra</span>
+                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+                  <input
+                    name="textColor"
+                    type="color"
+                    value={textColor}
+                    onChange={(event) => setTextColor(event.target.value)}
+                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 p-1"
+                  />
+                  <input
+                    value={textColor}
                     readOnly
                     className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
                   />
@@ -327,11 +345,11 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
               </label>
               <input type="hidden" name="primaryButtonHref" value="/agendar" />
               <input type="hidden" name="secondaryButtonHref" value="/servicos" />
-              <input type="hidden" name="showServices" value="on" />
-              <input type="hidden" name="showBarbers" value="on" />
+              <input type="hidden" name="showServices" value="off" />
+              <input type="hidden" name="showBarbers" value="off" />
               <input type="hidden" name="showReviews" value="on" />
-              <input type="hidden" name="showAbout" value="on" />
-              <input type="hidden" name="showContact" value="on" />
+              <input type="hidden" name="showAbout" value="off" />
+              <input type="hidden" name="showContact" value="off" />
               <input type="hidden" name="servicesTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.servicesTitle} />
               <input type="hidden" name="barbersTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.barbersTitle} />
               <input type="hidden" name="productsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.productsTitle} />
@@ -429,6 +447,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
           initialValues={{
             brandColor,
             backgroundColor,
+            textColor,
             fontFamily: "modern",
             ...DEFAULT_PUBLIC_HOME_CONTENT,
           }}

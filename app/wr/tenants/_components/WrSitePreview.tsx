@@ -7,6 +7,7 @@ type PreviewValues = {
   name: string;
   brandColor: string;
   backgroundColor: string;
+  textColor: string;
   fontFamily: string;
   logoPath: string;
   heroEyebrow: string;
@@ -66,6 +67,7 @@ function readValues(form: HTMLFormElement | null, initial: PreviewValues): Previ
       "backgroundColor",
       initial.backgroundColor
     ),
+    textColor: pickString(formData, "textColor", initial.textColor),
     fontFamily: pickString(formData, "fontFamily", initial.fontFamily),
     logoPath: pickString(formData, "logoPath", initial.logoPath),
     heroEyebrow: pickString(formData, "heroEyebrow", initial.heroEyebrow),
@@ -114,6 +116,7 @@ function buildInitialValues(values: Partial<PreviewValues>): PreviewValues {
     name: values.name || "Nome da barbearia",
     brandColor: values.brandColor || "#14b8a6",
     backgroundColor: values.backgroundColor || "#05070b",
+    textColor: values.textColor || "#ffffff",
     fontFamily: values.fontFamily || "modern",
     logoPath: values.logoPath || "",
     heroEyebrow: values.heroEyebrow || DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow,
@@ -186,15 +189,6 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
     };
   }, [formId, initial]);
 
-  const sections = [
-    values.showServices ? values.servicesTitle : null,
-    values.showBarbers ? values.barbersTitle : null,
-    values.showProducts ? values.productsTitle : null,
-    values.showReviews ? values.reviewsTitle : null,
-    values.showAbout ? values.aboutTitle : null,
-    values.showContact ? values.contactTitle : null,
-  ].filter(Boolean);
-
   return (
     <aside className="grid gap-4 lg:sticky lg:top-5">
       <div className="rounded-2xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
@@ -215,6 +209,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
           className="mx-auto max-w-[390px] overflow-hidden rounded-2xl border border-white/10 text-white"
           style={{
             backgroundColor: values.backgroundColor,
+            color: values.textColor,
             fontFamily: previewFontStack(values.fontFamily),
           }}
         >
@@ -235,7 +230,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                   {values.name.slice(0, 2).toUpperCase()}
                 </span>
               )}
-              <strong className="max-w-[160px] truncate text-sm text-white">
+              <strong className="max-w-[160px] truncate text-sm" style={{ color: values.textColor }}>
                 {values.name}
               </strong>
             </div>
@@ -253,23 +248,12 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                 >
                   {values.heroEyebrow}
                 </p>
-                <h3 className="mt-3 text-2xl font-black leading-tight text-white">
+                <h3 className="mt-3 text-2xl font-black leading-tight" style={{ color: values.textColor }}>
                   {values.heroTitle}
                 </h3>
-                <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-300">
+                <p className="mt-2 line-clamp-3 text-xs leading-5 opacity-80">
                   {values.heroSubtitle}
                 </p>
-                <div className="mt-5 grid gap-2">
-                  <span
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-black text-white"
-                    style={{ backgroundColor: values.brandColor }}
-                  >
-                    {values.primaryButtonLabel}
-                  </span>
-                  <span className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-center text-xs font-bold text-white">
-                    {values.secondaryButtonLabel}
-                  </span>
-                </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2">
                 <div
@@ -278,6 +262,20 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                     background: `linear-gradient(135deg, ${values.brandColor}, transparent 58%), #0f172a`,
                   }}
                 />
+              </div>
+              <div className="grid gap-2">
+                <span
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-black text-white"
+                  style={{ backgroundColor: values.brandColor }}
+                >
+                  {values.primaryButtonLabel}
+                </span>
+                <span
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-center text-xs font-bold"
+                  style={{ color: values.textColor }}
+                >
+                  {values.secondaryButtonLabel}
+                </span>
               </div>
             </div>
 
@@ -297,32 +295,31 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                   >
                     {label}
                   </p>
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-300">{value}</p>
+                  <p className="mt-1 line-clamp-2 text-xs opacity-80">{value}</p>
                 </div>
               ))}
             </div>
 
-            <div className="grid gap-5">
-              {sections.map((section) => (
+            {values.showReviews ? (
+              <div className="grid gap-5">
                 <div
-                  key={section}
                   className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
                 >
                   <p
                     className="text-[10px] font-black uppercase tracking-[0.18em]"
                     style={{ color: values.brandColor }}
                   >
-                    Secao
+                    Avaliacoes
                   </p>
-                  <h4 className="mt-2 text-base font-black leading-tight text-white">
-                    {section}
+                  <h4 className="mt-2 text-base font-black leading-tight" style={{ color: values.textColor }}>
+                    {values.reviewsTitle}
                   </h4>
-                  <div className="mt-3 rounded-lg border border-dashed border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-400">
-                    Conteudo real da barbearia aparece aqui.
+                  <div className="mt-3 rounded-lg border border-dashed border-white/10 bg-white/[0.03] p-3 text-xs leading-5 opacity-70">
+                    Avaliacoes reais dos clientes aparecem aqui.
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : null}
 
             <p className="border-t border-white/10 pt-4 text-center text-[11px] text-slate-500">
               {values.footerText}

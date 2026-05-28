@@ -61,20 +61,6 @@ function textareaInput(
   );
 }
 
-function toggleInput(label: string, name: string, checked: boolean) {
-  return (
-    <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-bold text-slate-200">
-      <input
-        name={name}
-        type="checkbox"
-        defaultChecked={checked}
-        className="h-4 w-4 accent-cyan-300"
-      />
-      {label}
-    </label>
-  );
-}
-
 function fontSelect(value: string | null | undefined) {
   return (
     <label className="grid gap-2 text-sm">
@@ -207,6 +193,15 @@ export default async function WrTenantSitePage({
                     className="h-12 rounded-xl border border-white/10 bg-black/30 p-1"
                   />
                 </label>
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">Cor da letra</span>
+                  <input
+                    name="textColor"
+                    type="color"
+                    defaultValue={shop.textColor || "#ffffff"}
+                    className="h-12 rounded-xl border border-white/10 bg-black/30 p-1"
+                  />
+                </label>
                 {fontSelect(shop.fontFamily)}
                 {textInput("Horario", "businessHours", shop.businessHours)}
                 {textInput("WhatsApp", "whatsappNumber", shop.whatsappNumber)}
@@ -253,49 +248,13 @@ export default async function WrTenantSitePage({
               </div>
             </SectionCard>
 
-            <SectionCard title="Secoes da home">
-              <div className="grid gap-3 md:grid-cols-3">
-                {toggleInput("Mostrar servicos", "showServices", content.showServices)}
-                {toggleInput("Mostrar barbeiros", "showBarbers", content.showBarbers)}
-                {toggleInput("Mostrar produtos", "showProducts", content.showProducts)}
-                {toggleInput("Mostrar avaliacoes", "showReviews", content.showReviews)}
-                {toggleInput("Mostrar sobre", "showAbout", content.showAbout)}
-                {toggleInput("Mostrar contato", "showContact", content.showContact)}
-              </div>
-            </SectionCard>
+            <input type="hidden" name="showReviews" value="on" />
 
-            <SectionCard title="Textos das secoes">
+            <SectionCard title="Avaliacoes">
               <div className="grid gap-4 md:grid-cols-2">
-              {textInput("Servicos chamada pequena", "servicesEyebrow", content.servicesEyebrow)}
-                {textInput("Servicos titulo", "servicesTitle", content.servicesTitle)}
-                {textareaInput(
-                  "Servicos descricao",
-                  "servicesDescription",
-                  content.servicesDescription
-                )}
-              {textInput("Barbeiros chamada pequena", "barbersEyebrow", content.barbersEyebrow)}
-                {textInput("Barbeiros titulo", "barbersTitle", content.barbersTitle)}
-                {textareaInput(
-                  "Barbeiros descricao",
-                  "barbersDescription",
-                  content.barbersDescription
-                )}
-              {textInput("Produtos chamada pequena", "productsEyebrow", content.productsEyebrow)}
-                {textInput("Produtos titulo", "productsTitle", content.productsTitle)}
-                {textareaInput(
-                  "Produtos descricao",
-                  "productsDescription",
-                  content.productsDescription
-                )}
-              {textInput("Avaliacoes chamada pequena", "reviewsEyebrow", content.reviewsEyebrow)}
+                {textInput("Avaliacoes chamada pequena", "reviewsEyebrow", content.reviewsEyebrow)}
                 {textInput("Avaliacoes titulo", "reviewsTitle", content.reviewsTitle)}
                 {textareaInput("Texto sem avaliacoes", "reviewsEmptyText", content.reviewsEmptyText)}
-              {textInput("Sobre chamada pequena", "aboutEyebrow", content.aboutEyebrow)}
-                {textInput("Sobre titulo", "aboutTitle", content.aboutTitle)}
-                {textareaInput("Sobre texto", "aboutBody", content.aboutBody)}
-              {textInput("Contato chamada pequena", "contactEyebrow", content.contactEyebrow)}
-                {textInput("Contato titulo", "contactTitle", content.contactTitle)}
-                {textareaInput("Contato texto", "contactBody", content.contactBody)}
                 {textInput("Rodape", "footerText", content.footerText)}
               </div>
             </SectionCard>
@@ -314,6 +273,7 @@ export default async function WrTenantSitePage({
               name: shop.name,
               brandColor: shop.brandColor || "#14b8a6",
               backgroundColor: shop.backgroundColor || "#05070b",
+              textColor: shop.textColor || "#ffffff",
               fontFamily: shop.fontFamily || "modern",
               logoPath: shop.logoPath || "",
               metadataTitle: shop.metadataTitle || shop.name,

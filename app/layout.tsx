@@ -390,6 +390,8 @@ export default async function RootLayout({
           "--app-gradient-start": shop.backgroundColor || "#05070b",
           "--app-gradient-mid": shop.backgroundColor || "#06101f",
           "--app-gradient-end": shop.backgroundColor || "#05070b",
+          "--text-primary": shop.textColor || "#f6f7fb",
+          "--text-secondary": shop.textColor || "#b0b6c5",
           "--brand": shop.brandColor || "#14b8a6",
           "--brand-strong": shop.brandColorStrong || "#99f6e4",
           "--brand-muted": shop.brandColorMuted || "rgba(20, 184, 166, 0.18)",

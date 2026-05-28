@@ -169,6 +169,9 @@ export async function updateTenantPublicSiteAction(formData: FormData) {
     const backgroundColor =
       normalizeHexColor(getNullableString(formData, "backgroundColor", 7)) ||
       "#05070b";
+    const textColor =
+      normalizeHexColor(getNullableString(formData, "textColor", 7)) ||
+      "#ffffff";
     const primaryDomain = normalizeTenantDomain(getNullableString(formData, "primaryDomain"));
     const logoPath = normalizeAssetPathOrUrl(
       getNullableString(formData, "logoPath", MAX_MEDIUM_TEXT),
@@ -201,6 +204,7 @@ export async function updateTenantPublicSiteAction(formData: FormData) {
           brandColorStrong: mixHexColor(brandColor, "#ffffff", 0.45),
           brandColorMuted: buildMutedColor(brandColor),
           backgroundColor,
+          textColor,
           fontFamily: normalizeFontFamily(getNullableString(formData, "fontFamily")),
         },
       }),

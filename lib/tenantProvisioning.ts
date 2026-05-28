@@ -15,6 +15,7 @@ const DEFAULT_BRAND_COLOR = "#14b8a6";
 const DEFAULT_BRAND_COLOR_STRONG = "#99f6e4";
 const DEFAULT_BRAND_COLOR_MUTED = "rgba(20, 184, 166, 0.18)";
 const DEFAULT_BACKGROUND_COLOR = "#05070b";
+const DEFAULT_TEXT_COLOR = "#ffffff";
 const DEFAULT_BUSINESS_HOURS = "Horario sob consulta";
 const ALLOWED_FONT_FAMILIES = new Set(["modern", "display", "system", "serif"]);
 
@@ -38,6 +39,7 @@ export type CreateTenantShopInput = {
   brandColorStrong?: string | null;
   brandColorMuted?: string | null;
   backgroundColor?: string | null;
+  textColor?: string | null;
   fontFamily?: string | null;
   emailSettings?: {
     fromName?: string | null;
@@ -389,6 +391,7 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
         : mixHexColor(brandColor, "#ffffff", 0.45),
       brandColorMuted: nullableTrimmed(input.brandColorMuted) || buildMutedColor(brandColor),
       backgroundColor: normalizeHexColor(input.backgroundColor, DEFAULT_BACKGROUND_COLOR),
+      textColor: normalizeHexColor(input.textColor, DEFAULT_TEXT_COLOR),
       fontFamily: normalizeFontFamily(input.fontFamily),
     },
     emailSettings: input.emailSettings

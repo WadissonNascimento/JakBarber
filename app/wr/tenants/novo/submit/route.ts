@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
         logoPath: getOptionalString(formData, "logoPath"),
         brandColor: getOptionalString(formData, "brandColor"),
         backgroundColor: getOptionalString(formData, "backgroundColor"),
+        textColor: getOptionalString(formData, "textColor"),
         fontFamily: getOptionalString(formData, "fontFamily"),
         homeContent: {
           heroEyebrow: getOptionalString(formData, "heroEyebrow"),
