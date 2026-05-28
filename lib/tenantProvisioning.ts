@@ -2,6 +2,10 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { basePrisma } from "@/lib/prisma-core";
 import { isStrongPassword, PASSWORD_REQUIREMENT_MESSAGE } from "@/lib/passwordPolicy";
+import {
+  DEFAULT_PUBLIC_HOME_CONTENT,
+  type PublicHomeContent,
+} from "@/lib/shopHomeContent";
 import { normalizeIdentityEmail } from "@/lib/userIdentity";
 
 export const WR_ADMIN_ROLE = "WR_ADMIN";
@@ -11,6 +15,10 @@ const DEFAULT_BRAND_COLOR = "#14b8a6";
 const DEFAULT_BRAND_COLOR_STRONG = "#99f6e4";
 const DEFAULT_BRAND_COLOR_MUTED = "rgba(20, 184, 166, 0.18)";
 const DEFAULT_BUSINESS_HOURS = "Horario sob consulta";
+
+type NullableHomeContentInput = {
+  [Key in keyof PublicHomeContent]?: PublicHomeContent[Key] | null;
+};
 
 export type CreateTenantShopInput = {
   name: string;
@@ -32,6 +40,7 @@ export type CreateTenantShopInput = {
     replyToEmail?: string | null;
     notificationEmail?: string | null;
   } | null;
+  homeContent?: NullableHomeContentInput | null;
   admin: {
     name: string;
     email: string;
@@ -127,6 +136,14 @@ function nullableTrimmed(value: string | null | undefined) {
   return trimmed || null;
 }
 
+function nullableLimitedText(
+  value: string | null | undefined,
+  maxLength: number
+) {
+  const trimmed = String(value || "").trim().slice(0, maxLength);
+  return trimmed || null;
+}
+
 function normalizeHexColor(value: string | null | undefined, fallback: string) {
   const color = nullableTrimmed(value);
 
@@ -193,6 +210,32 @@ function normalizeAssetPathOrUrl(value: string | null | undefined, fieldName: st
   }
 }
 
+function normalizePublicHref(value: string | null | undefined, fallback: string) {
+  const href = nullableTrimmed(value);
+
+  if (!href) {
+    return fallback;
+  }
+
+  if (href.startsWith("/")) {
+    return href;
+  }
+
+  try {
+    const url = new URL(href);
+
+    if (url.protocol !== "https:") {
+      throw new Error("Protocolo invalido.");
+    }
+
+    return url.toString();
+  } catch {
+    throw new TenantProvisioningError(
+      "Link de botao invalido. Use caminho /pagina ou URL https."
+    );
+  }
+}
+
 function normalizeOptionalEmail(value: string | null | undefined, fieldName: string) {
   const email = normalizeIdentityEmail(value);
 
@@ -240,6 +283,59 @@ function normalizeDefaultServices(input: CreateTenantShopInput["defaultServices"
       commissionValue: new Prisma.Decimal(commissionValue.toFixed(2)),
     };
   });
+}
+
+function normalizeHomeContent(input: CreateTenantShopInput["homeContent"]) {
+  if (!input) {
+    return null;
+  }
+
+  return {
+    heroEyebrow: nullableLimitedText(input.heroEyebrow, 120),
+    heroTitle: nullableLimitedText(input.heroTitle, 280),
+    heroSubtitle: nullableLimitedText(input.heroSubtitle, 280),
+    primaryButtonLabel: nullableLimitedText(input.primaryButtonLabel, 120),
+    primaryButtonHref: normalizePublicHref(
+      input.primaryButtonHref,
+      DEFAULT_PUBLIC_HOME_CONTENT.primaryButtonHref
+    ),
+    secondaryButtonLabel: nullableLimitedText(input.secondaryButtonLabel, 120),
+    secondaryButtonHref: normalizePublicHref(
+      input.secondaryButtonHref,
+      DEFAULT_PUBLIC_HOME_CONTENT.secondaryButtonHref
+    ),
+    infoOneLabel: nullableLimitedText(input.infoOneLabel, 120),
+    infoOneValue: nullableLimitedText(input.infoOneValue, 280),
+    infoTwoLabel: nullableLimitedText(input.infoTwoLabel, 120),
+    infoTwoValue: nullableLimitedText(input.infoTwoValue, 280),
+    infoThreeLabel: nullableLimitedText(input.infoThreeLabel, 120),
+    infoThreeValue: nullableLimitedText(input.infoThreeValue, 280),
+    showServices: input.showServices ?? DEFAULT_PUBLIC_HOME_CONTENT.showServices,
+    servicesEyebrow: nullableLimitedText(input.servicesEyebrow, 120),
+    servicesTitle: nullableLimitedText(input.servicesTitle, 280),
+    servicesDescription: nullableLimitedText(input.servicesDescription, 280),
+    showBarbers: input.showBarbers ?? DEFAULT_PUBLIC_HOME_CONTENT.showBarbers,
+    barbersEyebrow: nullableLimitedText(input.barbersEyebrow, 120),
+    barbersTitle: nullableLimitedText(input.barbersTitle, 280),
+    barbersDescription: nullableLimitedText(input.barbersDescription, 280),
+    showProducts: input.showProducts ?? DEFAULT_PUBLIC_HOME_CONTENT.showProducts,
+    productsEyebrow: nullableLimitedText(input.productsEyebrow, 120),
+    productsTitle: nullableLimitedText(input.productsTitle, 280),
+    productsDescription: nullableLimitedText(input.productsDescription, 280),
+    showReviews: input.showReviews ?? DEFAULT_PUBLIC_HOME_CONTENT.showReviews,
+    reviewsEyebrow: nullableLimitedText(input.reviewsEyebrow, 120),
+    reviewsTitle: nullableLimitedText(input.reviewsTitle, 280),
+    reviewsEmptyText: nullableLimitedText(input.reviewsEmptyText, 280),
+    showAbout: input.showAbout ?? DEFAULT_PUBLIC_HOME_CONTENT.showAbout,
+    aboutEyebrow: nullableLimitedText(input.aboutEyebrow, 120),
+    aboutTitle: nullableLimitedText(input.aboutTitle, 280),
+    aboutBody: nullableLimitedText(input.aboutBody, 900),
+    showContact: input.showContact ?? DEFAULT_PUBLIC_HOME_CONTENT.showContact,
+    contactEyebrow: nullableLimitedText(input.contactEyebrow, 120),
+    contactTitle: nullableLimitedText(input.contactTitle, 280),
+    contactBody: nullableLimitedText(input.contactBody, 280),
+    footerText: nullableLimitedText(input.footerText, 280),
+  };
 }
 
 export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
@@ -292,6 +388,7 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
           ),
         }
       : null,
+    homeContent: normalizeHomeContent(input.homeContent),
     admin: {
       name: adminName,
       email: adminEmail,
@@ -400,6 +497,15 @@ export async function createTenantShop(
           fromName: normalized.emailSettings.fromName,
           replyToEmail: normalized.emailSettings.replyToEmail || null,
           notificationEmail: normalized.emailSettings.notificationEmail || null,
+        },
+      });
+    }
+
+    if (normalized.homeContent) {
+      await tx.shopHomeContent.create({
+        data: {
+          shopId: shop.id,
+          ...normalized.homeContent,
         },
       });
     }

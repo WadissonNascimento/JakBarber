@@ -28,6 +28,12 @@ test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () =>
     primaryDomain: "www.blackzone.example.com",
     logoPath: "/uploads/black-zone/logo.webp",
     brandColor: "#22c55e",
+    homeContent: {
+      heroTitle: "Visual Black Zone",
+      primaryButtonHref: "/agendar",
+      showProducts: true,
+      footerText: "Black Zone online.",
+    },
     admin: {
       name: "Admin Black Zone",
       email: "ADMIN@BLACKZONE.EXAMPLE.COM",
@@ -49,6 +55,10 @@ test("tenant provisioning prepares an isolated SHOP_ADMIN tenant payload", () =>
   assert.equal(normalized.shop.brandColor, "#22c55e");
   assert.match(normalized.shop.brandColorStrong, /^#[0-9a-f]{6}$/);
   assert.equal(normalized.shop.brandColorMuted, "rgba(34, 197, 94, 0.18)");
+  assert.equal(normalized.homeContent?.heroTitle, "Visual Black Zone");
+  assert.equal(normalized.homeContent?.primaryButtonHref, "/agendar");
+  assert.equal(normalized.homeContent?.showProducts, true);
+  assert.equal(normalized.homeContent?.footerText, "Black Zone online.");
   assert.equal(normalized.admin.email, "admin@blackzone.example.com");
   assert.equal(normalized.defaultServices.length, 1);
   assert.equal(SHOP_ADMIN_ROLE, "SHOP_ADMIN");

@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { DEFAULT_PUBLIC_HOME_CONTENT } from "@/lib/shopHomeContent";
+import WrSitePreview from "../_components/WrSitePreview";
 
 type NewTenantFormProps = {
   creationEnabled: boolean;
@@ -13,6 +15,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [brandColor, setBrandColor] = useState("#14b8a6");
+  const formId = "wr-new-tenant-form";
 
   async function submitTenant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,12 +60,21 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
       ) : null}
 
       <form
+        id={formId}
         action="/wr/tenants/novo/submit"
         method="post"
         onSubmit={submitTenant}
-        className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.06] p-5"
+        className="grid gap-5"
       >
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
         <fieldset disabled={!creationEnabled || isSubmitting} className="grid gap-5 disabled:opacity-55">
+          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                Base
+              </p>
+              <h2 className="mt-1 text-lg font-black">Dados da barbearia</h2>
+            </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm">
               <span className="font-semibold text-slate-200">Nome da barbearia</span>
@@ -91,9 +103,17 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
               placeholder="blackzone.com.br"
             />
           </label>
+          </section>
 
-          <section className="grid gap-4 rounded-xl border border-white/10 bg-black/20 p-4 md:grid-cols-[1fr_1fr]">
+          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                Identidade
+              </p>
+              <h2 className="mt-1 text-lg font-black">Marca e contato</h2>
+            </div>
             <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm">
                 <span className="font-semibold text-slate-200">Logo</span>
                 <input
@@ -120,34 +140,182 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                   />
                 </div>
               </label>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                Preview
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <span
-                  className="flex h-12 w-12 items-center justify-center rounded-xl text-sm font-black text-white"
-                  style={{ backgroundColor: brandColor }}
-                >
-                  Aa
-                </span>
-                <div>
-                  <p className="font-black text-white">Nome da barbearia</p>
-                  <p className="text-xs text-slate-400">Tema aplicado no tenant</p>
-                </div>
               </div>
-              <button
-                type="button"
-                className="mt-4 min-h-11 w-full rounded-xl px-4 py-2 text-sm font-black text-white"
-                style={{ backgroundColor: brandColor }}
-              >
-                Agendar horario
-              </button>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">WhatsApp</span>
+                  <input
+                    name="whatsappNumber"
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    placeholder="5511999999999"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">Instagram</span>
+                  <input
+                    name="instagramUrl"
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    placeholder="https://instagram.com/barbearia"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">Endereco</span>
+                  <input
+                    name="addressLine"
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    placeholder="Rua, numero, cidade"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">Horario</span>
+                  <input
+                    name="businessHours"
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    placeholder="Seg a sab, 9h as 19h"
+                  />
+                </label>
+              </div>
             </div>
           </section>
 
+          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                Site
+              </p>
+              <h2 className="mt-1 text-lg font-black">Textos e preview</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Titulo Google</span>
+                <input
+                  name="metadataTitle"
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  placeholder="Nome da barbearia"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Descricao Google</span>
+                <textarea
+                  name="metadataDescription"
+                  rows={2}
+                  className="resize-y rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  placeholder="Descricao curta para aparecer no Google"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Eyebrow</span>
+                <input
+                  name="heroEyebrow"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Titulo principal</span>
+                <input
+                  name="heroTitle"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroTitle}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm md:col-span-2">
+                <span className="font-semibold text-slate-200">Texto principal</span>
+                <textarea
+                  name="heroSubtitle"
+                  rows={3}
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroSubtitle}
+                  className="resize-y rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Botao principal</span>
+                <input
+                  name="primaryButtonLabel"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.primaryButtonLabel}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Botao secundario</span>
+                <input
+                  name="secondaryButtonLabel"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.secondaryButtonLabel}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Card 1 titulo</span>
+                <input
+                  name="infoOneLabel"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneLabel}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Card 1 texto</span>
+                <input
+                  name="infoOneValue"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneValue}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Card 2 titulo</span>
+                <input
+                  name="infoTwoLabel"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoLabel}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Card 2 texto</span>
+                <input
+                  name="infoTwoValue"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoValue}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Card 3 titulo</span>
+                <input
+                  name="infoThreeLabel"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeLabel}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Card 3 texto</span>
+                <input
+                  name="infoThreeValue"
+                  defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeValue}
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                />
+              </label>
+              <input type="hidden" name="primaryButtonHref" value="/agendar" />
+              <input type="hidden" name="secondaryButtonHref" value="/servicos" />
+              <input type="hidden" name="showServices" value="on" />
+              <input type="hidden" name="showBarbers" value="on" />
+              <input type="hidden" name="showReviews" value="on" />
+              <input type="hidden" name="showAbout" value="on" />
+              <input type="hidden" name="showContact" value="on" />
+              <input type="hidden" name="servicesTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.servicesTitle} />
+              <input type="hidden" name="barbersTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.barbersTitle} />
+              <input type="hidden" name="productsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.productsTitle} />
+              <input type="hidden" name="reviewsTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.reviewsTitle} />
+              <input type="hidden" name="aboutTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.aboutTitle} />
+              <input type="hidden" name="contactTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.contactTitle} />
+              <input type="hidden" name="footerText" value={DEFAULT_PUBLIC_HOME_CONTENT.footerText} />
+            </div>
+          </section>
+
+          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                Acesso
+              </p>
+              <h2 className="mt-1 text-lg font-black">Admin inicial</h2>
+            </div>
           <div className="grid gap-4 md:grid-cols-3">
             <label className="grid gap-2 text-sm">
               <span className="font-semibold text-slate-200">Admin nome</span>
@@ -179,7 +347,15 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
               />
             </label>
           </div>
+          </section>
 
+          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                Operacao
+              </p>
+              <h2 className="mt-1 text-lg font-black">Servico inicial</h2>
+            </div>
           <div className="grid gap-4 md:grid-cols-3">
             <label className="grid gap-2 text-sm">
               <span className="font-semibold text-slate-200">Servico inicial</span>
@@ -212,7 +388,17 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
               />
             </label>
           </div>
+          </section>
         </fieldset>
+
+        <WrSitePreview
+          formId={formId}
+          initialValues={{
+            brandColor,
+            ...DEFAULT_PUBLIC_HOME_CONTENT,
+          }}
+        />
+        </div>
 
         <button
           type="submit"

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { basePrisma } from "@/lib/prisma-core";
 import { mergePublicHomeContent } from "@/lib/shopHomeContent";
 import { requireWrAdminSession } from "@/lib/wrSession";
+import WrSitePreview from "../_components/WrSitePreview";
 import WrShell from "../../WrShell";
 import { updateTenantPublicSiteAction } from "./actions";
 
@@ -116,6 +117,7 @@ export default async function WrTenantSitePage({
   const notice = getFlashParam(flashParams, "notice");
   const error = getFlashParam(flashParams, "error");
   const previewUrl = shop.primaryDomain ? `https://${shop.primaryDomain}` : null;
+  const formId = "wr-tenant-site-editor";
 
   return (
     <WrShell userName={user.name}>
@@ -159,123 +161,137 @@ export default async function WrTenantSitePage({
           alterar o tenant principal por acidente.
         </div>
       ) : (
-        <form action={updateTenantPublicSiteAction} className="grid gap-5">
-          <input type="hidden" name="shopId" value={shop.id} />
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
+          <form id={formId} action={updateTenantPublicSiteAction} className="grid gap-5">
+            <input type="hidden" name="shopId" value={shop.id} />
 
-          <SectionCard title="Identidade e dominio">
-            <div className="grid gap-4 md:grid-cols-2">
-              {textInput("Nome publico", "name", shop.name)}
-              {textInput("Dominio principal", "primaryDomain", shop.primaryDomain)}
-              {textInput("Logo", "logoPath", shop.logoPath, "/uploads/logo.png ou https://")}
-              {textInput("Favicon", "faviconPath", shop.faviconPath, "/favicon.ico ou https://")}
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Cor principal</span>
-                <input
-                  name="brandColor"
-                  type="color"
-                  defaultValue={shop.brandColor || "#14b8a6"}
-                  className="h-12 rounded-xl border border-white/10 bg-black/30 p-1"
-                />
-              </label>
-              {textInput("Horario", "businessHours", shop.businessHours)}
-              {textInput("WhatsApp", "whatsappNumber", shop.whatsappNumber)}
-              {textInput("Instagram", "instagramUrl", shop.instagramUrl)}
-              {textInput("Endereco", "addressLine", shop.addressLine)}
-            </div>
-          </SectionCard>
+            <SectionCard title="Identidade e dominio">
+              <div className="grid gap-4 md:grid-cols-2">
+                {textInput("Nome publico", "name", shop.name)}
+                {textInput("Dominio principal", "primaryDomain", shop.primaryDomain)}
+                {textInput("Logo", "logoPath", shop.logoPath, "/uploads/logo.png ou https://")}
+                {textInput("Favicon", "faviconPath", shop.faviconPath, "/favicon.ico ou https://")}
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">Cor principal</span>
+                  <input
+                    name="brandColor"
+                    type="color"
+                    defaultValue={shop.brandColor || "#14b8a6"}
+                    className="h-12 rounded-xl border border-white/10 bg-black/30 p-1"
+                  />
+                </label>
+                {textInput("Horario", "businessHours", shop.businessHours)}
+                {textInput("WhatsApp", "whatsappNumber", shop.whatsappNumber)}
+                {textInput("Instagram", "instagramUrl", shop.instagramUrl)}
+                {textInput("Endereco", "addressLine", shop.addressLine)}
+              </div>
+            </SectionCard>
 
-          <SectionCard title="SEO">
-            <div className="grid gap-4 md:grid-cols-2">
-              {textInput("Titulo Google", "metadataTitle", shop.metadataTitle)}
-              {textareaInput(
-                "Descricao Google",
-                "metadataDescription",
-                shop.metadataDescription
-              )}
-            </div>
-          </SectionCard>
+            <SectionCard title="SEO">
+              <div className="grid gap-4 md:grid-cols-2">
+                {textInput("Titulo Google", "metadataTitle", shop.metadataTitle)}
+                {textareaInput(
+                  "Descricao Google",
+                  "metadataDescription",
+                  shop.metadataDescription
+                )}
+              </div>
+            </SectionCard>
 
-          <SectionCard title="Hero e botoes">
-            <div className="grid gap-4 md:grid-cols-2">
-              {textInput("Eyebrow", "heroEyebrow", content.heroEyebrow)}
-              {textInput("Titulo principal", "heroTitle", content.heroTitle)}
-              {textareaInput("Texto principal", "heroSubtitle", content.heroSubtitle)}
-              {textInput("Botao principal", "primaryButtonLabel", content.primaryButtonLabel)}
-              {textInput("Link principal", "primaryButtonHref", content.primaryButtonHref)}
-              {textInput(
-                "Botao secundario",
-                "secondaryButtonLabel",
-                content.secondaryButtonLabel
-              )}
-              {textInput("Link secundario", "secondaryButtonHref", content.secondaryButtonHref)}
-            </div>
-          </SectionCard>
+            <SectionCard title="Hero e botoes">
+              <div className="grid gap-4 md:grid-cols-2">
+                {textInput("Eyebrow", "heroEyebrow", content.heroEyebrow)}
+                {textInput("Titulo principal", "heroTitle", content.heroTitle)}
+                {textareaInput("Texto principal", "heroSubtitle", content.heroSubtitle)}
+                {textInput("Botao principal", "primaryButtonLabel", content.primaryButtonLabel)}
+                {textInput("Link principal", "primaryButtonHref", content.primaryButtonHref)}
+                {textInput(
+                  "Botao secundario",
+                  "secondaryButtonLabel",
+                  content.secondaryButtonLabel
+                )}
+                {textInput("Link secundario", "secondaryButtonHref", content.secondaryButtonHref)}
+              </div>
+            </SectionCard>
 
-          <SectionCard title="Cartoes informativos">
-            <div className="grid gap-4 md:grid-cols-3">
-              {textInput("Card 1 titulo", "infoOneLabel", content.infoOneLabel)}
-              {textInput("Card 1 texto", "infoOneValue", content.infoOneValue)}
-              {textInput("Card 2 titulo", "infoTwoLabel", content.infoTwoLabel)}
-              {textInput("Card 2 texto", "infoTwoValue", content.infoTwoValue)}
-              {textInput("Card 3 titulo", "infoThreeLabel", content.infoThreeLabel)}
-              {textInput("Card 3 texto", "infoThreeValue", content.infoThreeValue)}
-            </div>
-          </SectionCard>
+            <SectionCard title="Cartoes informativos">
+              <div className="grid gap-4 md:grid-cols-3">
+                {textInput("Card 1 titulo", "infoOneLabel", content.infoOneLabel)}
+                {textInput("Card 1 texto", "infoOneValue", content.infoOneValue)}
+                {textInput("Card 2 titulo", "infoTwoLabel", content.infoTwoLabel)}
+                {textInput("Card 2 texto", "infoTwoValue", content.infoTwoValue)}
+                {textInput("Card 3 titulo", "infoThreeLabel", content.infoThreeLabel)}
+                {textInput("Card 3 texto", "infoThreeValue", content.infoThreeValue)}
+              </div>
+            </SectionCard>
 
-          <SectionCard title="Secoes da home">
-            <div className="grid gap-3 md:grid-cols-3">
-              {toggleInput("Mostrar servicos", "showServices", content.showServices)}
-              {toggleInput("Mostrar barbeiros", "showBarbers", content.showBarbers)}
-              {toggleInput("Mostrar produtos", "showProducts", content.showProducts)}
-              {toggleInput("Mostrar avaliacoes", "showReviews", content.showReviews)}
-              {toggleInput("Mostrar sobre", "showAbout", content.showAbout)}
-              {toggleInput("Mostrar contato", "showContact", content.showContact)}
-            </div>
-          </SectionCard>
+            <SectionCard title="Secoes da home">
+              <div className="grid gap-3 md:grid-cols-3">
+                {toggleInput("Mostrar servicos", "showServices", content.showServices)}
+                {toggleInput("Mostrar barbeiros", "showBarbers", content.showBarbers)}
+                {toggleInput("Mostrar produtos", "showProducts", content.showProducts)}
+                {toggleInput("Mostrar avaliacoes", "showReviews", content.showReviews)}
+                {toggleInput("Mostrar sobre", "showAbout", content.showAbout)}
+                {toggleInput("Mostrar contato", "showContact", content.showContact)}
+              </div>
+            </SectionCard>
 
-          <SectionCard title="Textos das secoes">
-            <div className="grid gap-4 md:grid-cols-2">
-              {textInput("Servicos eyebrow", "servicesEyebrow", content.servicesEyebrow)}
-              {textInput("Servicos titulo", "servicesTitle", content.servicesTitle)}
-              {textareaInput(
-                "Servicos descricao",
-                "servicesDescription",
-                content.servicesDescription
-              )}
-              {textInput("Barbeiros eyebrow", "barbersEyebrow", content.barbersEyebrow)}
-              {textInput("Barbeiros titulo", "barbersTitle", content.barbersTitle)}
-              {textareaInput(
-                "Barbeiros descricao",
-                "barbersDescription",
-                content.barbersDescription
-              )}
-              {textInput("Produtos eyebrow", "productsEyebrow", content.productsEyebrow)}
-              {textInput("Produtos titulo", "productsTitle", content.productsTitle)}
-              {textareaInput(
-                "Produtos descricao",
-                "productsDescription",
-                content.productsDescription
-              )}
-              {textInput("Avaliacoes eyebrow", "reviewsEyebrow", content.reviewsEyebrow)}
-              {textInput("Avaliacoes titulo", "reviewsTitle", content.reviewsTitle)}
-              {textareaInput("Texto sem avaliacoes", "reviewsEmptyText", content.reviewsEmptyText)}
-              {textInput("Sobre eyebrow", "aboutEyebrow", content.aboutEyebrow)}
-              {textInput("Sobre titulo", "aboutTitle", content.aboutTitle)}
-              {textareaInput("Sobre texto", "aboutBody", content.aboutBody)}
-              {textInput("Contato eyebrow", "contactEyebrow", content.contactEyebrow)}
-              {textInput("Contato titulo", "contactTitle", content.contactTitle)}
-              {textareaInput("Contato texto", "contactBody", content.contactBody)}
-              {textInput("Rodape", "footerText", content.footerText)}
-            </div>
-          </SectionCard>
+            <SectionCard title="Textos das secoes">
+              <div className="grid gap-4 md:grid-cols-2">
+                {textInput("Servicos eyebrow", "servicesEyebrow", content.servicesEyebrow)}
+                {textInput("Servicos titulo", "servicesTitle", content.servicesTitle)}
+                {textareaInput(
+                  "Servicos descricao",
+                  "servicesDescription",
+                  content.servicesDescription
+                )}
+                {textInput("Barbeiros eyebrow", "barbersEyebrow", content.barbersEyebrow)}
+                {textInput("Barbeiros titulo", "barbersTitle", content.barbersTitle)}
+                {textareaInput(
+                  "Barbeiros descricao",
+                  "barbersDescription",
+                  content.barbersDescription
+                )}
+                {textInput("Produtos eyebrow", "productsEyebrow", content.productsEyebrow)}
+                {textInput("Produtos titulo", "productsTitle", content.productsTitle)}
+                {textareaInput(
+                  "Produtos descricao",
+                  "productsDescription",
+                  content.productsDescription
+                )}
+                {textInput("Avaliacoes eyebrow", "reviewsEyebrow", content.reviewsEyebrow)}
+                {textInput("Avaliacoes titulo", "reviewsTitle", content.reviewsTitle)}
+                {textareaInput("Texto sem avaliacoes", "reviewsEmptyText", content.reviewsEmptyText)}
+                {textInput("Sobre eyebrow", "aboutEyebrow", content.aboutEyebrow)}
+                {textInput("Sobre titulo", "aboutTitle", content.aboutTitle)}
+                {textareaInput("Sobre texto", "aboutBody", content.aboutBody)}
+                {textInput("Contato eyebrow", "contactEyebrow", content.contactEyebrow)}
+                {textInput("Contato titulo", "contactTitle", content.contactTitle)}
+                {textareaInput("Contato texto", "contactBody", content.contactBody)}
+                {textInput("Rodape", "footerText", content.footerText)}
+              </div>
+            </SectionCard>
 
-          <button
-            type="submit"
-            className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
-          >
-            Salvar site
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
+            >
+              Salvar site
+            </button>
+          </form>
+
+          <WrSitePreview
+            formId={formId}
+            initialValues={{
+              name: shop.name,
+              brandColor: shop.brandColor || "#14b8a6",
+              logoPath: shop.logoPath || "",
+              metadataTitle: shop.metadataTitle || shop.name,
+              metadataDescription: shop.metadataDescription || "",
+              ...content,
+            }}
+          />
+        </div>
       )}
     </WrShell>
   );
