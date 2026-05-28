@@ -2,6 +2,15 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { basePrisma } from "@/lib/prisma-core";
 import { isStrongPassword, PASSWORD_REQUIREMENT_MESSAGE } from "@/lib/passwordPolicy";
+import { getTenantPlan, isTenantPlanCode, type TenantPlanCode } from "@/lib/tenantPlans";
+import {
+  getTenantDesignTemplate,
+  isTenantDesignTemplate,
+  isTenantFontStyle,
+  normalizeHexColor as normalizeDesignHexColor,
+  type TenantDesignTemplate,
+  type TenantFontStyle,
+} from "@/lib/tenantDesign";
 import {
   DEFAULT_PUBLIC_HOME_CONTENT,
   type PublicHomeContent,
@@ -14,8 +23,6 @@ export const SHOP_ADMIN_ROLE = "SHOP_ADMIN";
 const DEFAULT_BRAND_COLOR = "#14b8a6";
 const DEFAULT_BRAND_COLOR_STRONG = "#99f6e4";
 const DEFAULT_BRAND_COLOR_MUTED = "rgba(20, 184, 166, 0.18)";
-const DEFAULT_BACKGROUND_COLOR = "#05070b";
-const DEFAULT_TEXT_COLOR = "#ffffff";
 const DEFAULT_BUSINESS_HOURS = "Horario sob consulta";
 const ALLOWED_FONT_FAMILIES = new Set(["modern", "display", "system", "serif"]);
 
@@ -41,6 +48,20 @@ export type CreateTenantShopInput = {
   backgroundColor?: string | null;
   textColor?: string | null;
   fontFamily?: string | null;
+  fontStyle?: TenantFontStyle | null;
+  designTemplate?: TenantDesignTemplate | null;
+  heroImageUrl?: string | null;
+  heroEyebrow?: string | null;
+  heroTitle?: string | null;
+  heroSubtitle?: string | null;
+  primaryCtaLabel?: string | null;
+  secondaryCtaLabel?: string | null;
+  secondaryCtaHref?: string | null;
+  attendanceText?: string | null;
+  reviewsTitle?: string | null;
+  reviewsEmptyText?: string | null;
+  planCode?: TenantPlanCode | null;
+  barberLimit?: number | null;
   emailSettings?: {
     fromName?: string | null;
     replyToEmail?: string | null;
@@ -301,6 +322,41 @@ function normalizeDefaultServices(input: CreateTenantShopInput["defaultServices"
   });
 }
 
+function normalizeBarberLimit(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (!Number.isInteger(value) || value < 1 || value > 100) {
+    throw new TenantProvisioningError(
+      "Limite de barbeiros invalido. Use um numero entre 1 e 100."
+    );
+  }
+
+  return value;
+}
+
+function normalizePlanAndBarberLimit(
+  planCode: TenantPlanCode | null | undefined,
+  barberLimit: number | null | undefined,
+) {
+  const normalizedPlanCode =
+    planCode && isTenantPlanCode(planCode) ? planCode : "custom";
+  const plan = getTenantPlan(normalizedPlanCode);
+
+  if (normalizedPlanCode !== "custom") {
+    return {
+      planCode: normalizedPlanCode,
+      barberLimit: plan.barberLimit,
+    };
+  }
+
+  return {
+    planCode: normalizedPlanCode,
+    barberLimit: normalizeBarberLimit(barberLimit),
+  };
+}
+
 function normalizeHomeContent(input: CreateTenantShopInput["homeContent"]) {
   if (!input) {
     return null;
@@ -362,6 +418,14 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
   const adminEmail = normalizeIdentityEmail(input.admin?.email);
   const adminPassword = String(input.admin?.password || "");
   const brandColor = normalizeHexColor(input.brandColor, DEFAULT_BRAND_COLOR);
+  const plan = normalizePlanAndBarberLimit(input.planCode, input.barberLimit);
+  const designTemplate =
+    input.designTemplate && isTenantDesignTemplate(input.designTemplate)
+      ? input.designTemplate
+      : "dark-premium";
+  const fontStyle =
+    input.fontStyle && isTenantFontStyle(input.fontStyle) ? input.fontStyle : "modern";
+  const template = getTenantDesignTemplate(designTemplate);
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
     throw new TenantProvisioningError("E-mail do admin invalido.");
@@ -386,13 +450,31 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
       logoPath: normalizeAssetPathOrUrl(input.logoPath, "Logo"),
       faviconPath: normalizeAssetPathOrUrl(input.faviconPath, "Favicon"),
       brandColor,
+      backgroundColor: normalizeDesignHexColor(input.backgroundColor, template.backgroundColor),
+      textColor: normalizeDesignHexColor(input.textColor, template.textColor),
+      fontFamily: normalizeFontFamily(input.fontFamily),
+      fontStyle,
+      designTemplate,
+      heroImageUrl: normalizeAssetPathOrUrl(input.heroImageUrl, "Imagem principal"),
+      heroEyebrow: nullableTrimmed(input.heroEyebrow) || "Barbearia premium",
+      heroTitle: nullableTrimmed(input.heroTitle) || "Seu estilo comeca aqui.",
+      heroSubtitle:
+        nullableTrimmed(input.heroSubtitle) ||
+        "Agende seu horario com praticidade e tenha uma experiencia premium.",
+      primaryCtaLabel: nullableTrimmed(input.primaryCtaLabel) || "Agendar horario",
+      secondaryCtaLabel: nullableTrimmed(input.secondaryCtaLabel) || "Ver servicos",
+      secondaryCtaHref: nullableTrimmed(input.secondaryCtaHref) || "/servicos",
+      attendanceText: nullableTrimmed(input.attendanceText) || "Com hora marcada",
+      reviewsTitle: nullableTrimmed(input.reviewsTitle) || "O que os clientes acharam.",
+      reviewsEmptyText:
+        nullableTrimmed(input.reviewsEmptyText) ||
+        "As avaliacoes reais dos clientes vao aparecer aqui depois dos atendimentos concluidos.",
       brandColorStrong: input.brandColorStrong
         ? normalizeHexColor(input.brandColorStrong, DEFAULT_BRAND_COLOR_STRONG)
         : mixHexColor(brandColor, "#ffffff", 0.45),
       brandColorMuted: nullableTrimmed(input.brandColorMuted) || buildMutedColor(brandColor),
-      backgroundColor: normalizeHexColor(input.backgroundColor, DEFAULT_BACKGROUND_COLOR),
-      textColor: normalizeHexColor(input.textColor, DEFAULT_TEXT_COLOR),
-      fontFamily: normalizeFontFamily(input.fontFamily),
+      planCode: plan.planCode,
+      barberLimit: plan.barberLimit,
     },
     emailSettings: input.emailSettings
       ? {

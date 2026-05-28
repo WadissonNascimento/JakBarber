@@ -11,12 +11,12 @@ export default async function AdminBarbersPage({
   searchParams?: Promise<{ feedback?: string; tone?: string }>;
 }) {
   const resolvedSearchParams = (await searchParams) || {};
-  await requireTenantSession({
+  const { shopId } = await requireTenantSession({
     roles: SHOP_ADMIN_ROLES,
   });
 
   const now = new Date();
-  const [barbers, pendingBarbers] = await Promise.all([
+  const [barbers, pendingBarbers, shop] = await Promise.all([
     prisma.user.findMany({
       where: {
         role: "BARBER",
@@ -39,9 +39,15 @@ export default async function AdminBarbersPage({
         createdAt: "desc",
       },
     }),
+    prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { barberLimit: true },
+    }),
   ]);
 
   const feedback = readPageFeedback(resolvedSearchParams);
+  const activeBarberCount = barbers.filter((barber) => barber.isActive).length;
+  const usedBarberSlots = activeBarberCount + pendingBarbers.length;
 
   return (
     <DashboardShell>
@@ -62,6 +68,8 @@ export default async function AdminBarbersPage({
         <AdminBarbersClient
           barbers={barbers}
           pendingBarbers={pendingBarbers}
+          barberLimit={shop?.barberLimit ?? null}
+          usedBarberSlots={usedBarberSlots}
           initialFeedback={feedback}
         />
       </section>

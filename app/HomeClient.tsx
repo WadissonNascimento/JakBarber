@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import CrownRating from "@/components/ui/CrownRating";
-import type { PublicHomeContent } from "@/lib/shopHomeContent";
 
 export type HomeReview = {
   id: string;
@@ -61,7 +60,16 @@ type HomeClientProps = {
   services?: HomeService[];
   barbers?: HomeBarber[];
   products?: HomeProduct[];
-  homeContent: PublicHomeContent;
+  heroImageUrl?: string;
+  heroEyebrow?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  primaryCtaLabel?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaHref?: string;
+  attendanceText?: string;
+  reviewsTitle?: string;
+  reviewsEmptyText?: string;
 };
 
 const corteImages = [
@@ -71,6 +79,7 @@ const corteImages = [
 ];
 
 const rodrigoHeroFallback = "/brands/rodrigo-style/hero-premium.webp";
+const jakBarberShopId = "shop_jak_barber";
 
 function formatReviewName(name: string) {
   const [firstName] = name.trim().split(/\s+/);
@@ -102,192 +111,156 @@ export default function HomeClient(props: HomeClientProps) {
     return <RodrigoStyleHome {...props} />;
   }
 
-  if (props.shopId && props.shopId !== "shop_jak_barber") {
-    return <EditableTenantHome {...props} />;
+  if (!props.shopId || props.shopId === jakBarberShopId) {
+    return <DefaultHomeClient {...props} />;
   }
 
-  return <DefaultHomeClient {...props} />;
+  return <ThemedDefaultHomeClient {...props} />;
 }
 
-function EditableTenantHome({
+function ThemedDefaultHomeClient({
   reviews,
   hasMoreReviews,
   homeImages = [],
   brandName,
   addressLine,
   businessHours,
-  homeContent,
+  heroImageUrl,
+  heroEyebrow,
+  heroTitle,
+  heroSubtitle,
+  primaryCtaLabel,
+  secondaryCtaLabel,
+  secondaryCtaHref,
+  attendanceText,
+  reviewsTitle,
+  reviewsEmptyText,
 }: HomeClientProps) {
-  const heroImage = homeImages[0] || corteImages[0] || "/cortes/corte1.webp";
-  const infoCards = [
-    {
-      label: homeContent.infoOneLabel,
-      value: homeContent.infoOneValue || addressLine,
-    },
-    {
-      label: homeContent.infoTwoLabel,
-      value: homeContent.infoTwoValue || businessHours,
-    },
-    {
-      label: homeContent.infoThreeLabel,
-      value: homeContent.infoThreeValue,
-    },
-  ];
+  const image = homeImages[0] || heroImageUrl || corteImages[0];
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden text-[var(--text-primary)]">
-      <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-12 pt-6 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:pt-10">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--brand-strong)]">
-            {homeContent.heroEyebrow}
-          </p>
-          <h1 className="mt-5 max-w-2xl text-4xl font-black leading-tight sm:text-6xl">
-            {homeContent.heroTitle}
-          </h1>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-            {homeContent.heroSubtitle}
-          </p>
-          <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-2 lg:hidden">
-            <div className="relative h-[300px] overflow-hidden rounded-xl">
-              <Image
-                src={heroImage}
-                alt={brandName}
-                fill
-                sizes="100vw"
-                priority
-                quality={92}
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+    <main className="relative min-h-screen text-white">
+      <section className="mx-auto max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-10">
+        <div className="grid gap-7 lg:grid-cols-[1fr_0.95fr] lg:items-start">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+              {heroEyebrow || "Barbearia premium"}
+            </p>
+            <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+              {heroTitle || "Seu estilo comeca aqui."}
+            </h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">
+              {heroSubtitle ||
+                `Agende seu horario com praticidade e tenha uma experiencia premium na ${brandName}.`}
+            </p>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/agendar"
+                className="rounded-lg bg-[var(--brand)] px-6 py-3 text-center font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110 active:scale-[0.98]"
+              >
+                {primaryCtaLabel || "Agendar horario"}
+              </Link>
+
+              <Link
+                href={secondaryCtaHref || "/servicos"}
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-center text-white transition hover:bg-white/[0.08] active:scale-[0.98]"
+              >
+                {secondaryCtaLabel || "Ver servicos"}
+              </Link>
+            </div>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="surface-card rounded-lg p-4">
+                <p className="text-xs text-[var(--brand-strong)]">Local</p>
+                <p className="mt-2 text-sm text-zinc-200">{addressLine}</p>
+              </div>
+
+              <div className="surface-card rounded-lg p-4">
+                <p className="text-xs text-[var(--brand-strong)]">Horario</p>
+                <p className="mt-2 text-sm text-zinc-200">{businessHours}</p>
+              </div>
+
+              <div className="surface-card rounded-lg p-4">
+                <p className="text-xs text-[var(--brand-strong)]">Atendimento</p>
+                <p className="mt-2 text-sm text-zinc-200">
+                  {attendanceText || "Com hora marcada"}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="mt-7 grid gap-3 sm:max-w-lg sm:grid-cols-2">
-            <Link
-              href={homeContent.primaryButtonHref}
-              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-[var(--brand)] px-5 py-3 text-center text-sm font-black text-white transition hover:brightness-110 active:scale-[0.98]"
-            >
-              {homeContent.primaryButtonLabel}
-            </Link>
-            <Link
-              href={homeContent.secondaryButtonHref}
-              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-5 py-3 text-center text-sm font-bold text-[var(--text-primary)] transition hover:bg-white/[0.08] active:scale-[0.98]"
-            >
-              {homeContent.secondaryButtonLabel}
-            </Link>
-          </div>
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            {infoCards.map((card) => (
-              <div key={card.label} className="surface-card rounded-lg p-4">
-                <p className="text-xs text-[var(--brand-strong)]">{card.label}</p>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">{card.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="relative hidden overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-2 lg:block">
-          <div className="relative h-[300px] overflow-hidden rounded-xl sm:h-[440px] lg:h-[600px]">
-            <Image
-              src={heroImage}
-              alt={brandName}
-              fill
-              sizes="(max-width: 1024px) 100vw, 560px"
-              priority
-              quality={92}
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+          <div className="surface-card-strong overflow-hidden rounded-2xl p-2">
+            <div className="relative h-[290px] overflow-hidden rounded-[20px] sm:h-[420px] lg:h-[560px]">
+              {image ? (
+                <Image
+                  src={image}
+                  alt={`Imagem principal da ${brandName}`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 560px"
+                  quality={92}
+                  priority
+                  className="object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-[linear-gradient(135deg,var(--brand),#020817_65%)]" />
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      {homeContent.showReviews ? (
-        <EditableSection
-          eyebrow={homeContent.reviewsEyebrow}
-          title={homeContent.reviewsTitle}
-          description=""
-        >
-          {reviews.length === 0 ? (
-            <EditableEmpty text={homeContent.reviewsEmptyText} />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {reviews.map((review) => (
-                <article
-                  key={review.id}
-                  className="rounded-lg border border-white/10 bg-white/[0.04] p-5"
-                >
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
-                    {formatReviewName(review.customerName)}
-                  </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <CrownRating rating={review.rating} size="sm" />
-                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                      Nota {review.rating}/5
-                    </span>
-                  </div>
-                  <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
-                    {review.comment}
-                  </p>
-                </article>
-              ))}
-            </div>
-          )}
-          {hasMoreReviews ? (
-            <div className="mt-5 flex justify-center">
-              <Link
-                href="/avaliacoes"
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5"
-              >
-                Ver mais avaliacoes
-              </Link>
-            </div>
-          ) : null}
-        </EditableSection>
-      ) : null}
-
-      <footer className="mx-auto max-w-6xl px-4 pb-10 text-center text-xs text-zinc-500 sm:px-6">
-        {homeContent.footerText}
-      </footer>
-    </main>
-  );
-}
-
-function EditableSection({
-  eyebrow,
-  title,
-  description,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
-      <div className="mb-5">
-        <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-          {eyebrow}
-        </p>
-        <h2 className="mt-2 text-2xl font-black text-[var(--text-primary)] sm:text-3xl">
-          {title}
-        </h2>
-        {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-            {description}
+      <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
+        <div className="mb-5">
+          <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+            Avaliacoes
           </p>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
+          <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+            {reviewsTitle || "O que os clientes acharam."}
+          </h2>
+        </div>
 
-function EditableEmpty({ text }: { text: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.04] p-5 text-sm text-[var(--text-secondary)]">
-      {text}
-    </div>
+        {reviews.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.04] p-5 text-sm text-zinc-400">
+            {reviewsEmptyText ||
+              "As avaliacoes reais dos clientes vao aparecer aqui depois dos atendimentos concluidos."}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-3">
+            {reviews.map((review) => (
+              <article
+                key={review.id}
+                className="rounded-lg border border-white/10 bg-white/[0.04] p-5"
+              >
+                <p className="text-sm font-semibold text-white">
+                  {formatReviewName(review.customerName)}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <CrownRating rating={review.rating} size="sm" />
+                  <span className="text-xs font-semibold text-zinc-400">
+                    Nota {review.rating}/5
+                  </span>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-zinc-300">
+                  {review.comment}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {hasMoreReviews ? (
+          <div className="mt-5 flex justify-center">
+            <Link
+              href="/avaliacoes"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5"
+            >
+              Ver mais avaliacoes
+            </Link>
+          </div>
+        ) : null}
+      </section>
+    </main>
   );
 }
 
@@ -298,8 +271,23 @@ function DefaultHomeClient({
   brandName,
   addressLine,
   businessHours,
+  heroImageUrl,
+  heroEyebrow,
+  heroTitle,
+  heroSubtitle,
+  primaryCtaLabel,
+  secondaryCtaLabel,
+  secondaryCtaHref,
+  attendanceText,
+  reviewsTitle,
+  reviewsEmptyText,
 }: HomeClientProps) {
-  const galleryImages = homeImages.length > 0 ? homeImages.slice(0, 5) : corteImages;
+  const galleryImages =
+    homeImages.length > 0
+      ? homeImages.slice(0, 5)
+      : heroImageUrl
+        ? [heroImageUrl]
+        : corteImages;
   const [current, setCurrent] = useState(0);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const [touchStartX, setTouchStartX] = useState<number | null>(null);

@@ -103,8 +103,9 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   const createRoute = read("app/wr/tenants/novo/submit/route.ts");
   const createPage = read("app/wr/tenants/novo/page.tsx");
   const createForm = read("app/wr/tenants/novo/NewTenantForm.tsx");
-  const tenantSitePage = read("app/wr/tenants/[shopId]/page.tsx");
-  const tenantSiteActions = read("app/wr/tenants/[shopId]/actions.ts");
+  const tenantActions = read("app/wr/tenants/actions.ts");
+  const tenantDetailPage = read("app/wr/tenants/[shopId]/page.tsx");
+  const homeClient = read("app/HomeClient.tsx");
   const appChrome = read("components/AppChrome.tsx");
   const loginSubmit = read("app/login/submit/route.ts");
   const adminLoginSubmit = read("app/admin/login/submit/route.ts");
@@ -125,8 +126,13 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(createRoute, /requireWrAdminSession\(\)/);
   assert.match(createRoute, /isWrTenantCreationEnabled\(\)/);
   assert.match(createRoute, /createTenantShop\(/);
-  assert.match(createRoute, /logoPath:\s*getOptionalString\(formData, "logoPath"\)/);
+  assert.match(createRoute, /uploadTenantLogo/);
+  assert.match(createRoute, /logoFile/);
+  assert.match(createRoute, /logoPath:\s*uploadedLogo\?\.assetUrl \|\| getOptionalString\(formData, "logoPath"\)/);
   assert.match(createRoute, /brandColor:\s*getOptionalString\(formData, "brandColor"\)/);
+  assert.match(createRoute, /planCode:\s*getOptionalString\(formData, "planCode"\)/);
+  assert.match(createRoute, /designTemplate:\s*getOptionalString\(\s*formData,\s*"designTemplate"\s*\)/);
+  assert.match(createRoute, /heroTitle:\s*getOptionalString\(formData, "heroTitle"\)/);
   assert.match(createRoute, /x-wr-fetch/);
   assert.match(createRoute, /redirectTo:\s*"\/wr\/tenants"/);
   assert.doesNotMatch(createRoute, /basePrisma\.shop\.create/);
@@ -137,14 +143,27 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(createForm, /setIsSubmitting\(true\)/);
   assert.match(createForm, /Criando\.\.\./);
   assert.match(createForm, /name="logoPath"/);
+  assert.match(createForm, /name="logoFile"/);
   assert.match(createForm, /name="brandColor"/);
+  assert.match(createForm, /name="planCode"/);
+  assert.match(createForm, /name="designTemplate"/);
+  assert.match(createForm, /name="fontStyle"/);
+  assert.match(createForm, /name="heroTitle"/);
   assert.match(createForm, /Preview/);
-  assert.match(tenantSitePage, /requireWrAdminSession\(\)/);
-  assert.match(tenantSitePage, /updateTenantPublicSiteAction/);
-  assert.match(tenantSiteActions, /requireWrAdminSession\(\)/);
-  assert.match(tenantSiteActions, /shop\.isDefault/);
-  assert.match(tenantSiteActions, /shopHomeContent\.upsert/);
-  assert.match(tenantSiteActions, /normalizeTenantDomain/);
+  assert.match(tenantActions, /updateTenantDesignAction/);
+  assert.match(tenantActions, /updateTenantHomeContentAction/);
+  assert.match(tenantActions, /deleteTenantAction/);
+  assert.match(tenantActions, /bcrypt\.compare\(password, wrUser\.passwordHash\)/);
+  assert.match(tenantActions, /confirmDelete/);
+  assert.match(tenantActions, /wrPassword/);
+  assert.match(tenantActions, /shop\.isDefault/);
+  assert.match(tenantDetailPage, /Senha do painel WR/);
+  assert.match(tenantDetailPage, /Plano e limite/);
+  assert.match(tenantDetailPage, /Design/);
+  assert.match(tenantDetailPage, /Conteudo da home/);
+  assert.match(tenantDetailPage, /Salvar design/);
+  assert.match(homeClient, /jakBarberShopId = "shop_jak_barber"/);
+  assert.match(homeClient, /props\.shopId === jakBarberShopId[\s\S]*<DefaultHomeClient/);
 
   const wrLoginSubmit = read("app/wr/login/submit/route.ts");
   assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);
@@ -227,18 +246,24 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
 test("service role storage helpers are server-only and not imported from client components", () => {
   assert.match(read("lib/productImages.ts"), /import "server-only"/);
   assert.match(read("lib/extraProductImages.ts"), /import "server-only"/);
+  assert.match(read("lib/tenantBrandAssets.ts"), /import "server-only"/);
 
   const clientFiles = [
     "app/admin/produtos/ProductCardClient.tsx",
     "app/admin/produtos/novo/NewProductForm.tsx",
     "app/admin/extras/AdminExtrasClient.tsx",
     "app/admin/extras/ExtraProductCardClient.tsx",
+    "app/wr/tenants/novo/NewTenantForm.tsx",
   ];
 
   for (const file of clientFiles) {
     const contents = read(file);
     assert.doesNotMatch(contents, /SUPABASE_SERVICE_ROLE_KEY/, file);
-    assert.doesNotMatch(contents, /@\/lib\/productImages|@\/lib\/extraProductImages/, file);
+    assert.doesNotMatch(
+      contents,
+      /@\/lib\/productImages|@\/lib\/extraProductImages|@\/lib\/tenantBrandAssets/,
+      file,
+    );
   }
 });
 

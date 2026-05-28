@@ -13,20 +13,22 @@ export default async function WrLoginPage({
   const errorMessage = (await searchParams)?.error || null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#05070b] px-4 py-10 text-white">
+    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_32%),linear-gradient(180deg,#03060d,#070b13)] px-4 py-10 text-white">
       <form
         action="/wr/login/submit"
         method="post"
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.35)]"
+        className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.06] p-7 shadow-[0_28px_110px_rgba(0,0,0,0.45)] ring-1 ring-cyan-300/10 backdrop-blur-2xl"
       >
-        <Image
-          src={WR_TECH_HEADER_LOGO_PATH}
-          alt="WR Tech Solutions"
-          width={360}
-          height={113}
-          priority
-          className="mx-auto h-auto w-full max-w-[240px] rounded-lg object-cover"
-        />
+        <div className="mx-auto w-fit rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+          <Image
+            src={WR_TECH_HEADER_LOGO_PATH}
+            alt="WR Tech Solutions"
+            width={360}
+            height={113}
+            priority
+            className="h-auto w-full max-w-[220px] rounded-lg object-cover"
+          />
+        </div>
         <p className="mt-7 text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
           app.wrtechsolutions.tech
         </p>

@@ -5,9 +5,15 @@ import {
   TenantProvisioningError,
   type CreateTenantShopInput,
 } from "@/lib/tenantProvisioning";
+import { deleteTenantBrandAsset, uploadTenantLogo } from "@/lib/tenantBrandAssets";
 import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
 
 export const dynamic = "force-dynamic";
+
+type UploadedTenantLogo = {
+  assetPath: string;
+  assetUrl: string;
+};
 
 function wantsJson(request: NextRequest) {
   return request.headers.get("x-wr-fetch") === "1";
@@ -42,8 +48,15 @@ function getNumberValue(formData: FormData, key: string) {
   return value ? Number(value) : null;
 }
 
-function getBooleanValue(formData: FormData, key: string) {
-  return formData.get(key) === "on";
+function getIntegerValue(formData: FormData, key: string) {
+  const value = getNumberValue(formData, key);
+  return value === null ? null : Math.trunc(value);
+}
+
+function getOptionalImageFile(formData: FormData, key: string) {
+  const file = formData.get(key);
+
+  return file instanceof File && file.size > 0 ? file : null;
 }
 
 export async function POST(request: NextRequest) {
@@ -60,6 +73,8 @@ export async function POST(request: NextRequest) {
   const serviceName = getOptionalString(formData, "serviceName");
   const servicePrice = getNumberValue(formData, "servicePrice");
   const serviceDuration = getNumberValue(formData, "serviceDuration");
+  const logoFile = getOptionalImageFile(formData, "logoFile");
+  let uploadedLogo: UploadedTenantLogo | null = null;
   const defaultServices: CreateTenantShopInput["defaultServices"] = serviceName
     ? [
         {
@@ -72,63 +87,50 @@ export async function POST(request: NextRequest) {
       ]
     : [];
 
+  if (logoFile) {
+    try {
+      uploadedLogo = await uploadTenantLogo(
+        logoFile,
+        getOptionalString(formData, "slug") || getOptionalString(formData, "name"),
+      );
+    } catch (error) {
+      return errorRedirect(
+        request,
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel processar a logo.",
+      );
+    }
+  }
+
   try {
     await createTenantShop(
       {
         name: String(formData.get("name") || ""),
         slug: getOptionalString(formData, "slug"),
         primaryDomain: getOptionalString(formData, "domain"),
-        metadataTitle: getOptionalString(formData, "metadataTitle"),
-        metadataDescription: getOptionalString(formData, "metadataDescription"),
-        whatsappNumber: getOptionalString(formData, "whatsappNumber"),
-        instagramUrl: getOptionalString(formData, "instagramUrl"),
-        addressLine: getOptionalString(formData, "addressLine"),
-        businessHours: getOptionalString(formData, "businessHours"),
-        logoPath: getOptionalString(formData, "logoPath"),
+        logoPath: uploadedLogo?.assetUrl || getOptionalString(formData, "logoPath"),
+        faviconPath: getOptionalString(formData, "faviconPath"),
         brandColor: getOptionalString(formData, "brandColor"),
         backgroundColor: getOptionalString(formData, "backgroundColor"),
         textColor: getOptionalString(formData, "textColor"),
-        fontFamily: getOptionalString(formData, "fontFamily"),
-        homeContent: {
-          heroEyebrow: getOptionalString(formData, "heroEyebrow"),
-          heroTitle: getOptionalString(formData, "heroTitle"),
-          heroSubtitle: getOptionalString(formData, "heroSubtitle"),
-          primaryButtonLabel: getOptionalString(formData, "primaryButtonLabel"),
-          primaryButtonHref: getOptionalString(formData, "primaryButtonHref"),
-          secondaryButtonLabel: getOptionalString(formData, "secondaryButtonLabel"),
-          secondaryButtonHref: getOptionalString(formData, "secondaryButtonHref"),
-          infoOneLabel: getOptionalString(formData, "infoOneLabel"),
-          infoOneValue: getOptionalString(formData, "infoOneValue"),
-          infoTwoLabel: getOptionalString(formData, "infoTwoLabel"),
-          infoTwoValue: getOptionalString(formData, "infoTwoValue"),
-          infoThreeLabel: getOptionalString(formData, "infoThreeLabel"),
-          infoThreeValue: getOptionalString(formData, "infoThreeValue"),
-          showServices: getBooleanValue(formData, "showServices"),
-          servicesEyebrow: getOptionalString(formData, "servicesEyebrow"),
-          servicesTitle: getOptionalString(formData, "servicesTitle"),
-          servicesDescription: getOptionalString(formData, "servicesDescription"),
-          showBarbers: getBooleanValue(formData, "showBarbers"),
-          barbersEyebrow: getOptionalString(formData, "barbersEyebrow"),
-          barbersTitle: getOptionalString(formData, "barbersTitle"),
-          barbersDescription: getOptionalString(formData, "barbersDescription"),
-          showProducts: getBooleanValue(formData, "showProducts"),
-          productsEyebrow: getOptionalString(formData, "productsEyebrow"),
-          productsTitle: getOptionalString(formData, "productsTitle"),
-          productsDescription: getOptionalString(formData, "productsDescription"),
-          showReviews: getBooleanValue(formData, "showReviews"),
-          reviewsEyebrow: getOptionalString(formData, "reviewsEyebrow"),
-          reviewsTitle: getOptionalString(formData, "reviewsTitle"),
-          reviewsEmptyText: getOptionalString(formData, "reviewsEmptyText"),
-          showAbout: getBooleanValue(formData, "showAbout"),
-          aboutEyebrow: getOptionalString(formData, "aboutEyebrow"),
-          aboutTitle: getOptionalString(formData, "aboutTitle"),
-          aboutBody: getOptionalString(formData, "aboutBody"),
-          showContact: getBooleanValue(formData, "showContact"),
-          contactEyebrow: getOptionalString(formData, "contactEyebrow"),
-          contactTitle: getOptionalString(formData, "contactTitle"),
-          contactBody: getOptionalString(formData, "contactBody"),
-          footerText: getOptionalString(formData, "footerText"),
-        },
+        fontStyle: getOptionalString(formData, "fontStyle") as CreateTenantShopInput["fontStyle"],
+        designTemplate: getOptionalString(
+          formData,
+          "designTemplate"
+        ) as CreateTenantShopInput["designTemplate"],
+        heroImageUrl: getOptionalString(formData, "heroImageUrl"),
+        heroEyebrow: getOptionalString(formData, "heroEyebrow"),
+        heroTitle: getOptionalString(formData, "heroTitle"),
+        heroSubtitle: getOptionalString(formData, "heroSubtitle"),
+        primaryCtaLabel: getOptionalString(formData, "primaryCtaLabel"),
+        secondaryCtaLabel: getOptionalString(formData, "secondaryCtaLabel"),
+        secondaryCtaHref: getOptionalString(formData, "secondaryCtaHref"),
+        attendanceText: getOptionalString(formData, "attendanceText"),
+        reviewsTitle: getOptionalString(formData, "reviewsTitle"),
+        reviewsEmptyText: getOptionalString(formData, "reviewsEmptyText"),
+        planCode: getOptionalString(formData, "planCode") as CreateTenantShopInput["planCode"],
+        barberLimit: getIntegerValue(formData, "barberLimit"),
         admin: {
           name: String(formData.get("adminName") || ""),
           email: String(formData.get("adminEmail") || ""),
@@ -139,6 +141,10 @@ export async function POST(request: NextRequest) {
       user.id
     );
   } catch (error) {
+    if (uploadedLogo) {
+      await deleteTenantBrandAsset(uploadedLogo.assetPath);
+    }
+
     if (error instanceof TenantProvisioningError) {
       return errorRedirect(request, error.message);
     }

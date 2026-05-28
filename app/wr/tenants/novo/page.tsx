@@ -21,15 +21,29 @@ export default async function NewWrTenantPage({
 
   return (
     <WrShell userName={user.name}>
-      <div className="mb-6">
-        <Link href="/wr/tenants" className="text-sm text-cyan-200 hover:underline">
+      <div className="mb-6 rounded-[2rem] border border-white/10 bg-white/[0.055] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.28)]">
+        <Link href="/wr/tenants" className="text-sm font-bold text-cyan-200 hover:underline">
           Voltar para barbearias
         </Link>
-        <h1 className="mt-3 text-3xl font-black">Nova barbearia</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
-          Crie o tenant, o admin inicial e um servico base. Em producao, esta
-          acao exige liberacao explicita por env.
-        </p>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
+              Provisionamento
+            </p>
+            <h1 className="mt-2 text-4xl font-black">Nova barbearia</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">
+              Crie o tenant, o admin inicial, um servico base e a identidade visual
+              que diferencia cada cliente.
+            </p>
+          </div>
+          <span className={`rounded-full px-3 py-2 text-xs font-black uppercase tracking-[0.14em] ${
+            creationEnabled
+              ? "bg-emerald-400/15 text-emerald-100"
+              : "bg-amber-400/15 text-amber-100"
+          }`}>
+            {creationEnabled ? "Criacao liberada" : "Criacao bloqueada"}
+          </span>
+        </div>
       </div>
 
       {!creationEnabled ? (

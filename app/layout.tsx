@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getConfiguredAppUrl } from "@/lib/appUrl";
 import { prisma } from "@/lib/prisma";
+import { getTenantDesignTemplate, getTenantFontStyle } from "@/lib/tenantDesign";
 import {
   DEFAULT_SHOP_ID,
   getCurrentShop,
@@ -49,32 +50,6 @@ const headingFont = Space_Grotesk({
 });
 
 type TenantBrandStyle = CSSProperties & Record<`--${string}`, string>;
-
-function resolveTenantFontVars(
-  fontFamily: string | null | undefined
-): Record<`--${string}`, string> {
-  if (fontFamily === "display") {
-    return {
-      "--font-body": "var(--font-heading)",
-    };
-  }
-
-  if (fontFamily === "system") {
-    return {
-      "--font-body": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      "--font-heading": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    };
-  }
-
-  if (fontFamily === "serif") {
-    return {
-      "--font-body": "Georgia, 'Times New Roman', serif",
-      "--font-heading": "Georgia, 'Times New Roman', serif",
-    };
-  }
-
-  return {};
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   if (await isWrTechAppRequest()) {
@@ -356,23 +331,29 @@ export default async function RootLayout({
 
   const brandName = shop.name || "Barbearia";
   const logoPath = shop.logoPath || "";
+  const designTemplate = getTenantDesignTemplate(shop.designTemplate);
+  const tenantFont = getTenantFontStyle(shop.fontStyle);
+  const backgroundColor = shop.backgroundColor || designTemplate.backgroundColor;
+  const textColor = shop.textColor || designTemplate.textColor;
   const tenantBrandStyle: TenantBrandStyle =
     shop.id === "shop_rodrigo_style"
       ? {
-          "--app-bg": "#f8f5ef",
+          "--app-bg": backgroundColor,
           "--app-gradient-start": "#fafaf7",
-          "--app-gradient-mid": "#f8f5ef",
+          "--app-gradient-mid": backgroundColor,
           "--app-gradient-end": "#efe7d8",
           "--panel-bg": "#ffffff",
           "--panel-bg-strong": "#ffffff",
           "--panel-border": "#e6dfd2",
           "--surface-soft": "rgba(255, 255, 255, 0.76)",
-          "--text-primary": "#111111",
+          "--text-primary": textColor,
           "--text-secondary": "#5f5f5f",
           "--text-muted": "#767064",
-          "--brand": "#c9972b",
+          "--brand": shop.brandColor || designTemplate.brandColor,
           "--brand-strong": "#0b0b0b",
           "--brand-muted": "rgba(201, 151, 43, 0.16)",
+          "--tenant-font-family": tenantFont.cssFamily,
+          "--tenant-heading-font-family": tenantFont.cssFamily,
           "--site-header-bg": "rgba(255, 255, 255, 0.96)",
           "--site-header-border": "#e6dfd2",
           "--site-header-text": "#0b0b0b",
@@ -383,19 +364,19 @@ export default async function RootLayout({
           "--site-header-control-bg": "#ffffff",
           "--site-header-control-border": "#d8cfbf",
           "--site-header-control-text": "#0b0b0b",
-          ...resolveTenantFontVars(shop.fontFamily),
         }
       : {
-          "--app-bg": shop.backgroundColor || "#05070b",
-          "--app-gradient-start": shop.backgroundColor || "#05070b",
-          "--app-gradient-mid": shop.backgroundColor || "#06101f",
-          "--app-gradient-end": shop.backgroundColor || "#05070b",
-          "--text-primary": shop.textColor || "#f6f7fb",
-          "--text-secondary": shop.textColor || "#b0b6c5",
+          "--app-bg": backgroundColor,
+          "--app-gradient-start": backgroundColor,
+          "--app-gradient-mid": backgroundColor,
+          "--app-gradient-end": "#030712",
+          "--text-primary": textColor,
+          "--text-secondary": textColor,
           "--brand": shop.brandColor || "#14b8a6",
           "--brand-strong": shop.brandColorStrong || "#99f6e4",
           "--brand-muted": shop.brandColorMuted || "rgba(20, 184, 166, 0.18)",
-          ...resolveTenantFontVars(shop.fontFamily),
+          "--tenant-font-family": tenantFont.cssFamily,
+          "--tenant-heading-font-family": tenantFont.cssFamily,
         };
   const customerPhone =
     role === "CUSTOMER" && session?.user?.id

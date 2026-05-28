@@ -27,6 +27,9 @@ model Shop {
   primaryDomain       String?  @unique
   isDefault           Boolean  @default(false)
   isActive            Boolean  @default(true)
+  archivedAt          DateTime?
+  planCode            String?
+  barberLimit         Int?
   metadataTitle       String?
   metadataDescription String?
   whatsappNumber      String?
@@ -41,6 +44,18 @@ model Shop {
   backgroundColor     String?
   textColor           String?
   fontFamily          String?
+  fontStyle           String?
+  designTemplate      String?
+  heroImageUrl        String?
+  heroEyebrow         String?
+  heroTitle           String?
+  heroSubtitle        String?
+  primaryCtaLabel     String?
+  secondaryCtaLabel   String?
+  secondaryCtaHref    String?
+  attendanceText      String?
+  reviewsTitle        String?
+  reviewsEmptyText    String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -75,6 +90,53 @@ model Shop {
   accounts                 Account[]
 
   @@index([isActive, isDefault])
+}
+
+model ShopHomeContent {
+  id                   String   @id @default(cuid())
+  shopId               String   @unique
+  heroEyebrow          String?
+  heroTitle            String?
+  heroSubtitle         String?
+  primaryButtonLabel   String?
+  primaryButtonHref    String?
+  secondaryButtonLabel String?
+  secondaryButtonHref  String?
+  infoOneLabel         String?
+  infoOneValue         String?
+  infoTwoLabel         String?
+  infoTwoValue         String?
+  infoThreeLabel       String?
+  infoThreeValue       String?
+  showServices         Boolean  @default(true)
+  servicesEyebrow      String?
+  servicesTitle        String?
+  servicesDescription  String?
+  showBarbers          Boolean  @default(true)
+  barbersEyebrow       String?
+  barbersTitle         String?
+  barbersDescription   String?
+  showProducts         Boolean  @default(false)
+  productsEyebrow      String?
+  productsTitle        String?
+  productsDescription  String?
+  showReviews          Boolean  @default(true)
+  reviewsEyebrow       String?
+  reviewsTitle         String?
+  reviewsEmptyText     String?
+  showAbout            Boolean  @default(true)
+  aboutEyebrow         String?
+  aboutTitle           String?
+  aboutBody            String?
+  showContact          Boolean  @default(true)
+  contactEyebrow       String?
+  contactTitle         String?
+  contactBody          String?
+  footerText           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
 
 model ShopEmailSettings {
@@ -722,51 +784,4 @@ model HomeImage {
 
   @@unique([id, shopId])
   @@index([shopId, isActive, position])
-}
-
-model ShopHomeContent {
-  id                   String   @id @default(cuid())
-  shopId               String   @unique
-  heroEyebrow          String?
-  heroTitle            String?
-  heroSubtitle         String?
-  primaryButtonLabel   String?
-  primaryButtonHref    String?
-  secondaryButtonLabel String?
-  secondaryButtonHref  String?
-  infoOneLabel         String?
-  infoOneValue         String?
-  infoTwoLabel         String?
-  infoTwoValue         String?
-  infoThreeLabel       String?
-  infoThreeValue       String?
-  showServices         Boolean  @default(true)
-  servicesEyebrow      String?
-  servicesTitle        String?
-  servicesDescription  String?
-  showBarbers          Boolean  @default(true)
-  barbersEyebrow       String?
-  barbersTitle         String?
-  barbersDescription   String?
-  showProducts         Boolean  @default(false)
-  productsEyebrow      String?
-  productsTitle        String?
-  productsDescription  String?
-  showReviews          Boolean  @default(true)
-  reviewsEyebrow       String?
-  reviewsTitle         String?
-  reviewsEmptyText     String?
-  showAbout            Boolean  @default(true)
-  aboutEyebrow         String?
-  aboutTitle           String?
-  aboutBody            String?
-  showContact          Boolean  @default(true)
-  contactEyebrow       String?
-  contactTitle         String?
-  contactBody          String?
-  footerText           String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }

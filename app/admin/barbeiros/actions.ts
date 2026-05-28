@@ -99,6 +99,53 @@ function revalidateAdminBarberAvailabilityViews(barberId: string) {
   revalidatePath("/agendar");
 }
 
+async function getBarberCapacity(shopId: string | null | undefined) {
+  if (!shopId) {
+    return {
+      limit: null,
+      used: 0,
+    };
+  }
+
+  const [shop, activeBarbers, pendingBarbers] = await Promise.all([
+    prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { barberLimit: true },
+    }),
+    prisma.user.count({
+      where: {
+        shopId,
+        role: "BARBER",
+        isActive: true,
+      },
+    }),
+    prisma.pendingRegistration.count({
+      where: {
+        shopId,
+        role: "BARBER",
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    }),
+  ]);
+
+  return {
+    limit: shop?.barberLimit ?? null,
+    used: activeBarbers + pendingBarbers,
+  };
+}
+
+async function assertCanAddActiveBarber(shopId: string | null | undefined) {
+  const capacity = await getBarberCapacity(shopId);
+
+  if (capacity.limit !== null && capacity.used >= capacity.limit) {
+    return `Limite de barbeiros atingido (${capacity.used}/${capacity.limit}). Fale com a WR Tech para aumentar o plano.`;
+  }
+
+  return null;
+}
+
 export async function createBarberAction(
   formData: FormData,
 ): Promise<MutationResult> {
@@ -117,6 +164,12 @@ export async function createBarberAction(
 
   if (password.length < 6) {
     return mutationError("A senha deve ter pelo menos 6 caracteres.");
+  }
+
+  const capacityError = await assertCanAddActiveBarber(admin.shopId);
+
+  if (capacityError) {
+    return mutationError(capacityError);
   }
 
   const [existingUser, existingPendingRegistration, shop] = await Promise.all([
@@ -226,6 +279,14 @@ export async function toggleBarberStatusAction(
 
   if (!barber) {
     return mutationError("Barbeiro nao encontrado.");
+  }
+
+  if (!currentActive) {
+    const capacityError = await assertCanAddActiveBarber(admin.shopId);
+
+    if (capacityError) {
+      return mutationError(capacityError);
+    }
   }
 
   await prisma.user.update({

@@ -31,9 +31,21 @@ const UNCONFIGURED_SHOP_CONFIG: ShopRuntimeConfig = {
   brandColor: "#0ea5e9",
   brandColorStrong: "#7dd3fc",
   brandColorMuted: "rgba(14, 165, 233, 0.18)",
-  backgroundColor: null,
-  textColor: null,
-  fontFamily: null,
+  backgroundColor: "#030712",
+  textColor: "#f6f7fb",
+  fontStyle: "modern",
+  designTemplate: "dark-premium",
+  heroImageUrl: null,
+  heroEyebrow: "Barbearia premium",
+  heroTitle: "Seu estilo comeca aqui.",
+  heroSubtitle: "Agende seu horario com praticidade e tenha uma experiencia premium.",
+  primaryCtaLabel: "Agendar horario",
+  secondaryCtaLabel: "Ver servicos",
+  secondaryCtaHref: "/servicos",
+  attendanceText: "Com hora marcada",
+  reviewsTitle: "O que os clientes acharam.",
+  reviewsEmptyText:
+    "As avaliacoes reais dos clientes vao aparecer aqui depois dos atendimentos concluidos.",
 };
 
 export type ShopRuntimeConfig = Pick<
@@ -57,7 +69,18 @@ export type ShopRuntimeConfig = Pick<
   | "brandColorMuted"
   | "backgroundColor"
   | "textColor"
-  | "fontFamily"
+  | "fontStyle"
+  | "designTemplate"
+  | "heroImageUrl"
+  | "heroEyebrow"
+  | "heroTitle"
+  | "heroSubtitle"
+  | "primaryCtaLabel"
+  | "secondaryCtaLabel"
+  | "secondaryCtaHref"
+  | "attendanceText"
+  | "reviewsTitle"
+  | "reviewsEmptyText"
 >;
 
 type ShopCacheEntry = {
@@ -100,7 +123,18 @@ const shopRuntimeSelect = {
   brandColorMuted: true,
   backgroundColor: true,
   textColor: true,
-  fontFamily: true,
+  fontStyle: true,
+  designTemplate: true,
+  heroImageUrl: true,
+  heroEyebrow: true,
+  heroTitle: true,
+  heroSubtitle: true,
+  primaryCtaLabel: true,
+  secondaryCtaLabel: true,
+  secondaryCtaHref: true,
+  attendanceText: true,
+  reviewsTitle: true,
+  reviewsEmptyText: true,
 } satisfies Record<keyof ShopRuntimeConfig, true>;
 
 function normalizeHost(value: string | null | undefined) {

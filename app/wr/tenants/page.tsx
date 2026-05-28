@@ -5,8 +5,14 @@ import {
 } from "@/lib/domainActivation";
 import { getDomainReadiness } from "@/lib/domainReadiness";
 import { basePrisma } from "@/lib/prisma-core";
+import { getTenantPlan, TENANT_PLANS } from "@/lib/tenantPlans";
 import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
 import WrShell from "../WrShell";
+import {
+  archiveTenantAction,
+  reactivateTenantAction,
+  updateTenantPlanAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +56,12 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
         primaryDomain: true,
         isActive: true,
         isDefault: true,
+        archivedAt: true,
+        planCode: true,
+        barberLimit: true,
+        logoPath: true,
+        brandColor: true,
+        designTemplate: true,
         createdAt: true,
         _count: {
           select: {
@@ -70,9 +82,29 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
   const shopsWithDomainStatus = await Promise.all(
     shops.map(async (shop) => {
       const domainReadiness = await getDomainReadiness(shop.primaryDomain);
+      const [activeBarbers, pendingBarbers] = await Promise.all([
+        basePrisma.user.count({
+          where: {
+            shopId: shop.id,
+            role: "BARBER",
+            isActive: true,
+          },
+        }),
+        basePrisma.pendingRegistration.count({
+          where: {
+            shopId: shop.id,
+            role: "BARBER",
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+        }),
+      ]);
 
       return {
         ...shop,
+        activeBarbers,
+        pendingBarbers,
         domainReadiness,
         domainActivation: await getDomainActivationStatus(shop.primaryDomain, domainReadiness),
       };
@@ -81,12 +113,16 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
 
   return (
     <WrShell userName={user.name}>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 rounded-[2rem] border border-white/10 bg-white/[0.055] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.28)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
             Tenants
           </p>
-          <h1 className="mt-2 text-3xl font-black">Barbearias</h1>
+          <h1 className="mt-2 text-4xl font-black">Barbearias</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+            Controle operação, design, domínio e limite de equipe de cada tenant.
+          </p>
         </div>
         <Link
           href="/wr/tenants/novo"
@@ -98,6 +134,7 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
         >
           Nova barbearia
         </Link>
+        </div>
       </div>
 
       {notice ? (
@@ -111,37 +148,70 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
+      <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-[0_28px_100px_rgba(0,0,0,0.32)]">
         <div className="grid gap-0 divide-y divide-white/10">
           {shopsWithDomainStatus.map((shop) => (
             <article
               key={shop.id}
-              className="grid gap-4 p-5 md:grid-cols-[1.2fr_1fr_0.8fr]"
+              className="grid gap-5 p-5 transition hover:bg-white/[0.035] xl:grid-cols-[1.1fr_1fr_0.75fr_1fr]"
             >
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-black">{shop.name}</h2>
-                  {shop.isDefault ? (
-                    <span className="rounded-full bg-cyan-400/15 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
-                      Padrao
-                    </span>
-                  ) : null}
-                  <span
-                    className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
-                      shop.isActive
-                        ? "bg-emerald-400/15 text-emerald-200"
-                        : "bg-red-400/15 text-red-200"
-                    }`}
+                <div className="flex items-start gap-4">
+                  <div
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-cover bg-center bg-no-repeat text-sm font-black text-white shadow-[0_12px_35px_rgba(0,0,0,0.22)]"
+                    style={
+                      shop.logoPath
+                        ? { backgroundImage: `url(${shop.logoPath})` }
+                        : { backgroundColor: shop.brandColor || "#14b8a6" }
+                    }
                   >
-                    {shop.isActive ? "Ativa" : "Inativa"}
-                  </span>
+                    {shop.logoPath ? <span className="sr-only">{shop.name}</span> : shop.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/wr/tenants/${shop.id}`}
+                        className="text-lg font-black text-white hover:text-cyan-200"
+                      >
+                        {shop.name}
+                      </Link>
+                      {shop.isDefault ? (
+                        <span className="rounded-full bg-cyan-400/15 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                          Padrao
+                        </span>
+                      ) : null}
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
+                          shop.isActive
+                            ? "bg-emerald-400/15 text-emerald-200"
+                            : "bg-red-400/15 text-red-200"
+                        }`}
+                      >
+                        {shop.isActive ? "Ativa" : "Inativa"}
+                      </span>
+                      {shop.archivedAt ? (
+                        <span className="rounded-full bg-amber-400/15 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">
+                          Arquivada
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 break-all text-sm text-slate-400">{shop.id}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-600">
+                      {shop.designTemplate || "dark-premium"}
+                    </p>
+                  </div>
                 </div>
-                <p className="mt-2 text-sm text-slate-400">{shop.id}</p>
+                <Link
+                  href={`/wr/tenants/${shop.id}`}
+                  className="mt-4 inline-flex rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-black text-slate-100 hover:border-cyan-300/60"
+                >
+                  Gerenciar
+                </Link>
               </div>
 
               <div className="text-sm text-slate-300">
                 <p>Slug: {shop.slug}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span>Dominio: {shop.primaryDomain || "nao configurado"}</span>
                   <span
                     className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusBadgeClass(shop.domainReadiness.tone)}`}
@@ -210,6 +280,88 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
                   </strong>
                   agendas
                 </div>
+              </div>
+
+              <div className="grid gap-3 text-sm">
+                <form action={updateTenantPlanAction} className="grid gap-2">
+                  <input type="hidden" name="shopId" value={shop.id} />
+                  <input type="hidden" name="returnTo" value="list" />
+                  <label className="grid gap-1 text-xs font-bold text-slate-300">
+                    Plano e barbeiros
+                    <div className="grid grid-cols-[1fr_0.6fr_auto] gap-2">
+                      <select
+                        name="planCode"
+                        defaultValue={getTenantPlan(shop.planCode).code}
+                        disabled={shop.isDefault}
+                        className="min-h-9 rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none disabled:opacity-50"
+                      >
+                        {TENANT_PLANS.map((plan) => (
+                          <option key={plan.code} value={plan.code}>
+                            {plan.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        name="barberLimit"
+                        type="number"
+                        min="1"
+                        max="100"
+                        step="1"
+                        defaultValue={shop.barberLimit ?? ""}
+                        disabled={shop.isDefault}
+                        placeholder="Ilimitado"
+                        className="min-h-9 rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none disabled:opacity-50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={shop.isDefault}
+                        className="rounded-lg border border-white/10 px-3 text-xs font-black text-slate-100 disabled:opacity-50"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  </label>
+                  <p className="text-xs text-slate-500">
+                    Uso: {shop.activeBarbers + shop.pendingBarbers}
+                    {shop.barberLimit === null ? " / ilimitado" : ` / ${shop.barberLimit}`}{" "}
+                    ({shop.pendingBarbers} pendente)
+                  </p>
+                </form>
+
+                {!shop.isDefault ? (
+                  <div className="grid gap-2">
+                    {shop.isActive ? (
+                      <form action={archiveTenantAction}>
+                        <input type="hidden" name="shopId" value={shop.id} />
+                        <input type="hidden" name="returnTo" value="list" />
+                        <button
+                          type="submit"
+                          className="w-full rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-100"
+                        >
+                          Arquivar
+                        </button>
+                      </form>
+                    ) : (
+                      <form action={reactivateTenantAction}>
+                        <input type="hidden" name="shopId" value={shop.id} />
+                        <input type="hidden" name="returnTo" value="list" />
+                        <button
+                          type="submit"
+                          className="w-full rounded-lg border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100"
+                        >
+                          Reativar
+                        </button>
+                      </form>
+                    )}
+
+                    <Link
+                      href={`/wr/tenants/${shop.id}#perigo`}
+                      className="rounded-lg border border-red-300/25 bg-red-300/10 px-3 py-2 text-center text-xs font-black text-red-100"
+                    >
+                      Excluir
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </article>
           ))}

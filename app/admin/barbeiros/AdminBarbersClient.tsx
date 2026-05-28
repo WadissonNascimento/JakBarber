@@ -31,10 +31,14 @@ type PendingBarberItem = {
 export default function AdminBarbersClient({
   barbers,
   pendingBarbers,
+  barberLimit,
+  usedBarberSlots,
   initialFeedback,
 }: {
   barbers: BarberItem[];
   pendingBarbers: PendingBarberItem[];
+  barberLimit: number | null;
+  usedBarberSlots: number;
   initialFeedback?: {
     message: string;
     tone: "success" | "error" | "info";
@@ -51,6 +55,7 @@ export default function AdminBarbersClient({
   );
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const barberLimitReached = barberLimit !== null && usedBarberSlots >= barberLimit;
 
   function runAction(
     key: string,
@@ -80,6 +85,22 @@ export default function AdminBarbersClient({
   return (
     <div className="mt-6 space-y-5 border-t border-white/10 pt-5">
       <FeedbackMessage message={feedback.message} tone={feedback.tone} />
+
+      <section className="dashboard-subpanel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-white">Uso do plano</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Barbeiros ativos e convites pendentes contam no limite da barbearia.
+            </p>
+          </div>
+          <StatusBadge variant={barberLimitReached ? "warning" : "success"}>
+            {barberLimit === null
+              ? `${usedBarberSlots} / ilimitado`
+              : `${usedBarberSlots} / ${barberLimit} barbeiros`}
+          </StatusBadge>
+        </div>
+      </section>
 
       <section className="dashboard-subpanel p-4">
         <h2 className="text-xl font-bold text-white">
@@ -187,6 +208,13 @@ export default function AdminBarbersClient({
         <h2 className="text-xl font-bold text-white">
           Cadastrar novo barbeiro
         </h2>
+        {barberLimitReached ? (
+          <div className="mt-4 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
+            Limite de barbeiros atingido. Para cadastrar outro profissional,
+            remova um convite pendente, inative alguem ou aumente o plano no
+            painel WR.
+          </div>
+        ) : null}
         <form
           className="mt-4 grid gap-3 md:grid-cols-2"
           onSubmit={(event) => {
@@ -246,7 +274,7 @@ export default function AdminBarbersClient({
           <div className="md:col-span-2">
             <button
               type="submit"
-              disabled={isPending && pendingKey === "create-barber"}
+              disabled={barberLimitReached || (isPending && pendingKey === "create-barber")}
               className="btn-primary w-full sm:w-auto"
             >
               {isPending && pendingKey === "create-barber"
