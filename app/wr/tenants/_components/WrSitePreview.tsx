@@ -232,7 +232,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
   }, [formId, initial]);
 
   return (
-    <aside className="grid gap-4 lg:sticky lg:top-5">
+    <aside className="grid gap-4 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
       <div className="rounded-2xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>

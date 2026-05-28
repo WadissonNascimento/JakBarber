@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, type ReactNode } from "react";
 import { DEFAULT_PUBLIC_HOME_CONTENT } from "@/lib/shopHomeContent";
 import WrSitePreview from "../_components/WrSitePreview";
 
@@ -9,6 +9,70 @@ type NewTenantFormProps = {
   creationEnabled: boolean;
   initialError: string | null;
 };
+
+const inputClass =
+  "h-11 rounded-xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/70 focus:bg-slate-950";
+const textareaClass =
+  "resize-y rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-300/70 focus:bg-slate-950";
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
+          {eyebrow}
+        </p>
+        <h2 className="mt-1 text-lg font-black text-white">{title}</h2>
+        {description ? (
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
+            {description}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={`grid gap-2 text-sm ${className}`}>
+      <span className="font-semibold text-slate-200">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Panel({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-2xl border border-white/10 bg-white/[0.055] p-5 shadow-xl shadow-black/10 ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
 
 export default function NewTenantForm({ creationEnabled, initialError }: NewTenantFormProps) {
   const router = useRouter();
@@ -68,281 +132,288 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
         onSubmit={submitTenant}
         className="grid gap-5"
       >
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
-        <fieldset disabled={!creationEnabled || isSubmitting} className="grid gap-5 disabled:opacity-55">
-          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                Base
-              </p>
-              <h2 className="mt-1 text-lg font-black">Dados da barbearia</h2>
-            </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Nome da barbearia</span>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_460px] xl:items-start">
+        <fieldset disabled={!creationEnabled || isSubmitting} className="grid gap-6 disabled:opacity-55">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_360px] 2xl:items-start">
+            <Panel className="grid gap-5">
+              <SectionHeader
+                eyebrow="Base"
+                title="Dados principais"
+                description="Identifique a barbearia e o dominio que sera usado pelo cliente."
+              />
+              <div className="grid gap-4 lg:grid-cols-3">
+                <Field label="Nome da barbearia" className="lg:col-span-2">
               <input
                 name="name"
                 required
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                className={inputClass}
                 placeholder="Black Zone"
               />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Slug</span>
+                </Field>
+                <Field label="Slug">
               <input
                 name="slug"
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                className={inputClass}
                 placeholder="black-zone"
               />
-            </label>
-          </div>
-
-          <label className="grid gap-2 text-sm">
-            <span className="font-semibold text-slate-200">Dominio principal</span>
+                </Field>
+                <Field label="Dominio principal" className="lg:col-span-3">
             <input
               name="domain"
-              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+              className={inputClass}
               placeholder="blackzone.com.br"
             />
-          </label>
-          </section>
+                </Field>
+              </div>
+            </Panel>
 
-          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                Identidade
-              </p>
-              <h2 className="mt-1 text-lg font-black">Marca e contato</h2>
-            </div>
-            <div className="grid gap-4">
+            <Panel className="grid gap-5">
+              <SectionHeader
+                eyebrow="Acesso"
+                title="Admin inicial"
+                description="Usuario que recebe o primeiro acesso ao painel da barbearia."
+              />
+              <div className="grid gap-4">
+                <Field label="Admin nome">
+                  <input
+                    name="adminName"
+                    required
+                    className={inputClass}
+                    placeholder="Admin Black Zone"
+                  />
+                </Field>
+                <Field label="Admin e-mail">
+                  <input
+                    name="adminEmail"
+                    type="email"
+                    required
+                    className={inputClass}
+                    placeholder="admin@blackzone.com.br"
+                  />
+                </Field>
+                <Field label="Senha inicial">
+                  <input
+                    name="adminPassword"
+                    type="password"
+                    required
+                    className={inputClass}
+                    placeholder="Minimo 8, letra e numero"
+                  />
+                </Field>
+              </div>
+            </Panel>
+          </div>
+
+          <Panel className="grid gap-5">
+            <SectionHeader
+              eyebrow="Identidade"
+              title="Marca, cores e contato"
+              description="Essas escolhas aparecem no site publico, nos botoes e nos previews das telas."
+            />
+            <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.75fr)]">
               <div className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Logo</span>
+              <Field label="Logo" className="md:col-span-2">
                 <input
                   name="logoPath"
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                   placeholder="/uploads/logo-cliente.png ou https://..."
                 />
-              </label>
+              </Field>
 
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Cor principal</span>
-                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+              <Field label="Cor principal">
+                <div className="grid grid-cols-[3rem_1fr] gap-3">
                   <input
                     name="brandColor"
                     type="color"
                     value={brandColor}
                     onChange={(event) => setBrandColor(event.target.value)}
-                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 p-1"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-slate-950/70 p-1"
                   />
                   <input
                     value={brandColor}
                     readOnly
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                   />
                 </div>
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Cor de fundo</span>
-                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+              </Field>
+              <Field label="Cor de fundo">
+                <div className="grid grid-cols-[3rem_1fr] gap-3">
                   <input
                     name="backgroundColor"
                     type="color"
                     value={backgroundColor}
                     onChange={(event) => setBackgroundColor(event.target.value)}
-                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 p-1"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-slate-950/70 p-1"
                   />
                   <input
                     value={backgroundColor}
                     readOnly
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                   />
                 </div>
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Cor da letra</span>
-                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+              </Field>
+              <Field label="Cor da letra">
+                <div className="grid grid-cols-[3rem_1fr] gap-3">
                   <input
                     name="textColor"
                     type="color"
                     value={textColor}
                     onChange={(event) => setTextColor(event.target.value)}
-                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 p-1"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-slate-950/70 p-1"
                   />
                   <input
                     value={textColor}
                     readOnly
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                   />
                 </div>
-              </label>
-              <label className="grid gap-2 text-sm md:col-span-2">
-                <span className="font-semibold text-slate-200">Fonte do site</span>
+              </Field>
+              <Field label="Fonte do site">
                 <select
                   name="fontFamily"
                   defaultValue="modern"
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 >
                   <option value="modern">Moderna limpa</option>
                   <option value="display">Marcante</option>
                   <option value="system">Sistema</option>
                   <option value="serif">Classica</option>
                 </select>
-              </label>
+              </Field>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="grid gap-2 text-sm">
-                  <span className="font-semibold text-slate-200">WhatsApp</span>
+                <Field label="WhatsApp">
                   <input
                     name="whatsappNumber"
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                     placeholder="5511999999999"
                   />
-                </label>
-                <label className="grid gap-2 text-sm">
-                  <span className="font-semibold text-slate-200">Instagram</span>
+                </Field>
+                <Field label="Instagram">
                   <input
                     name="instagramUrl"
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                     placeholder="https://instagram.com/barbearia"
                   />
-                </label>
-                <label className="grid gap-2 text-sm">
-                  <span className="font-semibold text-slate-200">Endereco</span>
+                </Field>
+                <Field label="Endereco">
                   <input
                     name="addressLine"
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                     placeholder="Rua, numero, cidade"
                   />
-                </label>
-                <label className="grid gap-2 text-sm">
-                  <span className="font-semibold text-slate-200">Horario</span>
+                </Field>
+                <Field label="Horario">
                   <input
                     name="businessHours"
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                    className={inputClass}
                     placeholder="Seg a sab, 9h as 19h"
                   />
-                </label>
+                </Field>
               </div>
             </div>
-          </section>
+          </Panel>
 
-          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                Site
-              </p>
-              <h2 className="mt-1 text-lg font-black">Textos e preview</h2>
-            </div>
+          <Panel className="grid gap-5">
+            <SectionHeader
+              eyebrow="Site"
+              title="Conteudo da pagina publica"
+              description="Textos exibidos na home e nos resultados de busca."
+            />
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Titulo Google</span>
+              <Field label="Titulo Google">
                 <input
                   name="metadataTitle"
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                   placeholder="Nome da barbearia"
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Descricao Google</span>
+              </Field>
+              <Field label="Descricao Google">
                 <textarea
                   name="metadataDescription"
                   rows={2}
-                  className="resize-y rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={textareaClass}
                   placeholder="Descricao curta para aparecer no Google"
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">
-                  Texto pequeno acima do titulo
-                </span>
+              </Field>
+              <Field label="Texto pequeno acima do titulo">
                 <input
                   name="heroEyebrow"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Titulo principal</span>
+              </Field>
+              <Field label="Titulo principal">
                 <input
                   name="heroTitle"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroTitle}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm md:col-span-2">
-                <span className="font-semibold text-slate-200">Texto principal</span>
+              </Field>
+              <Field label="Texto principal" className="md:col-span-2">
                 <textarea
                   name="heroSubtitle"
                   rows={3}
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroSubtitle}
-                  className="resize-y rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={textareaClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Botao principal</span>
+              </Field>
+              <Field label="Botao principal">
                 <input
                   name="primaryButtonLabel"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.primaryButtonLabel}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Botao secundario</span>
+              </Field>
+              <Field label="Botao secundario">
                 <input
                   name="secondaryButtonLabel"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.secondaryButtonLabel}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Card 1 titulo</span>
+              </Field>
+              <Field label="Card 1 titulo">
                 <input
                   name="infoOneLabel"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneLabel}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Card 1 texto</span>
+              </Field>
+              <Field label="Card 1 texto">
                 <input
                   name="infoOneValue"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoOneValue}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Card 2 titulo</span>
+              </Field>
+              <Field label="Card 2 titulo">
                 <input
                   name="infoTwoLabel"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoLabel}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Card 2 texto</span>
+              </Field>
+              <Field label="Card 2 texto">
                 <input
                   name="infoTwoValue"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoTwoValue}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Card 3 titulo</span>
+              </Field>
+              <Field label="Card 3 titulo">
                 <input
                   name="infoThreeLabel"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeLabel}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
-              <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Card 3 texto</span>
+              </Field>
+              <Field label="Card 3 texto">
                 <input
                   name="infoThreeValue"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.infoThreeValue}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  className={inputClass}
                 />
-              </label>
+              </Field>
               <input type="hidden" name="primaryButtonHref" value="/agendar" />
               <input type="hidden" name="secondaryButtonHref" value="/servicos" />
               <input type="hidden" name="showServices" value="off" />
@@ -358,88 +429,44 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
               <input type="hidden" name="contactTitle" value={DEFAULT_PUBLIC_HOME_CONTENT.contactTitle} />
               <input type="hidden" name="footerText" value={DEFAULT_PUBLIC_HOME_CONTENT.footerText} />
             </div>
-          </section>
+          </Panel>
 
-          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                Acesso
-              </p>
-              <h2 className="mt-1 text-lg font-black">Admin inicial</h2>
-            </div>
+          <Panel className="grid gap-5">
+            <SectionHeader
+              eyebrow="Operacao"
+              title="Servico inicial"
+              description="Cria um primeiro servico para o tenant ja sair testavel."
+            />
           <div className="grid gap-4 md:grid-cols-3">
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Admin nome</span>
-              <input
-                name="adminName"
-                required
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
-                placeholder="Admin Black Zone"
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Admin e-mail</span>
-              <input
-                name="adminEmail"
-                type="email"
-                required
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
-                placeholder="admin@blackzone.com.br"
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Senha inicial</span>
-              <input
-                name="adminPassword"
-                type="password"
-                required
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
-                placeholder="Minimo 8, letra e numero"
-              />
-            </label>
-          </div>
-          </section>
-
-          <section className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                Operacao
-              </p>
-              <h2 className="mt-1 text-lg font-black">Servico inicial</h2>
-            </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Servico inicial</span>
+            <Field label="Servico inicial">
               <input
                 name="serviceName"
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                className={inputClass}
                 placeholder="Corte"
               />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Preco</span>
+            </Field>
+            <Field label="Preco">
               <input
                 name="servicePrice"
                 type="number"
                 min="0"
                 step="0.01"
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                className={inputClass}
                 placeholder="45"
               />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="font-semibold text-slate-200">Duracao min.</span>
+            </Field>
+            <Field label="Duracao min.">
               <input
                 name="serviceDuration"
                 type="number"
                 min="5"
                 step="5"
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                className={inputClass}
                 placeholder="40"
               />
-            </label>
+            </Field>
           </div>
-          </section>
+          </Panel>
         </fieldset>
 
         <WrSitePreview
@@ -454,13 +481,20 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
         />
         </div>
 
-        <button
-          type="submit"
-          disabled={!creationEnabled || isSubmitting}
-          className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-        >
-          {isSubmitting ? "Criando..." : "Criar barbearia"}
-        </button>
+        <div className="sticky bottom-4 z-10 rounded-2xl border border-white/10 bg-slate-950/90 p-3 shadow-2xl shadow-black/30 backdrop-blur">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-slate-400">
+              Revise os dados e o preview antes de criar o tenant.
+            </p>
+            <button
+              type="submit"
+              disabled={!creationEnabled || isSubmitting}
+              className="min-h-11 rounded-xl bg-cyan-400 px-6 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              {isSubmitting ? "Criando..." : "Criar barbearia"}
+            </button>
+          </div>
+        </div>
       </form>
     </>
   );
