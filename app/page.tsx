@@ -1,7 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { basePrisma } from "@/lib/prisma-core";
 import { toMoneyNumber } from "@/lib/money";
-import { getCurrentShop } from "@/lib/shop";
+import { DEFAULT_SHOP_ID, getCurrentShop } from "@/lib/shop";
+import { mergePublicHomeContent } from "@/lib/shopHomeContent";
 import {
   isWrTechAppRequest,
   isWrTechInstitutionalRequest,
@@ -144,6 +145,19 @@ const getHomePublicData = unstable_cache(
   }
 );
 
+const getHomeContent = unstable_cache(
+  async (shopId: string) =>
+    basePrisma.shopHomeContent.findUnique({
+      where: {
+        shopId,
+      },
+    }),
+  ["home-content"],
+  {
+    revalidate: 300,
+  }
+);
+
 export default async function HomePage() {
   if (await isWrTechAppRequest()) {
     return <WrTechAppPlaceholder />;
@@ -155,14 +169,14 @@ export default async function HomePage() {
 
   const shop = await getCurrentShop();
   const shopId = shop.id;
-  const shouldLoadTenantPublicData = shopId === "shop_rodrigo_style";
-  const shouldLoadTenantHomeImages = shopId === "shop_rodrigo_style";
-  const [reviews, images, publicData] = await Promise.all([
+  const shouldLoadEditableSiteData = shopId !== DEFAULT_SHOP_ID;
+  const [reviews, images, publicData, homeContent] = await Promise.all([
     getHomeReviews(shopId),
-    shouldLoadTenantHomeImages ? getHomeImages(shopId) : Promise.resolve([]),
-    shouldLoadTenantPublicData
+    shouldLoadEditableSiteData ? getHomeImages(shopId) : Promise.resolve([]),
+    shouldLoadEditableSiteData
       ? getHomePublicData(shopId)
       : Promise.resolve({ services: [], barbers: [], products: [] }),
+    shouldLoadEditableSiteData ? getHomeContent(shopId) : Promise.resolve(null),
   ]);
 
   const homeReviews: HomeReview[] = reviews.slice(0, 3).map((review) => ({
@@ -187,6 +201,10 @@ export default async function HomePage() {
       services={publicData.services}
       barbers={publicData.barbers}
       products={publicData.products}
+      homeContent={mergePublicHomeContent(homeContent, {
+        infoOneValue: shop.addressLine || "Endereco sob consulta",
+        infoTwoValue: shop.businessHours || "Horario sob consulta",
+      })}
     />
   );
 }

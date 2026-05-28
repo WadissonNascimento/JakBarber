@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import CrownRating from "@/components/ui/CrownRating";
+import type { PublicHomeContent } from "@/lib/shopHomeContent";
 
 export type HomeReview = {
   id: string;
@@ -60,6 +61,7 @@ type HomeClientProps = {
   services?: HomeService[];
   barbers?: HomeBarber[];
   products?: HomeProduct[];
+  homeContent: PublicHomeContent;
 };
 
 const corteImages = [
@@ -100,7 +102,345 @@ export default function HomeClient(props: HomeClientProps) {
     return <RodrigoStyleHome {...props} />;
   }
 
+  if (props.shopId && props.shopId !== "shop_jak_barber") {
+    return <EditableTenantHome {...props} />;
+  }
+
   return <DefaultHomeClient {...props} />;
+}
+
+function EditableTenantHome({
+  reviews,
+  hasMoreReviews,
+  homeImages = [],
+  brandName,
+  addressLine,
+  businessHours,
+  whatsappNumber,
+  instagramUrl,
+  services = [],
+  barbers = [],
+  products = [],
+  homeContent,
+}: HomeClientProps) {
+  const heroImage = homeImages[0] || corteImages[0] || "/cortes/corte1.webp";
+  const whatsappHref = buildWhatsAppHref(whatsappNumber, brandName);
+  const infoCards = [
+    {
+      label: homeContent.infoOneLabel,
+      value: homeContent.infoOneValue || addressLine,
+    },
+    {
+      label: homeContent.infoTwoLabel,
+      value: homeContent.infoTwoValue || businessHours,
+    },
+    {
+      label: homeContent.infoThreeLabel,
+      value: homeContent.infoThreeValue,
+    },
+  ];
+
+  return (
+    <main className="relative min-h-screen overflow-x-hidden text-white">
+      <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-12 pt-6 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:pt-10">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+            {homeContent.heroEyebrow}
+          </p>
+          <h1 className="mt-5 max-w-2xl text-4xl font-black leading-tight sm:text-6xl">
+            {homeContent.heroTitle}
+          </h1>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-zinc-300 sm:text-base">
+            {homeContent.heroSubtitle}
+          </p>
+          <div className="mt-7 grid gap-3 sm:max-w-lg sm:grid-cols-2">
+            <Link
+              href={homeContent.primaryButtonHref}
+              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-[var(--brand)] px-5 py-3 text-center text-sm font-black text-white transition hover:brightness-110 active:scale-[0.98]"
+            >
+              {homeContent.primaryButtonLabel}
+            </Link>
+            <Link
+              href={homeContent.secondaryButtonHref}
+              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.08] active:scale-[0.98]"
+            >
+              {homeContent.secondaryButtonLabel}
+            </Link>
+          </div>
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            {infoCards.map((card) => (
+              <div key={card.label} className="surface-card rounded-lg p-4">
+                <p className="text-xs text-[var(--brand-strong)]">{card.label}</p>
+                <p className="mt-2 text-sm text-zinc-200">{card.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-2">
+          <div className="relative h-[300px] overflow-hidden rounded-xl sm:h-[440px] lg:h-[600px]">
+            <Image
+              src={heroImage}
+              alt={brandName}
+              fill
+              sizes="(max-width: 1024px) 100vw, 560px"
+              priority
+              quality={92}
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+          </div>
+        </div>
+      </section>
+
+      {homeContent.showServices ? (
+        <EditableSection
+          eyebrow={homeContent.servicesEyebrow}
+          title={homeContent.servicesTitle}
+          description={homeContent.servicesDescription}
+        >
+          {services.length === 0 ? (
+            <EditableEmpty text="Os servicos desta barbearia aparecerao aqui em breve." />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {services.map((service) => (
+                <article
+                  key={service.id}
+                  className="rounded-lg border border-white/10 bg-white/[0.04] p-5"
+                >
+                  <Scissors className="h-5 w-5 text-[var(--brand-strong)]" />
+                  <h3 className="mt-4 text-lg font-black text-white">{service.name}</h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">
+                    {service.description || `${service.duration} min de atendimento.`}
+                  </p>
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <strong className="text-[var(--brand-strong)]">
+                      {formatCurrency(service.price)}
+                    </strong>
+                    <Link
+                      href="/agendar"
+                      className="rounded-lg bg-[var(--brand)] px-3 py-2 text-xs font-black text-white"
+                    >
+                      Agendar
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </EditableSection>
+      ) : null}
+
+      {homeContent.showBarbers ? (
+        <EditableSection
+          eyebrow={homeContent.barbersEyebrow}
+          title={homeContent.barbersTitle}
+          description={homeContent.barbersDescription}
+        >
+          {barbers.length === 0 ? (
+            <EditableEmpty text="A equipe desta barbearia aparecera aqui em breve." />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {barbers.map((barber) => (
+                <article
+                  key={barber.id}
+                  className="flex items-center gap-4 rounded-lg border border-white/10 bg-white/[0.04] p-5"
+                >
+                  <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
+                    {barber.image ? (
+                      <Image
+                        src={barber.image}
+                        alt={barber.name}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <Users className="h-7 w-7 text-[var(--brand-strong)]" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-black text-white">{barber.name}</h3>
+                    <p className="mt-1 text-sm text-zinc-400">Atendimento por agenda</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </EditableSection>
+      ) : null}
+
+      {homeContent.showProducts ? (
+        <EditableSection
+          eyebrow={homeContent.productsEyebrow}
+          title={homeContent.productsTitle}
+          description={homeContent.productsDescription}
+        >
+          {products.length === 0 ? (
+            <EditableEmpty text="Os produtos desta barbearia aparecerao aqui em breve." />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {products.map((product) => (
+                <article
+                  key={product.id}
+                  className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
+                >
+                  <div className="relative mb-4 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-white/10">
+                    {product.imageUrl ? (
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 240px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <ShoppingBag className="h-8 w-8 text-[var(--brand-strong)]" />
+                    )}
+                  </div>
+                  <h3 className="font-black text-white">{product.name}</h3>
+                  <p className="mt-2 font-black text-[var(--brand-strong)]">
+                    {formatCurrency(product.price)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+        </EditableSection>
+      ) : null}
+
+      {homeContent.showAbout ? (
+        <EditableSection
+          eyebrow={homeContent.aboutEyebrow}
+          title={homeContent.aboutTitle}
+          description={homeContent.aboutBody}
+        />
+      ) : null}
+
+      {homeContent.showReviews ? (
+        <EditableSection
+          eyebrow={homeContent.reviewsEyebrow}
+          title={homeContent.reviewsTitle}
+          description=""
+        >
+          {reviews.length === 0 ? (
+            <EditableEmpty text={homeContent.reviewsEmptyText} />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {reviews.map((review) => (
+                <article
+                  key={review.id}
+                  className="rounded-lg border border-white/10 bg-white/[0.04] p-5"
+                >
+                  <p className="text-sm font-semibold text-white">
+                    {formatReviewName(review.customerName)}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <CrownRating rating={review.rating} size="sm" />
+                    <span className="text-xs font-semibold text-zinc-400">
+                      Nota {review.rating}/5
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-zinc-300">
+                    {review.comment}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+          {hasMoreReviews ? (
+            <div className="mt-5 flex justify-center">
+              <Link
+                href="/avaliacoes"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/5"
+              >
+                Ver mais avaliacoes
+              </Link>
+            </div>
+          ) : null}
+        </EditableSection>
+      ) : null}
+
+      {homeContent.showContact ? (
+        <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
+          <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+                {homeContent.contactEyebrow}
+              </p>
+              <h2 className="mt-3 text-2xl font-black text-white">
+                {homeContent.contactTitle}
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-zinc-300">
+                {homeContent.contactBody}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+              <a
+                href={whatsappHref}
+                target={whatsappNumber ? "_blank" : undefined}
+                rel={whatsappNumber ? "noreferrer" : undefined}
+                className="rounded-lg bg-[#25d366] px-5 py-3 text-center text-sm font-black text-black"
+              >
+                WhatsApp
+              </a>
+              {instagramUrl ? (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-white/10 px-5 py-3 text-center text-sm font-black text-white"
+                >
+                  Instagram
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <footer className="mx-auto max-w-6xl px-4 pb-10 text-center text-xs text-zinc-500 sm:px-6">
+        {homeContent.footerText}
+      </footer>
+    </main>
+  );
+}
+
+function EditableSection({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
+      <div className="mb-5">
+        <p className="text-xs uppercase tracking-[0.24em] text-[var(--brand-strong)]">
+          {eyebrow}
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">{title}</h2>
+        {description ? (
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-300">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function EditableEmpty({ text }: { text: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.04] p-5 text-sm text-zinc-400">
+      {text}
+    </div>
+  );
 }
 
 function DefaultHomeClient({

@@ -64,6 +64,7 @@ model Shop {
   barberPayouts            BarberPayout[]
   barberTips               BarberTip[]
   homeImages               HomeImage[]
+  homeContent              ShopHomeContent?
   emailDeliveryLogs        EmailDeliveryLog[]
   appNotifications         AppNotification[]
   pushSubscriptions        PushSubscription[]
@@ -718,4 +719,51 @@ model HomeImage {
 
   @@unique([id, shopId])
   @@index([shopId, isActive, position])
+}
+
+model ShopHomeContent {
+  id                   String   @id @default(cuid())
+  shopId               String   @unique
+  heroEyebrow          String?
+  heroTitle            String?
+  heroSubtitle         String?
+  primaryButtonLabel   String?
+  primaryButtonHref    String?
+  secondaryButtonLabel String?
+  secondaryButtonHref  String?
+  infoOneLabel         String?
+  infoOneValue         String?
+  infoTwoLabel         String?
+  infoTwoValue         String?
+  infoThreeLabel       String?
+  infoThreeValue       String?
+  showServices         Boolean  @default(true)
+  servicesEyebrow      String?
+  servicesTitle        String?
+  servicesDescription  String?
+  showBarbers          Boolean  @default(true)
+  barbersEyebrow       String?
+  barbersTitle         String?
+  barbersDescription   String?
+  showProducts         Boolean  @default(false)
+  productsEyebrow      String?
+  productsTitle        String?
+  productsDescription  String?
+  showReviews          Boolean  @default(true)
+  reviewsEyebrow       String?
+  reviewsTitle         String?
+  reviewsEmptyText     String?
+  showAbout            Boolean  @default(true)
+  aboutEyebrow         String?
+  aboutTitle           String?
+  aboutBody            String?
+  showContact          Boolean  @default(true)
+  contactEyebrow       String?
+  contactTitle         String?
+  contactBody          String?
+  footerText           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }

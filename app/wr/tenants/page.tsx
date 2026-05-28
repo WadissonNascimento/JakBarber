@@ -185,6 +185,14 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
                     </button>
                   </form>
                 ) : null}
+                {!shop.isDefault ? (
+                  <Link
+                    href={`/wr/tenants/${shop.id}`}
+                    className="mt-3 inline-flex rounded-lg border border-white/10 px-3 py-2 text-xs font-black text-slate-100 hover:border-cyan-300/60"
+                  >
+                    Editar site
+                  </Link>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center text-xs text-slate-400">

@@ -103,6 +103,8 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   const createRoute = read("app/wr/tenants/novo/submit/route.ts");
   const createPage = read("app/wr/tenants/novo/page.tsx");
   const createForm = read("app/wr/tenants/novo/NewTenantForm.tsx");
+  const tenantSitePage = read("app/wr/tenants/[shopId]/page.tsx");
+  const tenantSiteActions = read("app/wr/tenants/[shopId]/actions.ts");
   const appChrome = read("components/AppChrome.tsx");
   const loginSubmit = read("app/login/submit/route.ts");
   const adminLoginSubmit = read("app/admin/login/submit/route.ts");
@@ -137,6 +139,12 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(createForm, /name="logoPath"/);
   assert.match(createForm, /name="brandColor"/);
   assert.match(createForm, /Preview/);
+  assert.match(tenantSitePage, /requireWrAdminSession\(\)/);
+  assert.match(tenantSitePage, /updateTenantPublicSiteAction/);
+  assert.match(tenantSiteActions, /requireWrAdminSession\(\)/);
+  assert.match(tenantSiteActions, /shop\.isDefault/);
+  assert.match(tenantSiteActions, /shopHomeContent\.upsert/);
+  assert.match(tenantSiteActions, /normalizeTenantDomain/);
 
   const wrLoginSubmit = read("app/wr/login/submit/route.ts");
   assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);
