@@ -15,6 +15,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [brandColor, setBrandColor] = useState("#14b8a6");
+  const [backgroundColor, setBackgroundColor] = useState("#05070b");
   const formId = "wr-new-tenant-form";
 
   async function submitTenant(event: FormEvent<HTMLFormElement>) {
@@ -140,6 +141,36 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                   />
                 </div>
               </label>
+              <label className="grid gap-2 text-sm">
+                <span className="font-semibold text-slate-200">Cor de fundo</span>
+                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+                  <input
+                    name="backgroundColor"
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(event) => setBackgroundColor(event.target.value)}
+                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 p-1"
+                  />
+                  <input
+                    value={backgroundColor}
+                    readOnly
+                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                  />
+                </div>
+              </label>
+              <label className="grid gap-2 text-sm md:col-span-2">
+                <span className="font-semibold text-slate-200">Fonte do site</span>
+                <select
+                  name="fontFamily"
+                  defaultValue="modern"
+                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+                >
+                  <option value="modern">Moderna limpa</option>
+                  <option value="display">Marcante</option>
+                  <option value="system">Sistema</option>
+                  <option value="serif">Classica</option>
+                </select>
+              </label>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2 text-sm">
@@ -204,7 +235,9 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
                 />
               </label>
               <label className="grid gap-2 text-sm">
-                <span className="font-semibold text-slate-200">Eyebrow</span>
+                <span className="font-semibold text-slate-200">
+                  Texto pequeno acima do titulo
+                </span>
                 <input
                   name="heroEyebrow"
                   defaultValue={DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow}
@@ -395,6 +428,8 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
           formId={formId}
           initialValues={{
             brandColor,
+            backgroundColor,
+            fontFamily: "modern",
             ...DEFAULT_PUBLIC_HOME_CONTENT,
           }}
         />

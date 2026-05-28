@@ -86,6 +86,8 @@ export async function POST(request: NextRequest) {
         businessHours: getOptionalString(formData, "businessHours"),
         logoPath: getOptionalString(formData, "logoPath"),
         brandColor: getOptionalString(formData, "brandColor"),
+        backgroundColor: getOptionalString(formData, "backgroundColor"),
+        fontFamily: getOptionalString(formData, "fontFamily"),
         homeContent: {
           heroEyebrow: getOptionalString(formData, "heroEyebrow"),
           heroTitle: getOptionalString(formData, "heroTitle"),

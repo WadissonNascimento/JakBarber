@@ -14,7 +14,9 @@ export const SHOP_ADMIN_ROLE = "SHOP_ADMIN";
 const DEFAULT_BRAND_COLOR = "#14b8a6";
 const DEFAULT_BRAND_COLOR_STRONG = "#99f6e4";
 const DEFAULT_BRAND_COLOR_MUTED = "rgba(20, 184, 166, 0.18)";
+const DEFAULT_BACKGROUND_COLOR = "#05070b";
 const DEFAULT_BUSINESS_HOURS = "Horario sob consulta";
+const ALLOWED_FONT_FAMILIES = new Set(["modern", "display", "system", "serif"]);
 
 type NullableHomeContentInput = {
   [Key in keyof PublicHomeContent]?: PublicHomeContent[Key] | null;
@@ -35,6 +37,8 @@ export type CreateTenantShopInput = {
   brandColor?: string | null;
   brandColorStrong?: string | null;
   brandColorMuted?: string | null;
+  backgroundColor?: string | null;
+  fontFamily?: string | null;
   emailSettings?: {
     fromName?: string | null;
     replyToEmail?: string | null;
@@ -156,6 +160,16 @@ function normalizeHexColor(value: string | null | undefined, fallback: string) {
   }
 
   return color;
+}
+
+function normalizeFontFamily(value: string | null | undefined) {
+  const fontFamily = nullableTrimmed(value) || "modern";
+
+  if (!ALLOWED_FONT_FAMILIES.has(fontFamily)) {
+    throw new TenantProvisioningError("Fonte invalida.");
+  }
+
+  return fontFamily;
 }
 
 function hexToRgb(color: string) {
@@ -374,6 +388,8 @@ export function normalizeCreateTenantShopInput(input: CreateTenantShopInput) {
         ? normalizeHexColor(input.brandColorStrong, DEFAULT_BRAND_COLOR_STRONG)
         : mixHexColor(brandColor, "#ffffff", 0.45),
       brandColorMuted: nullableTrimmed(input.brandColorMuted) || buildMutedColor(brandColor),
+      backgroundColor: normalizeHexColor(input.backgroundColor, DEFAULT_BACKGROUND_COLOR),
+      fontFamily: normalizeFontFamily(input.fontFamily),
     },
     emailSettings: input.emailSettings
       ? {

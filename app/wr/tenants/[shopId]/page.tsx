@@ -75,6 +75,24 @@ function toggleInput(label: string, name: string, checked: boolean) {
   );
 }
 
+function fontSelect(value: string | null | undefined) {
+  return (
+    <label className="grid gap-2 text-sm">
+      <span className="font-semibold text-slate-200">Fonte do site</span>
+      <select
+        name="fontFamily"
+        defaultValue={value || "modern"}
+        className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-300/70"
+      >
+        <option value="modern">Moderna limpa</option>
+        <option value="display">Marcante</option>
+        <option value="system">Sistema</option>
+        <option value="serif">Classica</option>
+      </select>
+    </label>
+  );
+}
+
 function SectionCard({
   title,
   children,
@@ -180,6 +198,16 @@ export default async function WrTenantSitePage({
                     className="h-12 rounded-xl border border-white/10 bg-black/30 p-1"
                   />
                 </label>
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold text-slate-200">Cor de fundo</span>
+                  <input
+                    name="backgroundColor"
+                    type="color"
+                    defaultValue={shop.backgroundColor || "#05070b"}
+                    className="h-12 rounded-xl border border-white/10 bg-black/30 p-1"
+                  />
+                </label>
+                {fontSelect(shop.fontFamily)}
                 {textInput("Horario", "businessHours", shop.businessHours)}
                 {textInput("WhatsApp", "whatsappNumber", shop.whatsappNumber)}
                 {textInput("Instagram", "instagramUrl", shop.instagramUrl)}
@@ -200,7 +228,7 @@ export default async function WrTenantSitePage({
 
             <SectionCard title="Hero e botoes">
               <div className="grid gap-4 md:grid-cols-2">
-                {textInput("Eyebrow", "heroEyebrow", content.heroEyebrow)}
+                {textInput("Texto pequeno acima do titulo", "heroEyebrow", content.heroEyebrow)}
                 {textInput("Titulo principal", "heroTitle", content.heroTitle)}
                 {textareaInput("Texto principal", "heroSubtitle", content.heroSubtitle)}
                 {textInput("Botao principal", "primaryButtonLabel", content.primaryButtonLabel)}
@@ -238,34 +266,34 @@ export default async function WrTenantSitePage({
 
             <SectionCard title="Textos das secoes">
               <div className="grid gap-4 md:grid-cols-2">
-                {textInput("Servicos eyebrow", "servicesEyebrow", content.servicesEyebrow)}
+              {textInput("Servicos chamada pequena", "servicesEyebrow", content.servicesEyebrow)}
                 {textInput("Servicos titulo", "servicesTitle", content.servicesTitle)}
                 {textareaInput(
                   "Servicos descricao",
                   "servicesDescription",
                   content.servicesDescription
                 )}
-                {textInput("Barbeiros eyebrow", "barbersEyebrow", content.barbersEyebrow)}
+              {textInput("Barbeiros chamada pequena", "barbersEyebrow", content.barbersEyebrow)}
                 {textInput("Barbeiros titulo", "barbersTitle", content.barbersTitle)}
                 {textareaInput(
                   "Barbeiros descricao",
                   "barbersDescription",
                   content.barbersDescription
                 )}
-                {textInput("Produtos eyebrow", "productsEyebrow", content.productsEyebrow)}
+              {textInput("Produtos chamada pequena", "productsEyebrow", content.productsEyebrow)}
                 {textInput("Produtos titulo", "productsTitle", content.productsTitle)}
                 {textareaInput(
                   "Produtos descricao",
                   "productsDescription",
                   content.productsDescription
                 )}
-                {textInput("Avaliacoes eyebrow", "reviewsEyebrow", content.reviewsEyebrow)}
+              {textInput("Avaliacoes chamada pequena", "reviewsEyebrow", content.reviewsEyebrow)}
                 {textInput("Avaliacoes titulo", "reviewsTitle", content.reviewsTitle)}
                 {textareaInput("Texto sem avaliacoes", "reviewsEmptyText", content.reviewsEmptyText)}
-                {textInput("Sobre eyebrow", "aboutEyebrow", content.aboutEyebrow)}
+              {textInput("Sobre chamada pequena", "aboutEyebrow", content.aboutEyebrow)}
                 {textInput("Sobre titulo", "aboutTitle", content.aboutTitle)}
                 {textareaInput("Sobre texto", "aboutBody", content.aboutBody)}
-                {textInput("Contato eyebrow", "contactEyebrow", content.contactEyebrow)}
+              {textInput("Contato chamada pequena", "contactEyebrow", content.contactEyebrow)}
                 {textInput("Contato titulo", "contactTitle", content.contactTitle)}
                 {textareaInput("Contato texto", "contactBody", content.contactBody)}
                 {textInput("Rodape", "footerText", content.footerText)}
@@ -285,6 +313,8 @@ export default async function WrTenantSitePage({
             initialValues={{
               name: shop.name,
               brandColor: shop.brandColor || "#14b8a6",
+              backgroundColor: shop.backgroundColor || "#05070b",
+              fontFamily: shop.fontFamily || "modern",
               logoPath: shop.logoPath || "",
               metadataTitle: shop.metadataTitle || shop.name,
               metadataDescription: shop.metadataDescription || "",

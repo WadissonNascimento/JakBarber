@@ -38,6 +38,8 @@ model Shop {
   brandColor          String?
   brandColorStrong    String?
   brandColorMuted     String?
+  backgroundColor     String?
+  fontFamily          String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

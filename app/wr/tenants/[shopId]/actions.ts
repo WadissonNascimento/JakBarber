@@ -10,6 +10,7 @@ import { requireWrAdminSession } from "@/lib/wrSession";
 const MAX_SHORT_TEXT = 120;
 const MAX_MEDIUM_TEXT = 280;
 const MAX_LONG_TEXT = 900;
+const ALLOWED_FONT_FAMILIES = new Set(["modern", "display", "system", "serif"]);
 
 function getString(formData: FormData, key: string, maxLength = MAX_SHORT_TEXT) {
   return String(formData.get(key) || "")
@@ -50,6 +51,16 @@ function normalizeHexColor(value: string | null) {
   }
 
   return value;
+}
+
+function normalizeFontFamily(value: string | null) {
+  const fontFamily = value || "modern";
+
+  if (!ALLOWED_FONT_FAMILIES.has(fontFamily)) {
+    throw new Error("Fonte invalida.");
+  }
+
+  return fontFamily;
 }
 
 function hexToRgb(color: string) {
@@ -155,6 +166,9 @@ export async function updateTenantPublicSiteAction(formData: FormData) {
       normalizeHexColor(getNullableString(formData, "brandColor", 7)) ||
       shop.brandColor ||
       "#14b8a6";
+    const backgroundColor =
+      normalizeHexColor(getNullableString(formData, "backgroundColor", 7)) ||
+      "#05070b";
     const primaryDomain = normalizeTenantDomain(getNullableString(formData, "primaryDomain"));
     const logoPath = normalizeAssetPathOrUrl(
       getNullableString(formData, "logoPath", MAX_MEDIUM_TEXT),
@@ -186,6 +200,8 @@ export async function updateTenantPublicSiteAction(formData: FormData) {
           brandColor,
           brandColorStrong: mixHexColor(brandColor, "#ffffff", 0.45),
           brandColorMuted: buildMutedColor(brandColor),
+          backgroundColor,
+          fontFamily: normalizeFontFamily(getNullableString(formData, "fontFamily")),
         },
       }),
       basePrisma.shopHomeContent.upsert({

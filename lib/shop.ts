@@ -31,6 +31,8 @@ const UNCONFIGURED_SHOP_CONFIG: ShopRuntimeConfig = {
   brandColor: "#0ea5e9",
   brandColorStrong: "#7dd3fc",
   brandColorMuted: "rgba(14, 165, 233, 0.18)",
+  backgroundColor: null,
+  fontFamily: null,
 };
 
 export type ShopRuntimeConfig = Pick<
@@ -52,6 +54,8 @@ export type ShopRuntimeConfig = Pick<
   | "brandColor"
   | "brandColorStrong"
   | "brandColorMuted"
+  | "backgroundColor"
+  | "fontFamily"
 >;
 
 type ShopCacheEntry = {
@@ -92,6 +96,8 @@ const shopRuntimeSelect = {
   brandColor: true,
   brandColorStrong: true,
   brandColorMuted: true,
+  backgroundColor: true,
+  fontFamily: true,
 } satisfies Record<keyof ShopRuntimeConfig, true>;
 
 function normalizeHost(value: string | null | undefined) {

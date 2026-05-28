@@ -50,6 +50,32 @@ const headingFont = Space_Grotesk({
 
 type TenantBrandStyle = CSSProperties & Record<`--${string}`, string>;
 
+function resolveTenantFontVars(
+  fontFamily: string | null | undefined
+): Record<`--${string}`, string> {
+  if (fontFamily === "display") {
+    return {
+      "--font-body": "var(--font-heading)",
+    };
+  }
+
+  if (fontFamily === "system") {
+    return {
+      "--font-body": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      "--font-heading": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    };
+  }
+
+  if (fontFamily === "serif") {
+    return {
+      "--font-body": "Georgia, 'Times New Roman', serif",
+      "--font-heading": "Georgia, 'Times New Roman', serif",
+    };
+  }
+
+  return {};
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   if (await isWrTechAppRequest()) {
     const title = "WR Tech Solutions | Plataforma";
@@ -357,11 +383,17 @@ export default async function RootLayout({
           "--site-header-control-bg": "#ffffff",
           "--site-header-control-border": "#d8cfbf",
           "--site-header-control-text": "#0b0b0b",
+          ...resolveTenantFontVars(shop.fontFamily),
         }
       : {
+          "--app-bg": shop.backgroundColor || "#05070b",
+          "--app-gradient-start": shop.backgroundColor || "#05070b",
+          "--app-gradient-mid": shop.backgroundColor || "#06101f",
+          "--app-gradient-end": shop.backgroundColor || "#05070b",
           "--brand": shop.brandColor || "#14b8a6",
           "--brand-strong": shop.brandColorStrong || "#99f6e4",
           "--brand-muted": shop.brandColorMuted || "rgba(20, 184, 166, 0.18)",
+          ...resolveTenantFontVars(shop.fontFamily),
         };
   const customerPhone =
     role === "CUSTOMER" && session?.user?.id

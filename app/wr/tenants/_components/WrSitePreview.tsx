@@ -6,6 +6,8 @@ import { DEFAULT_PUBLIC_HOME_CONTENT } from "@/lib/shopHomeContent";
 type PreviewValues = {
   name: string;
   brandColor: string;
+  backgroundColor: string;
+  fontFamily: string;
   logoPath: string;
   heroEyebrow: string;
   heroTitle: string;
@@ -59,6 +61,12 @@ function readValues(form: HTMLFormElement | null, initial: PreviewValues): Previ
   return {
     name: pickString(formData, "name", initial.name),
     brandColor: pickString(formData, "brandColor", initial.brandColor),
+    backgroundColor: pickString(
+      formData,
+      "backgroundColor",
+      initial.backgroundColor
+    ),
+    fontFamily: pickString(formData, "fontFamily", initial.fontFamily),
     logoPath: pickString(formData, "logoPath", initial.logoPath),
     heroEyebrow: pickString(formData, "heroEyebrow", initial.heroEyebrow),
     heroTitle: pickString(formData, "heroTitle", initial.heroTitle),
@@ -105,6 +113,8 @@ function buildInitialValues(values: Partial<PreviewValues>): PreviewValues {
   return {
     name: values.name || "Nome da barbearia",
     brandColor: values.brandColor || "#14b8a6",
+    backgroundColor: values.backgroundColor || "#05070b",
+    fontFamily: values.fontFamily || "modern",
     logoPath: values.logoPath || "",
     heroEyebrow: values.heroEyebrow || DEFAULT_PUBLIC_HOME_CONTENT.heroEyebrow,
     heroTitle: values.heroTitle || DEFAULT_PUBLIC_HOME_CONTENT.heroTitle,
@@ -137,6 +147,22 @@ function buildInitialValues(values: Partial<PreviewValues>): PreviewValues {
       values.metadataDescription ||
       "Agende seu horario online e acompanhe seus atendimentos.",
   };
+}
+
+function previewFontStack(fontFamily: string) {
+  if (fontFamily === "display") {
+    return "var(--font-heading), sans-serif";
+  }
+
+  if (fontFamily === "system") {
+    return "system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  }
+
+  if (fontFamily === "serif") {
+    return "Georgia, 'Times New Roman', serif";
+  }
+
+  return "var(--font-body), sans-serif";
 }
 
 export default function WrSitePreview({ formId, initialValues }: WrSitePreviewProps) {
@@ -177,7 +203,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
             <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
               Preview ao vivo
             </p>
-            <p className="mt-1 text-xs text-slate-500">Desktop compacto</p>
+            <p className="mt-1 text-xs text-slate-500">Mobile publico</p>
           </div>
           <span
             className="h-8 w-8 rounded-full border border-white/10"
@@ -185,19 +211,25 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
           />
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#05070b]">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div
+          className="mx-auto max-w-[390px] overflow-hidden rounded-2xl border border-white/10 text-white"
+          style={{
+            backgroundColor: values.backgroundColor,
+            fontFamily: previewFontStack(values.fontFamily),
+          }}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
             <div className="flex items-center gap-2">
               {values.logoPath ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={values.logoPath}
                   alt=""
-                  className="h-9 w-9 rounded-lg object-cover"
+                  className="h-10 w-10 rounded-lg object-cover"
                 />
               ) : (
                 <span
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-xs font-black text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-xs font-black text-white"
                   style={{ backgroundColor: values.brandColor }}
                 >
                   {values.name.slice(0, 2).toUpperCase()}
@@ -207,11 +239,13 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                 {values.name}
               </strong>
             </div>
-            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+              <span className="h-0.5 w-4 rounded-full bg-white/70" />
+            </div>
           </div>
 
-          <div className="grid gap-5 p-4">
-            <div className="grid gap-4 md:grid-cols-[1fr_0.9fr]">
+          <div className="grid gap-7 px-4 pb-5 pt-6">
+            <div className="grid gap-5">
               <div>
                 <p
                   className="text-[10px] font-black uppercase tracking-[0.18em]"
@@ -225,21 +259,21 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                 <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-300">
                   {values.heroSubtitle}
                 </p>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="mt-5 grid gap-2">
                   <span
-                    className="rounded-lg px-3 py-2 text-center text-xs font-black text-white"
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-black text-white"
                     style={{ backgroundColor: values.brandColor }}
                   >
                     {values.primaryButtonLabel}
                   </span>
-                  <span className="rounded-lg border border-white/10 px-3 py-2 text-center text-xs font-bold text-white">
+                  <span className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-center text-xs font-bold text-white">
                     {values.secondaryButtonLabel}
                   </span>
                 </div>
               </div>
-              <div className="min-h-[170px] rounded-xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2">
                 <div
-                  className="h-full min-h-[145px] rounded-lg opacity-70"
+                  className="h-[210px] rounded-xl opacity-80"
                   style={{
                     background: `linear-gradient(135deg, ${values.brandColor}, transparent 58%), #0f172a`,
                   }}
@@ -247,15 +281,18 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-3">
               {[
                 [values.infoOneLabel, values.infoOneValue],
                 [values.infoTwoLabel, values.infoTwoValue],
                 [values.infoThreeLabel, values.infoThreeValue],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                <div
+                  key={label}
+                  className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
+                >
                   <p
-                    className="text-[10px] font-black uppercase"
+                    className="text-[10px] font-black uppercase tracking-[0.12em]"
                     style={{ color: values.brandColor }}
                   >
                     {label}
@@ -265,18 +302,29 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
               ))}
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid gap-5">
               {sections.map((section) => (
                 <div
                   key={section}
-                  className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-white"
+                  className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
                 >
-                  {section}
+                  <p
+                    className="text-[10px] font-black uppercase tracking-[0.18em]"
+                    style={{ color: values.brandColor }}
+                  >
+                    Secao
+                  </p>
+                  <h4 className="mt-2 text-base font-black leading-tight text-white">
+                    {section}
+                  </h4>
+                  <div className="mt-3 rounded-lg border border-dashed border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-400">
+                    Conteudo real da barbearia aparece aqui.
+                  </div>
                 </div>
               ))}
             </div>
 
-            <p className="border-t border-white/10 pt-3 text-center text-[11px] text-slate-500">
+            <p className="border-t border-white/10 pt-4 text-center text-[11px] text-slate-500">
               {values.footerText}
             </p>
           </div>
