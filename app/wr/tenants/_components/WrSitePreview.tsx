@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_PUBLIC_HOME_CONTENT } from "@/lib/shopHomeContent";
 
 type PreviewValues = {
@@ -166,48 +166,6 @@ function previewFontStack(fontFamily: string) {
   }
 
   return "var(--font-body), sans-serif";
-}
-
-function MiniPagePreview({
-  title,
-  eyebrow,
-  values,
-  children,
-}: {
-  title: string;
-  eyebrow: string;
-  values: PreviewValues;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      className="overflow-hidden rounded-2xl border border-white/10"
-      style={{
-        backgroundColor: values.backgroundColor,
-        color: values.textColor,
-        fontFamily: previewFontStack(values.fontFamily),
-      }}
-    >
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div>
-          <p
-            className="text-[10px] font-black uppercase tracking-[0.18em]"
-            style={{ color: values.brandColor }}
-          >
-            {eyebrow}
-          </p>
-          <h4 className="mt-1 text-sm font-black" style={{ color: values.textColor }}>
-            {title}
-          </h4>
-        </div>
-        <span
-          className="h-3 w-3 rounded-full"
-          style={{ backgroundColor: values.brandColor }}
-        />
-      </div>
-      <div className="grid gap-3 p-4">{children}</div>
-    </div>
-  );
 }
 
 export default function WrSitePreview({ formId, initialValues }: WrSitePreviewProps) {
@@ -378,70 +336,6 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
         <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">
           {values.metadataDescription}
         </p>
-      </div>
-
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-          Outras paginas
-        </p>
-        <div className="mt-4 grid gap-3">
-          <MiniPagePreview title="Agendar horario" eyebrow="Agenda" values={values}>
-            <div className="grid gap-2">
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-[10px] uppercase tracking-[0.14em] opacity-60">
-                  Servico
-                </p>
-                <p className="mt-1 text-xs font-bold">Corte</p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {["09:00", "10:30", "14:00"].map((time) => (
-                  <span
-                    key={time}
-                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-bold"
-                  >
-                    {time}
-                  </span>
-                ))}
-              </div>
-              <span
-                className="mt-1 rounded-lg px-3 py-2 text-center text-xs font-black text-white"
-                style={{ backgroundColor: values.brandColor }}
-              >
-                Continuar
-              </span>
-            </div>
-          </MiniPagePreview>
-
-          <MiniPagePreview title="Entrar na conta" eyebrow="Login" values={values}>
-            <div className="grid gap-2">
-              <div className="h-10 rounded-lg border border-white/10 bg-white/[0.04]" />
-              <div className="h-10 rounded-lg border border-white/10 bg-white/[0.04]" />
-              <span
-                className="rounded-lg px-3 py-2 text-center text-xs font-black text-white"
-                style={{ backgroundColor: values.brandColor }}
-              >
-                Entrar
-              </span>
-            </div>
-          </MiniPagePreview>
-
-          <MiniPagePreview title="Painel do cliente" eyebrow="Area logada" values={values}>
-            <div className="grid gap-2">
-              {["Proximo horario", "Historico", "Notificacoes"].map((label) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.04] p-3"
-                >
-                  <span className="text-xs font-bold">{label}</span>
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: values.brandColor }}
-                  />
-                </div>
-              ))}
-            </div>
-          </MiniPagePreview>
-        </div>
       </div>
     </aside>
   );
