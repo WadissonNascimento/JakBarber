@@ -17,6 +17,7 @@ const sectionClass =
 const sectionEyebrowClass =
   "text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200";
 const fieldClass = "grid min-w-0 gap-2 text-sm";
+const maxLogoSizeBytes = 5 * 1024 * 1024;
 
 async function parseSubmitResponse(response: Response) {
   const contentType = response.headers.get("content-type") || "";
@@ -63,6 +64,21 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
   function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
 
+    if (file && file.size > maxLogoSizeBytes) {
+      event.target.value = "";
+      setSelectedLogoName(null);
+      setLogoPreview((current) => {
+        if (current) {
+          URL.revokeObjectURL(current);
+        }
+
+        return null;
+      });
+      setErrorMessage("A logo deve ter no maximo 5MB. Reduza a imagem ou envie um arquivo menor.");
+      return;
+    }
+
+    setErrorMessage(null);
     setSelectedLogoName(file?.name || null);
     setLogoPreview((current) => {
       if (current) {
