@@ -7,6 +7,16 @@ export const ADMIN_BARBER_PROFILE = {
   image: "/uploads/barbers/jackson-barber.jpg",
 };
 
+export const SHOPS_WITHOUT_ADMIN_BARBER_PROFILE = new Set([
+  "shop_pedro_rocha_barbearia",
+]);
+
+export function canAdminActAsBarber(shopId?: string | null) {
+  const targetShopId = shopId || DEFAULT_SHOP_ID;
+
+  return !SHOPS_WITHOUT_ADMIN_BARBER_PROFILE.has(targetShopId);
+}
+
 function getAdminBarberProfile(shopId: string) {
   if (shopId === DEFAULT_SHOP_ID) {
     return ADMIN_BARBER_PROFILE;
@@ -43,6 +53,11 @@ type SessionUserLike = {
 
 export async function ensureAdminBarberProfile(shopId?: string | null) {
   const targetShopId = shopId || DEFAULT_SHOP_ID;
+
+  if (!canAdminActAsBarber(targetShopId)) {
+    return null;
+  }
+
   const profile = getAdminBarberProfile(targetShopId);
   const existingByDefaultEmail = await prisma.user.findFirst({
     where: {
@@ -104,6 +119,10 @@ export async function ensureAdminBarberProfile(shopId?: string | null) {
 
 export async function getActiveBarberForSession(user: SessionUserLike) {
   if (user.role === "ADMIN" || user.role === "SHOP_ADMIN") {
+    if (!canAdminActAsBarber(user.shopId)) {
+      return null;
+    }
+
     return ensureAdminBarberProfile(user.shopId);
   }
 

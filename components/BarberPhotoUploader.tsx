@@ -80,7 +80,7 @@ export default function BarberPhotoUploader({
             }
           }}
           disabled={!localImage}
-          className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-sky-500/30 via-white/10 to-black/20 text-sm font-bold text-[var(--brand-strong)] transition hover:border-[var(--brand)]/50 disabled:cursor-default"
+          className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--brand)]/25 bg-[var(--brand-muted)] text-sm font-bold text-[var(--brand-strong)] transition hover:border-[var(--brand)]/50 disabled:cursor-default"
           aria-label={localImage ? "Ampliar foto do barbeiro" : "Foto do barbeiro"}
         >
           {localImage ? (

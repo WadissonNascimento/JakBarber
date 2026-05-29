@@ -19,7 +19,10 @@ export default function DashboardEntryCard({
       href={href}
       className="group relative flex min-h-[74px] items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-black/20 px-3.5 py-3 transition duration-200 hover:border-[var(--brand)]/35 hover:bg-[var(--brand-muted)] focus-visible:border-[var(--brand)]/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/20"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[var(--brand)]">
+      <div
+        data-dashboard-entry-icon
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[var(--brand)]"
+      >
         <Icon className="h-5 w-5" strokeWidth={1.9} />
       </div>
 

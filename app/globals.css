@@ -228,6 +228,62 @@ body[data-shop-id="shop_rodrigo_style"] [class*="bg-white/10"] {
   background: #ffffff !important;
 }
 
+body[data-shop-id="shop_pedro_rocha_barbearia"]::before {
+  background:
+    radial-gradient(circle at 22% 12%, rgba(241, 232, 216, 0.08), transparent 30%),
+    linear-gradient(
+      180deg,
+      var(--app-gradient-start) 0%,
+      var(--app-gradient-mid) 48%,
+      var(--app-gradient-end) 100%
+    );
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer {
+  border-color: rgba(241, 232, 216, 0.12) !important;
+  background: #070706 !important;
+  color: #f5efe3 !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer::before {
+  background:
+    radial-gradient(circle at bottom, rgba(241, 232, 216, 0.06), transparent 34%),
+    linear-gradient(180deg, rgba(14, 14, 13, 0.98), #020202) !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer [class*="text-zinc-200"],
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer [class*="text-zinc-400"],
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer [class*="text-zinc-500"] {
+  color: #bfb6a8 !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer [class*="border-white/10"] {
+  border-color: rgba(241, 232, 216, 0.12) !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] footer [class*="bg-white/[0.04]"] {
+  background: rgba(241, 232, 216, 0.045) !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] [data-dashboard-entry-icon] {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #ffffff !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] [data-admin-metric-icon] {
+  color: #ffffff !important;
+}
+
+body[data-shop-id="shop_pedro_rocha_barbearia"] input:-webkit-autofill,
+body[data-shop-id="shop_pedro_rocha_barbearia"] input:-webkit-autofill:hover,
+body[data-shop-id="shop_pedro_rocha_barbearia"] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f5efe3 !important;
+  caret-color: #f5efe3;
+  box-shadow: 0 0 0 1000px rgba(22, 21, 19, 0.98) inset !important;
+  border-color: rgba(241, 232, 216, 0.18) !important;
+}
+
 body[data-shop-id="shop_rodrigo_style"] [class*="bg-[var(--brand-muted)]"] {
   border-color: rgba(201, 151, 43, 0.42) !important;
   background: rgba(212, 175, 55, 0.16) !important;

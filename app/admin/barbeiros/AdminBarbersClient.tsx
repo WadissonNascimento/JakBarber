@@ -118,9 +118,9 @@ export default function AdminBarbersClient({
                 <Link
                   key={barber.id}
                   href={`/admin/barbeiros/${barber.id}`}
-                  className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))] px-3 py-3 shadow-[0_18px_44px_rgba(0,0,0,0.22)] transition hover:border-sky-400/30 hover:bg-sky-500/10"
+                  className="flex items-center gap-3 rounded-[24px] border border-[var(--brand)]/25 bg-[linear-gradient(180deg,var(--panel-bg-strong),rgba(13,18,30,0.94))] px-3 py-3 shadow-[0_18px_44px_rgba(0,0,0,0.22)] transition hover:border-[var(--brand)]/45 hover:bg-[var(--brand-muted)]"
                 >
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-sky-400/20 bg-sky-500/10 text-xl font-semibold text-sky-200">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-[var(--brand)]/30 bg-[var(--brand-muted)] text-xl font-semibold text-[var(--brand-strong)]">
                     {barber.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -140,15 +140,6 @@ export default function AdminBarbersClient({
                       <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-white sm:text-lg">
                         {barber.name || "Barbeiro"}
                       </h3>
-                      <span
-                        className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                          barber.isActive
-                            ? "border-sky-400/30 bg-sky-500/10 text-sky-200"
-                            : "border-red-500/25 bg-red-500/10 text-red-200"
-                        }`}
-                      >
-                        {barber.isActive ? "Ativo" : "Off"}
-                      </span>
                     </div>
                   </div>
 
@@ -176,7 +167,7 @@ export default function AdminBarbersClient({
               {pendingBarbers.map((barber) => (
                 <div
                   key={barber.id}
-                  className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(32,43,64,0.52),rgba(18,24,39,0.90))] p-4"
+                  className="rounded-[24px] border border-[var(--brand)]/20 bg-[linear-gradient(180deg,var(--panel-bg-strong),rgba(18,24,39,0.90))] p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-lg font-semibold text-white">

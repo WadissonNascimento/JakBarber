@@ -304,7 +304,7 @@ export default function Header({
                 onClick={closeMenu}
                 className={`flex w-full items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold transition active:scale-[0.98] ${
                   isActivePath(pathname, link.href)
-                    ? "bg-[var(--brand)] text-white shadow-[0_12px_24px_rgba(37,99,235,0.35)]"
+                    ? "bg-[var(--brand)] text-white shadow-[0_12px_24px_rgba(0,0,0,0.28)]"
                     : "border border-white/10 bg-white/[0.04] text-white hover:border-[var(--brand)]/40 hover:bg-[var(--brand-muted)]"
                 }`}
               >

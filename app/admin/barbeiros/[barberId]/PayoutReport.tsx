@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
+import PayoutAppointmentCard from "./PayoutAppointmentCard";
 import PayoutFilters from "./PayoutFilters";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getBarberTipRows } from "@/lib/barberTips";
@@ -176,6 +177,27 @@ export default async function PayoutReport({
     type: "Caixinha",
   }));
 
+  const appointmentRows = appointments.map((appointment) => {
+    const appointmentServiceRows = serviceRows.filter(
+      (row) => row.appointmentId === appointment.id
+    );
+    const appointmentProductRows = productRows.filter(
+      (row) => row.appointmentId === appointment.id
+    );
+    const appointmentItems = [...appointmentServiceRows, ...appointmentProductRows];
+
+    return {
+      id: appointment.id,
+      time: formatScheduleTime(appointment.date),
+      customerName: getPayoutCustomerName(appointment),
+      gross: appointmentItems.reduce((sum, row) => sum + row.gross, 0),
+      payout: appointmentItems.reduce((sum, row) => sum + row.payout, 0),
+      servicesPayout: appointmentServiceRows.reduce((sum, row) => sum + row.payout, 0),
+      extrasPayout: appointmentProductRows.reduce((sum, row) => sum + row.payout, 0),
+      items: appointmentItems,
+    };
+  });
+
   const rows = [...serviceRows, ...productRows, ...tipRows];
   const totalGross = rows.reduce((sum, row) => sum + row.gross, 0);
   const totalPayout = rows.reduce((sum, row) => sum + row.payout, 0);
@@ -222,30 +244,35 @@ export default async function PayoutReport({
             Nenhum atendimento concluído nesse período.
           </div>
         ) : (
-          rows.map((row) => (
-            <article
-              key={`${row.type}-${row.id}`}
-              className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))] p-4 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-sky-300">
-                    {row.type} - {row.time}
-                  </p>
-                  <p className="mt-2 font-semibold text-white">{row.name}</p>
-                  <p className="mt-1 truncate text-sm text-zinc-400">{row.customerName}</p>
+          <>
+            {appointmentRows.map((appointment) => (
+              <PayoutAppointmentCard key={appointment.id} appointment={appointment} />
+            ))}
+            {tipRows.map((row) => (
+              <article
+                key={`${row.type}-${row.id}`}
+                className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(28,40,61,0.72),rgba(13,18,30,0.98))] p-4 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-sky-300">
+                      {row.type} - {row.time}
+                    </p>
+                    <p className="mt-2 font-semibold text-white">{row.name}</p>
+                    <p className="mt-1 truncate text-sm text-zinc-400">{row.customerName}</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300">
+                    {row.commission}
+                  </span>
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300">
-                  {row.commission}
-                </span>
-              </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <InfoBox label="Valor" value={formatCurrency(row.gross)} />
-                <InfoBox label="Ganho barbeiro" value={formatCurrency(row.payout)} />
-              </div>
-            </article>
-          ))
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <InfoBox label="Valor" value={formatCurrency(row.gross)} />
+                  <InfoBox label="Ganho barbeiro" value={formatCurrency(row.payout)} />
+                </div>
+              </article>
+            ))}
+          </>
         )}
       </div>
     </DashboardShell>

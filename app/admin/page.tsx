@@ -18,7 +18,7 @@ import {
   getCurrentScheduleDateValue,
   getScheduleDayRange,
 } from "@/lib/scheduleTime";
-import { ensureAdminBarberProfile } from "@/lib/barberAccess";
+import { canAdminActAsBarber, ensureAdminBarberProfile } from "@/lib/barberAccess";
 import { formatCurrency } from "@/lib/utils";
 import { getAppointmentGrandTotal } from "@/lib/appointmentServices";
 import {
@@ -66,7 +66,9 @@ export default async function AdminPage() {
     roles: SHOP_ADMIN_ROLES,
   });
 
-  await ensureAdminBarberProfile(shopId);
+  if (canAdminActAsBarber(shopId)) {
+    await ensureAdminBarberProfile(shopId);
+  }
 
   const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange();
@@ -288,7 +290,7 @@ export default async function AdminPage() {
   const sortedEntries = [...entries].sort(
     (left, right) =>
       routineOrder.indexOf(left.href) - routineOrder.indexOf(right.href)
-  );
+  ).filter((entry) => canAdminActAsBarber(shopId) || entry.href !== "/barber");
 
   return (
     <div className="min-h-screen">
@@ -373,7 +375,10 @@ function AdminMetric({
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
       <div className="flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
-        <span className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4">
+        <span
+          data-admin-metric-icon
+          className="h-4 w-4 shrink-0 text-[var(--brand-strong)] [&>svg]:h-4 [&>svg]:w-4"
+        >
           {icon}
         </span>
         <span className="min-w-0 truncate">{label}</span>

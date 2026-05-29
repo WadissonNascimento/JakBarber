@@ -107,6 +107,10 @@ function buildWhatsAppHref(phone: string | undefined, brandName: string) {
 }
 
 export default function HomeClient(props: HomeClientProps) {
+  if (props.shopId === "shop_pedro_rocha_barbearia") {
+    return <PedroRochaHome {...props} />;
+  }
+
   if (props.shopId === "shop_rodrigo_style") {
     return <RodrigoStyleHome {...props} />;
   }
@@ -116,6 +120,134 @@ export default function HomeClient(props: HomeClientProps) {
   }
 
   return <ThemedDefaultHomeClient {...props} />;
+}
+
+function PedroRochaHome({
+  reviews,
+  hasMoreReviews,
+  homeImages = [],
+  brandName,
+  addressLine,
+  businessHours,
+  logoPath,
+}: HomeClientProps) {
+  const heroImage = homeImages[0] || logoPath || corteImages[0];
+
+  return (
+    <main className="relative min-h-screen overflow-x-hidden bg-[#080807] text-[#f5efe3]">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,_#11100f_0%,_#080807_48%,_#020202_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] bg-[radial-gradient(circle_at_22%_18%,_rgba(241,232,216,0.08),_transparent_30%),radial-gradient(circle_at_82%_8%,_rgba(255,255,255,0.045),_transparent_28%)]" />
+
+      <section className="px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-6xl gap-7 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <p className="inline-flex rounded-full border border-[#f1e8d8]/15 bg-white/[0.045] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.24em] text-[#ded4c4]">
+              Pedro Rocha Barbearia
+            </p>
+
+            <h1 className="mt-5 max-w-2xl text-[2.35rem] font-black leading-[0.96] tracking-normal text-[#f8f3e7] sm:text-6xl lg:text-7xl">
+              Corte classico, acabamento preciso.
+            </h1>
+          </div>
+
+          <div className="relative min-h-[330px] overflow-hidden rounded-lg border border-[#f1e8d8]/10 bg-[#11100f] shadow-[0_28px_80px_rgba(0,0,0,0.48)] sm:min-h-[480px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-[640px]">
+            <Image
+              src={heroImage}
+              alt={`Identidade visual da ${brandName}`}
+              fill
+              sizes="(max-width: 1024px) 100vw, 580px"
+              quality={94}
+              priority
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,_rgba(0,0,0,0.05),_rgba(0,0,0,0.58))]" />
+          </div>
+
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+            <div className="mt-7 grid gap-3 sm:max-w-lg sm:grid-cols-2">
+              <Link
+                href="/agendar"
+                className="inline-flex min-h-14 items-center justify-center rounded-lg bg-[#f1e8d8] px-5 text-base font-black text-[#080807] shadow-[0_18px_42px_rgba(0,0,0,0.32)] transition hover:bg-white active:scale-[0.98]"
+              >
+                Agendar horario
+              </Link>
+              <Link
+                href="/servicos"
+                className="inline-flex min-h-14 items-center justify-center rounded-lg border border-[#f1e8d8]/15 bg-white/[0.035] px-5 text-base font-bold text-[#f5efe3] transition hover:bg-white/[0.07] active:scale-[0.98]"
+              >
+                Ver servicos
+              </Link>
+            </div>
+
+            <div className="mt-6 grid gap-2 text-sm text-[#c9c0b2] sm:grid-cols-3">
+              <span className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                <Clock3 className="mb-2 h-4 w-4 text-[#ded4c4]" aria-hidden="true" />
+                {businessHours}
+              </span>
+              <span className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                <MapPin className="mb-2 h-4 w-4 text-[#ded4c4]" aria-hidden="true" />
+                {addressLine}
+              </span>
+              <span className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                <Scissors className="mb-2 h-4 w-4 text-[#ded4c4]" aria-hidden="true" />
+                Com hora marcada
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#ded4c4]">
+            Avaliacoes
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-[#f8f3e7] sm:text-4xl">
+            Confianca construida no atendimento.
+          </h2>
+
+          {reviews.length === 0 ? (
+            <div className="mt-5 rounded-lg border border-dashed border-[#f1e8d8]/15 bg-white/[0.035] p-5 text-sm text-[#c9c0b2]">
+              As avaliacoes da Pedro Rocha Barbearia aparecerao aqui em breve.
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {reviews.map((review) => (
+                <article
+                  key={review.id}
+                  className="rounded-lg border border-[#f1e8d8]/15 bg-white/[0.04] p-5"
+                >
+                  <p className="text-sm font-black text-[#f8f3e7]">
+                    {formatReviewName(review.customerName)}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <CrownRating rating={review.rating} size="sm" />
+                    <span className="text-xs font-semibold text-[#c9c0b2]">
+                      Nota {review.rating}/5
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[#c9c0b2]">
+                    {review.comment}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {hasMoreReviews ? (
+            <div className="mt-5 flex justify-center">
+              <Link
+                href="/avaliacoes"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#f1e8d8]/15 px-4 py-2 text-sm font-bold text-[#f5efe3] transition hover:bg-white/[0.07]"
+              >
+                Ver mais avaliacoes
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </section>
+    </main>
+  );
 }
 
 function ThemedDefaultHomeClient({

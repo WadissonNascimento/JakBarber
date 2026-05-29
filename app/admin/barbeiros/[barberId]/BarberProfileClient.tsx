@@ -82,7 +82,7 @@ export default function BarberProfileClient({
       <SectionCard
         title="Perfil do barbeiro"
         description="Dados, foto e comissões individuais."
-        className="overflow-hidden rounded-[30px] border border-sky-500/15 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(9,12,20,0.98))] shadow-[0_24px_80px_rgba(2,132,199,0.10)]"
+        className="overflow-hidden rounded-[30px] border border-[var(--brand)]/20 bg-[linear-gradient(180deg,var(--panel-bg-strong),rgba(9,12,20,0.98))] shadow-[0_24px_80px_rgba(0,0,0,0.22)]"
         actions={
           <BackLink
             href="/admin/barbeiros"
@@ -322,18 +322,18 @@ function ProfileMenuCard({
   return (
     <Link
       href={href}
-      className="group relative flex min-h-[76px] items-center justify-between gap-3 overflow-hidden rounded-2xl border border-sky-400/18 bg-black/20 px-3.5 py-3 outline-none transition hover:border-sky-300/55 hover:bg-sky-500/10 focus-visible:border-sky-300/70 focus-visible:ring-2 focus-visible:ring-sky-400/30"
+      className="group relative flex min-h-[76px] items-center justify-between gap-3 overflow-hidden rounded-2xl border border-[var(--brand)]/22 bg-black/20 px-3.5 py-3 outline-none transition hover:border-[var(--brand)]/55 hover:bg-[var(--brand-muted)] focus-visible:border-[var(--brand)]/70 focus-visible:ring-2 focus-visible:ring-[var(--brand)]/25"
       aria-label={`Abrir ${label}`}
     >
       <span className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[var(--brand)] opacity-70 transition group-hover:opacity-100" />
       <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-sky-300">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-strong)]">
           {label}
         </p>
         <p className="mt-1 truncate text-lg font-bold text-white">{value}</p>
         <p className="mt-1 text-xs text-zinc-400">{helper}</p>
       </div>
-      <span className="flex shrink-0 items-center gap-1.5 rounded-xl border border-sky-400/25 bg-sky-500/10 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-sky-200 transition group-hover:border-sky-300/60 group-hover:bg-sky-500/20">
+      <span className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-muted)] px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--brand-strong)] transition group-hover:border-[var(--brand)]/60 group-hover:bg-[var(--brand-muted)]">
         Abrir
         <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
       </span>
