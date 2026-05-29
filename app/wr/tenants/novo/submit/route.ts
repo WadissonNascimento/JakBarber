@@ -5,6 +5,7 @@ import {
   TenantProvisioningError,
   type CreateTenantShopInput,
 } from "@/lib/tenantProvisioning";
+import { clearShopRuntimeCache } from "@/lib/shop";
 import { deleteTenantBrandAsset, uploadTenantLogo } from "@/lib/tenantBrandAssets";
 import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
 
@@ -154,6 +155,7 @@ export async function POST(request: NextRequest) {
 
   revalidatePath("/wr");
   revalidatePath("/wr/tenants");
+  clearShopRuntimeCache();
 
   return successRedirect(request);
 }

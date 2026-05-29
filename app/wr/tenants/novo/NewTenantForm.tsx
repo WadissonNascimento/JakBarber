@@ -18,6 +18,32 @@ const sectionEyebrowClass =
   "text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200";
 const fieldClass = "grid min-w-0 gap-2 text-sm";
 
+async function parseSubmitResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  const responseText = await response.text().catch(() => "");
+
+  if (response.redirected || response.url.includes("/wr/login")) {
+    return {
+      ok: false,
+      error: "Sessao do painel expirada. Entre no painel WR novamente e tente criar a barbearia.",
+    };
+  }
+
+  return {
+    ok: false,
+    error: response.ok
+      ? "Resposta inesperada ao criar a barbearia. Recarregue o painel e tente novamente."
+      : `Erro do servidor (${response.status}) ao criar a barbearia.${
+          responseText ? " Veja os logs do PM2 para detalhes." : ""
+        }`,
+  };
+}
+
 export default function NewTenantForm({ creationEnabled, initialError }: NewTenantFormProps) {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState(initialError);
@@ -65,7 +91,7 @@ export default function NewTenantForm({ creationEnabled, initialError }: NewTena
           "X-WR-Fetch": "1",
         },
       });
-      const body = await response.json();
+      const body = await parseSubmitResponse(response);
 
       if (!response.ok || !body.ok) {
         setErrorMessage(body.error || "Nao foi possivel criar a barbearia.");
