@@ -13,7 +13,8 @@ dominio desconhecido cair na JakBarber por acidente.
 
 ## Fluxo para um novo cliente
 
-1. Criar a barbearia pelo painel WR com o dominio principal do cliente.
+1. Criar a barbearia pelo fluxo manual de provisionamento com o dominio
+   principal do cliente.
 2. Pedir para o cliente apontar o DNS:
    - `A @ -> 2.24.65.212`
    - `CNAME www -> dominio-principal.com` ou `A www -> 2.24.65.212`

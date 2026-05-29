@@ -4,13 +4,6 @@ import { isWrTechAppRequest } from "@/lib/wrTechInstitutionalServer";
 
 export const WR_ADMIN_ROLES = ["WR_ADMIN"] as const;
 
-export async function isWrTenantCreationEnabled() {
-  return (
-    process.env.NODE_ENV !== "production" ||
-    process.env.WR_TENANT_CREATION_ENABLED === "1"
-  );
-}
-
 export async function requireWrAdminSession() {
   const [session, isWrHost] = await Promise.all([
     auth(),

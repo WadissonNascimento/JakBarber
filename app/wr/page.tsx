@@ -1,18 +1,16 @@
 import Link from "next/link";
 import { basePrisma } from "@/lib/prisma-core";
-import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
+import { requireWrAdminSession } from "@/lib/wrSession";
 import WrShell from "./WrShell";
 
 export const dynamic = "force-dynamic";
 
 export default async function WrDashboardPage() {
-  const [{ user }, tenantCount, activeTenantCount, creationEnabled] =
-    await Promise.all([
-      requireWrAdminSession(),
-      basePrisma.shop.count(),
-      basePrisma.shop.count({ where: { isActive: true } }),
-      isWrTenantCreationEnabled(),
-    ]);
+  const [{ user }, tenantCount, activeTenantCount] = await Promise.all([
+    requireWrAdminSession(),
+    basePrisma.shop.count(),
+    basePrisma.shop.count({ where: { isActive: true } }),
+  ]);
 
   return (
     <WrShell userName={user.name}>
@@ -26,7 +24,7 @@ export default async function WrDashboardPage() {
               Controle premium para todas as barbearias.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-              Gerencie tenants, dominios, planos, identidade visual e acessos iniciais
+              Gerencie tenants, dominios, planos, identidade visual e limites
               sem entrar no painel operacional de cada barbearia.
             </p>
 
@@ -36,12 +34,6 @@ export default async function WrDashboardPage() {
                 className="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_16px_40px_rgba(34,211,238,0.22)] transition hover:bg-cyan-300"
               >
                 Ver barbearias
-              </Link>
-              <Link
-                href="/wr/tenants/novo"
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/60"
-              >
-                Criar barbearia
               </Link>
             </div>
           </div>
@@ -55,16 +47,6 @@ export default async function WrDashboardPage() {
           <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.22)]">
             <p className="text-sm text-slate-400">Ativas</p>
             <strong className="mt-2 block text-4xl font-black">{activeTenantCount}</strong>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.22)]">
-            <p className="text-sm text-slate-400">Criacao em producao</p>
-            <strong className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-black ${
-              creationEnabled
-                ? "bg-emerald-400/15 text-emerald-100"
-                : "bg-amber-400/15 text-amber-100"
-            }`}>
-              {creationEnabled ? "Liberada" : "Bloqueada"}
-            </strong>
           </div>
         </div>
       </section>

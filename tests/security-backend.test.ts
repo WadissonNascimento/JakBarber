@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -95,14 +95,13 @@ test("admin-only pages and export routes enforce admin role", () => {
   }
 });
 
-test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () => {
+test("wr platform pages require WR_ADMIN and keep tenant controls gated", () => {
   const auth = read("auth.ts");
   const proxy = read("proxy.ts");
   const redirect = read("lib/authRedirect.ts");
   const wrSession = read("lib/wrSession.ts");
-  const createRoute = read("app/wr/tenants/novo/submit/route.ts");
-  const createPage = read("app/wr/tenants/novo/page.tsx");
-  const createForm = read("app/wr/tenants/novo/NewTenantForm.tsx");
+  const wrDashboardPage = read("app/wr/page.tsx");
+  const tenantsPage = read("app/wr/tenants/page.tsx");
   const tenantActions = read("app/wr/tenants/actions.ts");
   const tenantDetailPage = read("app/wr/tenants/[shopId]/page.tsx");
   const homeClient = read("app/HomeClient.tsx");
@@ -122,34 +121,12 @@ test("wr platform pages require WR_ADMIN and use safe tenant provisioning", () =
   assert.match(proxy, /"\/wr\/:path\*"/);
   assert.match(redirect, /role === "WR_ADMIN"[\s\S]*return "\/wr"/);
   assert.match(wrSession, /WR_ADMIN_ROLES = \["WR_ADMIN"\]/);
-  assert.match(wrSession, /WR_TENANT_CREATION_ENABLED === "1"/);
-  assert.match(createRoute, /requireWrAdminSession\(\)/);
-  assert.match(createRoute, /isWrTenantCreationEnabled\(\)/);
-  assert.match(createRoute, /createTenantShop\(/);
-  assert.match(createRoute, /uploadTenantLogo/);
-  assert.match(createRoute, /logoFile/);
-  assert.match(createRoute, /logoPath:\s*uploadedLogo\?\.assetUrl \|\| getOptionalString\(formData, "logoPath"\)/);
-  assert.match(createRoute, /brandColor:\s*getOptionalString\(formData, "brandColor"\)/);
-  assert.match(createRoute, /planCode:\s*getOptionalString\(formData, "planCode"\)/);
-  assert.match(createRoute, /designTemplate:\s*getOptionalString\(\s*formData,\s*"designTemplate"\s*\)/);
-  assert.match(createRoute, /heroTitle:\s*getOptionalString\(formData, "heroTitle"\)/);
-  assert.match(createRoute, /x-wr-fetch/);
-  assert.match(createRoute, /redirectTo:\s*"\/wr\/tenants"/);
-  assert.doesNotMatch(createRoute, /basePrisma\.shop\.create/);
-  assert.doesNotMatch(createRoute, /role:\s*"ADMIN"/);
-  assert.match(createPage, /<NewTenantForm/);
-  assert.match(createForm, /"use client"/);
-  assert.match(createForm, /router\.replace\(body\.redirectTo/);
-  assert.match(createForm, /setIsSubmitting\(true\)/);
-  assert.match(createForm, /Criando\.\.\./);
-  assert.match(createForm, /name="logoPath"/);
-  assert.match(createForm, /name="logoFile"/);
-  assert.match(createForm, /name="brandColor"/);
-  assert.match(createForm, /name="planCode"/);
-  assert.match(createForm, /name="designTemplate"/);
-  assert.match(createForm, /name="fontStyle"/);
-  assert.match(createForm, /name="heroTitle"/);
-  assert.match(createForm, /Preview/);
+  assert.doesNotMatch(wrSession, /WR_TENANT_CREATION_ENABLED|isWrTenantCreationEnabled/);
+  assert.doesNotMatch(wrDashboardPage, /\/wr\/tenants\/novo|Criar barbearia/);
+  assert.doesNotMatch(tenantsPage, /\/wr\/tenants\/novo|Nova barbearia/);
+  assert.equal(existsSync(join(process.cwd(), "app/wr/tenants/novo/page.tsx")), false);
+  assert.equal(existsSync(join(process.cwd(), "app/wr/tenants/novo/submit/route.ts")), false);
+  assert.equal(existsSync(join(process.cwd(), "app/wr/tenants/novo/NewTenantForm.tsx")), false);
   assert.match(tenantActions, /updateTenantDesignAction/);
   assert.match(tenantActions, /updateTenantHomeContentAction/);
   assert.match(tenantActions, /deleteTenantAction/);
@@ -253,7 +230,6 @@ test("service role storage helpers are server-only and not imported from client 
     "app/admin/produtos/novo/NewProductForm.tsx",
     "app/admin/extras/AdminExtrasClient.tsx",
     "app/admin/extras/ExtraProductCardClient.tsx",
-    "app/wr/tenants/novo/NewTenantForm.tsx",
   ];
 
   for (const file of clientFiles) {

@@ -6,7 +6,7 @@ import {
 import { getDomainReadiness } from "@/lib/domainReadiness";
 import { basePrisma } from "@/lib/prisma-core";
 import { getTenantPlan, TENANT_PLANS } from "@/lib/tenantPlans";
-import { isWrTenantCreationEnabled, requireWrAdminSession } from "@/lib/wrSession";
+import { requireWrAdminSession } from "@/lib/wrSession";
 import WrShell from "../WrShell";
 import {
   archiveTenantAction,
@@ -46,7 +46,7 @@ function statusBadgeClass(tone: "muted" | "warning" | "success" | "danger") {
 }
 
 export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps) {
-  const [{ user }, shops, creationEnabled, activationEnabled, params] = await Promise.all([
+  const [{ user }, shops, activationEnabled, params] = await Promise.all([
     requireWrAdminSession(),
     basePrisma.shop.findMany({
       select: {
@@ -73,7 +73,6 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
       },
       orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
     }),
-    isWrTenantCreationEnabled(),
     isWrDomainActivationEnabled(),
     searchParams,
   ]);
@@ -115,25 +114,15 @@ export default async function WrTenantsPage({ searchParams }: WrTenantsPageProps
     <WrShell userName={user.name}>
       <div className="mb-6 rounded-[2rem] border border-white/10 bg-white/[0.055] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.28)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
-            Tenants
-          </p>
-          <h1 className="mt-2 text-4xl font-black">Barbearias</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Controle operação, design, domínio e limite de equipe de cada tenant.
-          </p>
-        </div>
-        <Link
-          href="/wr/tenants/novo"
-          className={`rounded-xl px-5 py-3 text-sm font-black ${
-            creationEnabled
-              ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300"
-              : "border border-white/10 text-slate-300"
-          }`}
-        >
-          Nova barbearia
-        </Link>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
+              Tenants
+            </p>
+            <h1 className="mt-2 text-4xl font-black">Barbearias</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Controle operação, design, domínio e limite de equipe de cada tenant.
+            </p>
+          </div>
         </div>
       </div>
 
