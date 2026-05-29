@@ -47,6 +47,15 @@ function statusBadgeClass(tone: "muted" | "warning" | "success" | "danger") {
   return "bg-white/10 text-slate-300";
 }
 
+const formInputClass =
+  "min-h-12 w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none placeholder:text-slate-600 disabled:opacity-50 sm:text-sm";
+const formTextareaClass = `${formInputClass} min-h-24`;
+const formFieldClass = "grid min-w-0 gap-2 text-sm";
+const colorInputClass =
+  "h-12 w-full max-w-20 rounded-xl border border-white/10 bg-black/30 px-2";
+const panelClass =
+  "w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4 sm:p-5";
+
 function InfoCard({
   label,
   value,
@@ -171,9 +180,9 @@ export default async function TenantDetailPage({
 
   return (
     <WrShell userName={user.name}>
-      <div className="mb-6 rounded-[2rem] border border-white/10 bg-white/[0.055] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.28)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-4">
+      <div className="mb-5 w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.28)] sm:mb-6 sm:rounded-[2rem] sm:p-6">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
           <div
             className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-cover bg-center bg-no-repeat text-lg font-black text-white shadow-[0_12px_35px_rgba(0,0,0,0.24)]"
             style={
@@ -189,7 +198,7 @@ export default async function TenantDetailPage({
             Voltar para barbearias
           </Link>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <h1 className="text-3xl font-black">{shop.name}</h1>
+            <h1 className="min-w-0 break-words text-3xl font-black">{shop.name}</h1>
             {shop.isDefault ? (
               <span className="rounded-full bg-cyan-400/15 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
                 Padrao
@@ -205,7 +214,7 @@ export default async function TenantDetailPage({
               {shop.isActive ? "Ativa" : "Inativa"}
             </span>
           </div>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 break-words text-sm text-slate-400">
             {shop.id} - slug {shop.slug}
           </p>
           </div>
@@ -234,8 +243,8 @@ export default async function TenantDetailPage({
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
-        <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.24)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+        <section className="w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.24)] sm:p-5">
           <h2 className="text-xl font-black">Resumo</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <InfoCard label="Usuarios" value={shop._count.users} />
@@ -258,18 +267,18 @@ export default async function TenantDetailPage({
           ) : null}
         </section>
 
-        <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.24)]">
+        <section className="w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.24)] sm:p-5">
           <h2 className="text-xl font-black">Plano e limite</h2>
-          <form action={updateTenantPlanAction} className="mt-4 grid gap-3">
+          <form action={updateTenantPlanAction} className="mt-4 grid min-w-0 gap-3">
             <input type="hidden" name="shopId" value={shop.id} />
             <input type="hidden" name="returnTo" value="detail" />
-            <label className="grid gap-2 text-sm">
+            <label className={formFieldClass}>
               <span className="font-semibold text-slate-200">Plano</span>
               <select
                 name="planCode"
                 defaultValue={plan.code}
                 disabled={shop.isDefault}
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none disabled:opacity-50"
+                className={formInputClass}
               >
                 {TENANT_PLANS.map((item) => (
                   <option key={item.code} value={item.code}>
@@ -279,7 +288,7 @@ export default async function TenantDetailPage({
                 ))}
               </select>
             </label>
-            <label className="grid gap-2 text-sm">
+            <label className={formFieldClass}>
               <span className="font-semibold text-slate-200">
                 Limite manual
               </span>
@@ -292,7 +301,7 @@ export default async function TenantDetailPage({
                 defaultValue={shop.barberLimit ?? ""}
                 disabled={shop.isDefault}
                 placeholder="Ilimitado"
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none disabled:opacity-50"
+                className={formInputClass}
               />
             </label>
             <p className="text-sm text-slate-400">
@@ -310,15 +319,15 @@ export default async function TenantDetailPage({
           </form>
         </section>
 
-        <section className="rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.035] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.24)]">
+        <section className="w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.035] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.24)] sm:p-5">
           <h2 className="text-xl font-black">Design</h2>
           <form
             action={updateTenantDesignAction}
             encType="multipart/form-data"
-            className="mt-4 grid gap-3"
+            className="mt-4 grid min-w-0 gap-3"
           >
             <input type="hidden" name="shopId" value={shop.id} />
-            <div className="grid gap-3 rounded-2xl border border-dashed border-cyan-300/20 bg-black/20 p-4 md:grid-cols-[7rem_1fr]">
+            <div className="grid min-w-0 gap-3 rounded-2xl border border-dashed border-cyan-300/20 bg-black/20 p-3 sm:p-4 md:grid-cols-[7rem_minmax(0,1fr)]">
               <div
                 className="flex aspect-square items-center justify-center rounded-2xl border border-white/10 bg-slate-950 bg-contain bg-center bg-no-repeat text-sm font-black text-white"
                 style={
@@ -329,26 +338,26 @@ export default async function TenantDetailPage({
               >
                 {shop.logoPath ? <span className="sr-only">{shop.name}</span> : "Logo"}
               </div>
-              <label className="grid content-center gap-2 text-sm">
+              <label className="grid min-w-0 content-center gap-2 text-sm">
                 <span className="font-semibold text-slate-200">Trocar logo por arquivo</span>
                 <input
                   name="logoFile"
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-950"
+                  className="w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-xs text-white file:mb-2 file:block file:rounded-lg file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-950 sm:px-4 sm:text-sm sm:file:mb-0 sm:file:mr-3 sm:file:inline-block"
                 />
-                <span className="text-xs text-slate-500">
+                <span className="break-words text-xs text-slate-500">
                   Ao enviar arquivo, ele substitui o caminho informado abaixo.
                 </span>
               </label>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-sm">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Template</span>
                 <select
                   name="designTemplate"
                   defaultValue={designTemplate.code}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 >
                   {TENANT_DESIGN_TEMPLATES.map((template) => (
                     <option key={template.code} value={template.code}>
@@ -357,12 +366,12 @@ export default async function TenantDetailPage({
                   ))}
                 </select>
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Fonte</span>
                 <select
                   name="fontStyle"
                   defaultValue={fontStyle.code}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 >
                   {TENANT_FONT_STYLES.map((font) => (
                     <option key={font.code} value={font.code}>
@@ -371,58 +380,58 @@ export default async function TenantDetailPage({
                   ))}
                 </select>
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Cor principal</span>
                 <input
                   name="brandColor"
                   type="color"
                   defaultValue={shop.brandColor || designTemplate.brandColor}
-                  className="h-12 rounded-xl border border-white/10 bg-black/30 px-2"
+                  className={colorInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Cor de fundo</span>
                 <input
                   name="backgroundColor"
                   type="color"
                   defaultValue={shop.backgroundColor || designTemplate.backgroundColor}
-                  className="h-12 rounded-xl border border-white/10 bg-black/30 px-2"
+                  className={colorInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Cor da letra</span>
                 <input
                   name="textColor"
                   type="color"
                   defaultValue={shop.textColor || designTemplate.textColor}
-                  className="h-12 rounded-xl border border-white/10 bg-black/30 px-2"
+                  className={colorInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Logo</span>
                 <input
                   name="logoPath"
                   defaultValue={shop.logoPath || ""}
                   placeholder="/uploads/logo.png ou https://..."
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Favicon</span>
                 <input
                   name="faviconPath"
                   defaultValue={shop.faviconPath || ""}
                   placeholder="/favicon.ico ou https://..."
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm md:col-span-2">
+              <label className={`${formFieldClass} md:col-span-2`}>
                 <span className="font-semibold text-slate-200">Imagem principal</span>
                 <input
                   name="heroImageUrl"
                   defaultValue={shop.heroImageUrl || ""}
                   placeholder="/uploads/hero.webp ou https://..."
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
             </div>
@@ -432,130 +441,130 @@ export default async function TenantDetailPage({
           </form>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+        <section className={panelClass}>
           <h2 className="text-xl font-black">Conteudo da home</h2>
-          <form action={updateTenantHomeContentAction} className="mt-4 grid gap-3">
+          <form action={updateTenantHomeContentAction} className="mt-4 grid min-w-0 gap-3">
             <input type="hidden" name="shopId" value={shop.id} />
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-sm">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Titulo Google</span>
                 <input
                   name="metadataTitle"
                   defaultValue={shop.metadataTitle || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">WhatsApp</span>
                 <input
                   name="whatsappNumber"
                   defaultValue={shop.whatsappNumber || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm md:col-span-2">
+              <label className={`${formFieldClass} md:col-span-2`}>
                 <span className="font-semibold text-slate-200">Descricao Google</span>
                 <textarea
                   name="metadataDescription"
                   defaultValue={shop.metadataDescription || ""}
-                  className="min-h-24 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formTextareaClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Endereco</span>
                 <input
                   name="addressLine"
                   defaultValue={shop.addressLine || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Horario</span>
                 <input
                   name="businessHours"
                   defaultValue={shop.businessHours || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Instagram</span>
                 <input
                   name="instagramUrl"
                   defaultValue={shop.instagramUrl || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Texto atendimento</span>
                 <input
                   name="attendanceText"
                   defaultValue={shop.attendanceText || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Texto pequeno do hero</span>
                 <input
                   name="heroEyebrow"
                   defaultValue={shop.heroEyebrow || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Titulo principal</span>
                 <input
                   name="heroTitle"
                   defaultValue={shop.heroTitle || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm md:col-span-2">
+              <label className={`${formFieldClass} md:col-span-2`}>
                 <span className="font-semibold text-slate-200">Subtitulo</span>
                 <textarea
                   name="heroSubtitle"
                   defaultValue={shop.heroSubtitle || ""}
-                  className="min-h-24 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formTextareaClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Botao principal</span>
                 <input
                   name="primaryCtaLabel"
                   defaultValue={shop.primaryCtaLabel || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Botao secundario</span>
                 <input
                   name="secondaryCtaLabel"
                   defaultValue={shop.secondaryCtaLabel || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Link secundario</span>
                 <input
                   name="secondaryCtaHref"
                   defaultValue={shop.secondaryCtaHref || ""}
                   placeholder="/servicos"
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className={formFieldClass}>
                 <span className="font-semibold text-slate-200">Titulo avaliacoes</span>
                 <input
                   name="reviewsTitle"
                   defaultValue={shop.reviewsTitle || ""}
-                  className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formInputClass}
                 />
               </label>
-              <label className="grid gap-2 text-sm md:col-span-2">
+              <label className={`${formFieldClass} md:col-span-2`}>
                 <span className="font-semibold text-slate-200">Texto sem avaliacoes</span>
                 <textarea
                   name="reviewsEmptyText"
                   defaultValue={shop.reviewsEmptyText || ""}
-                  className="min-h-24 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className={formTextareaClass}
                 />
               </label>
             </div>
@@ -565,10 +574,10 @@ export default async function TenantDetailPage({
           </form>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+        <section className={panelClass}>
           <h2 className="text-xl font-black">Dominio e SSL</h2>
-          <div className="mt-4 grid gap-3 text-sm text-slate-300">
-            <p>Dominio: {shop.primaryDomain || "Nao configurado"}</p>
+          <div className="mt-4 grid min-w-0 gap-3 text-sm text-slate-300">
+            <p className="break-words">Dominio: {shop.primaryDomain || "Nao configurado"}</p>
             <div className="flex flex-wrap gap-2">
               <span
                 className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${statusBadgeClass(domainReadiness.tone)}`}
@@ -583,13 +592,13 @@ export default async function TenantDetailPage({
                 {domainActivation.label}
               </span>
             </div>
-            <p className="text-slate-400">{domainReadiness.message}</p>
+            <p className="break-words text-slate-400">{domainReadiness.message}</p>
             {domainActivation.canActivate ? (
               <form action={`/wr/tenants/${shop.id}/domain/activate`} method="post">
                 <button
                   type="submit"
                   disabled={!activationEnabled}
-                  className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 disabled:border disabled:border-white/10 disabled:bg-transparent disabled:text-slate-500"
+                  className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 disabled:border disabled:border-white/10 disabled:bg-transparent disabled:text-slate-500 sm:w-auto"
                 >
                   Ativar SSL
                 </button>
@@ -598,23 +607,23 @@ export default async function TenantDetailPage({
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+        <section className={panelClass}>
           <h2 className="text-xl font-black">Equipe e agenda</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div>
+          <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                 Admins
               </p>
               <div className="mt-2 grid gap-2">
                 {admins.map((admin) => (
-                  <div key={admin.id} className="rounded-xl bg-black/20 p-3 text-sm">
+                  <div key={admin.id} className="min-w-0 rounded-xl bg-black/20 p-3 text-sm">
                     <strong className="block text-white">{admin.name}</strong>
-                    <span className="text-slate-400">{admin.email}</span>
+                    <span className="break-all text-slate-400">{admin.email}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                 Ultimos agendamentos
               </p>
@@ -622,7 +631,7 @@ export default async function TenantDetailPage({
                 {latestAppointments.map((appointment) => (
                   <div
                     key={appointment.id}
-                    className="rounded-xl bg-black/20 p-3 text-sm text-slate-300"
+                    className="min-w-0 break-words rounded-xl bg-black/20 p-3 text-sm text-slate-300"
                   >
                     {appointment.date.toLocaleString("pt-BR")} - {appointment.status}
                   </div>
@@ -634,11 +643,11 @@ export default async function TenantDetailPage({
 
         <section
           id="perigo"
-          className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-5"
+          className="w-full min-w-0 overflow-hidden rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 sm:p-5"
         >
           <h2 className="text-xl font-black text-amber-100">Acesso</h2>
           {!shop.isDefault ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
               {shop.isActive ? (
                 <form action={archiveTenantAction}>
                   <input type="hidden" name="shopId" value={shop.id} />
@@ -665,13 +674,13 @@ export default async function TenantDetailPage({
         </section>
 
         {!shop.isDefault ? (
-          <section className="rounded-2xl border border-red-300/20 bg-red-300/10 p-5">
+          <section className="w-full min-w-0 overflow-hidden rounded-2xl border border-red-300/20 bg-red-300/10 p-4 sm:p-5">
             <h2 className="text-xl font-black text-red-100">Excluir tenant</h2>
             <p className="mt-2 text-sm leading-6 text-red-100/80">
               Esta acao apaga a barbearia e os dados vinculados. Para continuar,
               confirme a exclusao e informe a senha atual do painel WR.
             </p>
-            <form action={deleteTenantAction} className="mt-4 grid gap-3">
+            <form action={deleteTenantAction} className="mt-4 grid min-w-0 gap-3">
               <input type="hidden" name="shopId" value={shop.id} />
               <label className="flex items-center gap-3 rounded-xl border border-red-300/20 bg-black/20 p-3 text-sm font-bold text-red-100">
                 <input name="confirmDelete" type="checkbox" required />
@@ -683,7 +692,7 @@ export default async function TenantDetailPage({
                 required
                 autoComplete="current-password"
                 placeholder="Senha do painel WR"
-                className="rounded-xl border border-red-300/20 bg-black/30 px-4 py-3 text-white outline-none"
+                className={formInputClass}
               />
               <button className="rounded-xl bg-red-300 px-4 py-3 text-sm font-black text-red-950">
                 Excluir definitivamente

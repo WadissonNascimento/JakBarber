@@ -454,7 +454,7 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
           {activePage === "home" ? (
             <main className="relative min-h-[720px] overflow-hidden text-[var(--text-primary)]">
               <section className="grid gap-8 px-5 pb-10 pt-6 xl:grid-cols-[0.95fr_1.05fr] xl:items-center">
-                <div>
+                <div className="xl:col-start-1 xl:row-start-1">
                   <EditableText
                     field="heroEyebrow"
                     values={values}
@@ -481,6 +481,26 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                     onPick={pickText}
                     onCommit={commitText}
                   />
+                </div>
+
+                <button
+                  type="button"
+                  className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-left xl:col-start-2 xl:row-span-2 xl:row-start-1 ${
+                    activeField === "brandColor" ? "ring-2 ring-cyan-300/70" : ""
+                  }`}
+                  onClick={() => selectColorTarget("brandColor")}
+                >
+                  <div
+                    className="relative h-[290px] overflow-hidden rounded-xl sm:h-[420px]"
+                    style={{
+                      background: `linear-gradient(145deg, ${values.brandColor}, transparent 52%), linear-gradient(315deg, #020617, #111827)`,
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+                  </div>
+                </button>
+
+                <div className="xl:col-start-1 xl:row-start-2">
                   <div className="mt-7 grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"
@@ -545,23 +565,6 @@ export default function WrSitePreview({ formId, initialValues }: WrSitePreviewPr
                     ))}
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-left ${
-                    activeField === "brandColor" ? "ring-2 ring-cyan-300/70" : ""
-                  }`}
-                  onClick={() => selectColorTarget("brandColor")}
-                >
-                  <div
-                    className="relative h-[420px] overflow-hidden rounded-xl"
-                    style={{
-                      background: `linear-gradient(145deg, ${values.brandColor}, transparent 52%), linear-gradient(315deg, #020617, #111827)`,
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
-                  </div>
-                </button>
               </section>
 
               {values.showReviews ? (

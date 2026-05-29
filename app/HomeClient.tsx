@@ -142,7 +142,7 @@ function ThemedDefaultHomeClient({
     <main className="relative min-h-screen text-white">
       <section className="mx-auto max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-10">
         <div className="grid gap-7 lg:grid-cols-[1fr_0.95fr] lg:items-start">
-          <div className="min-w-0">
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--brand-strong)]">
               {heroEyebrow || "Barbearia premium"}
             </p>
@@ -153,7 +153,27 @@ function ThemedDefaultHomeClient({
               {heroSubtitle ||
                 `Agende seu horario com praticidade e tenha uma experiencia premium na ${brandName}.`}
             </p>
+          </div>
 
+          <div className="surface-card-strong overflow-hidden rounded-2xl p-2 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <div className="relative h-[290px] overflow-hidden rounded-[20px] sm:h-[420px] lg:h-[560px]">
+              {image ? (
+                <Image
+                  src={image}
+                  alt={`Imagem principal da ${brandName}`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 560px"
+                  quality={92}
+                  priority
+                  className="object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-[linear-gradient(135deg,var(--brand),#020817_65%)]" />
+              )}
+            </div>
+          </div>
+
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2">
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/agendar"
@@ -187,24 +207,6 @@ function ThemedDefaultHomeClient({
                   {attendanceText || "Com hora marcada"}
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="surface-card-strong overflow-hidden rounded-2xl p-2">
-            <div className="relative h-[290px] overflow-hidden rounded-[20px] sm:h-[420px] lg:h-[560px]">
-              {image ? (
-                <Image
-                  src={image}
-                  alt={`Imagem principal da ${brandName}`}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 560px"
-                  quality={92}
-                  priority
-                  className="object-cover"
-                />
-              ) : (
-                <div className="h-full w-full bg-[linear-gradient(135deg,var(--brand),#020817_65%)]" />
-              )}
             </div>
           </div>
         </div>
