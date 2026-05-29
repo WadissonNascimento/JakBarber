@@ -53,11 +53,19 @@ test("customer profile email changes require code verification and do not verify
 
 test("barber actions use the authenticated barber id instead of trusting form ids", () => {
   const actions = read("app/barber/actions.ts");
+  const clientsPage = read("app/barber/clientes/page.tsx");
+  const clientProfilePage = read("app/barber/clientes/[customerId]/page.tsx");
+  const data = read("app/barber/data.ts");
 
   assert.match(actions, /const barber = await requireBarber\(\)/);
   assert.match(actions, /barberId:\s*barber\.id/);
   assert.match(actions, /Cliente selecionado nao pertence a sua base/);
   assert.match(actions, /Cliente nao vinculado a este barbeiro/);
+  assert.match(clientsPage, /const params = await searchParams/);
+  assert.match(clientProfilePage, /const \{ customerId \} = await params/);
+  assert.match(clientProfilePage, /getBarberClientProfile\(barber\.id, customerId\)/);
+  assert.match(data, /const normalizedCustomerId = customerId\.trim\(\)/);
+  assert.match(data, /id: normalizedCustomerId/);
 });
 
 test("barber tip action stores tips only for the authenticated barber", () => {
@@ -79,6 +87,7 @@ test("admin-only pages and export routes enforce admin role", () => {
   const proxy = read("proxy.ts");
   const layout = read("app/layout.tsx");
   const header = read("components/Header.tsx");
+  const payoutReport = read("app/admin/barbeiros/[barberId]/PayoutReport.tsx");
 
   assert.match(proxy, /SHOP_ADMIN_ROLES = \["ADMIN", "SHOP_ADMIN"\]/);
   assert.match(proxy, /isShopAdminRole\(role\)/);
@@ -93,6 +102,11 @@ test("admin-only pages and export routes enforce admin role", () => {
   ]) {
     assert.match(read(file), /roles:\s*SHOP_ADMIN_ROLES/, file);
   }
+
+  assert.match(payoutReport, /totalServicesPayout = serviceRows\.reduce\(\(sum, row\) => sum \+ row\.payout/);
+  assert.match(payoutReport, /totalExtrasPayout = productRows\.reduce\(\(sum, row\) => sum \+ row\.payout/);
+  assert.match(payoutReport, /totalTipsPayout = tipRows\.reduce\(\(sum, row\) => sum \+ row\.payout/);
+  assert.doesNotMatch(payoutReport, /\{ label: "Servicos", value: formatCurrency\(totalServices\) \}/);
 });
 
 test("wr platform pages require WR_ADMIN and keep tenant controls gated", () => {

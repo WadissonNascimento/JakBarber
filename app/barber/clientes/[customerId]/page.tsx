@@ -39,14 +39,15 @@ import { requireActiveBarber } from "../../guard";
 export default async function BarberClientProfilePage({
   params,
 }: {
-  params: { customerId: string };
+  params: Promise<{ customerId: string }>;
   searchParams?: { feedback?: string; tone?: string };
 }) {
   noStore();
 
   const { barber } = await requireActiveBarber();
+  const { customerId } = await params;
 
-  const profile = await getBarberClientProfile(barber.id, params.customerId);
+  const profile = await getBarberClientProfile(barber.id, customerId);
 
   if (!profile) {
     notFound();

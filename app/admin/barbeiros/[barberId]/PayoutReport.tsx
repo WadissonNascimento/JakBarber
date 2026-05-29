@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import BackLink from "@/components/ui/BackLink";
 import DashboardShell from "@/components/ui/DashboardShell";
 import PageHeader from "@/components/ui/PageHeader";
+import PayoutFilters from "./PayoutFilters";
 import { normalizeAppointmentStatus } from "@/lib/appointmentStatus";
 import { getBarberTipRows } from "@/lib/barberTips";
 import { getManualFitInCustomerDisplay } from "@/lib/manualFitIn";
@@ -178,9 +179,9 @@ export default async function PayoutReport({
   const rows = [...serviceRows, ...productRows, ...tipRows];
   const totalGross = rows.reduce((sum, row) => sum + row.gross, 0);
   const totalPayout = rows.reduce((sum, row) => sum + row.payout, 0);
-  const totalServices = serviceRows.reduce((sum, row) => sum + row.gross, 0);
-  const totalExtras = productRows.reduce((sum, row) => sum + row.gross, 0);
-  const totalTips = tipRows.reduce((sum, row) => sum + row.gross, 0);
+  const totalServicesPayout = serviceRows.reduce((sum, row) => sum + row.payout, 0);
+  const totalExtrasPayout = productRows.reduce((sum, row) => sum + row.payout, 0);
+  const totalTipsPayout = tipRows.reduce((sum, row) => sum + row.payout, 0);
   const startValue = formatDateInputValue(range.start);
   const endValue = formatDateInputValue(range.end);
 
@@ -195,38 +196,7 @@ export default async function PayoutReport({
         }
       />
 
-      <form className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300">
-          Filtrar periodo
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <label className="block">
-            <span className="mb-2 block text-xs font-semibold text-zinc-400">
-              Inicio
-            </span>
-            <input
-              type="date"
-              name="start"
-              defaultValue={startValue}
-              className="form-control"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-xs font-semibold text-zinc-400">
-              Fim
-            </span>
-            <input
-              type="date"
-              name="end"
-              defaultValue={endValue}
-              className="form-control"
-            />
-          </label>
-          <button type="submit" className="btn-primary self-end">
-            Aplicar
-          </button>
-        </div>
-      </form>
+      <PayoutFilters start={startValue} end={endValue} />
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <SummaryCard
@@ -238,9 +208,9 @@ export default async function PayoutReport({
           label="Repasse do barbeiro"
           value={formatCurrency(totalPayout)}
           details={[
-            { label: "Servicos", value: formatCurrency(totalServices) },
-            { label: "Extras", value: formatCurrency(totalExtras) },
-            { label: "Caixinhas", value: formatCurrency(totalTips) },
+            { label: "Servicos", value: formatCurrency(totalServicesPayout) },
+            { label: "Extras", value: formatCurrency(totalExtrasPayout) },
+            { label: "Caixinhas", value: formatCurrency(totalTipsPayout) },
           ]}
           featured
         />

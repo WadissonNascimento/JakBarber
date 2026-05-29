@@ -1096,6 +1096,12 @@ export async function getBarberClientsDirectory(barberId: string, search = "") {
 }
 
 export async function getBarberClientProfile(barberId: string, customerId: string) {
+  const normalizedCustomerId = customerId.trim();
+
+  if (!normalizedCustomerId) {
+    return null;
+  }
+
   const barber = await prisma.user.findUnique({
     where: {
       id: barberId,
@@ -1111,7 +1117,7 @@ export async function getBarberClientProfile(barberId: string, customerId: strin
 
   const customer = await prisma.user.findFirst({
     where: {
-      id: customerId,
+      id: normalizedCustomerId,
       shopId: barber.shopId,
       role: "CUSTOMER",
       isActive: true,

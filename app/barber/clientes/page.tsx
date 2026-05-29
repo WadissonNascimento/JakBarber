@@ -11,13 +11,14 @@ type SearchParams = {
 export default async function BarberClientsPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
   const { barber } = await requireActiveBarber();
+  const params = await searchParams;
 
   const result = await getBarberClientsDirectory(
     barber.id,
-    searchParams.q || ""
+    params.q || ""
   );
 
   return (
