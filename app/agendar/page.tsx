@@ -81,6 +81,7 @@ export default async function AgendarPage({
         id: true,
         name: true,
         image: true,
+        phone: true,
       },
     }),
     prisma.service.findMany({

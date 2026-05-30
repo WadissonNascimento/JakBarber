@@ -203,7 +203,7 @@ export default function AdminBarbersClient({
           <div className="mt-4 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
             Limite de barbeiros atingido. Para cadastrar outro profissional,
             remova um convite pendente, inative alguem ou aumente o plano no
-            painel WR.
+            suporte.
           </div>
         ) : null}
         <form

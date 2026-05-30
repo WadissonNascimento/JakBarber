@@ -6,13 +6,13 @@ import { getPostLoginRedirect } from "@/lib/authRedirect";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import { getCurrentShopId } from "@/lib/shop";
-import { isWrTechAppRequest } from "@/lib/wrTechInstitutionalServer";
 import {
   getShopEmailRateLimitIdentifier,
   normalizeIdentityEmail,
 } from "@/lib/userIdentity";
 
 export const dynamic = "force-dynamic";
+const CUSTOMER_LOGIN_ROLES = ["ADMIN", "SHOP_ADMIN", "BARBER", "CUSTOMER"];
 
 function wantsJson(request: NextRequest) {
   return (
@@ -52,7 +52,12 @@ async function getLoginFailureMessage(shopId: string, email: string, password: s
     },
   });
 
-  if (!user || !user.isActive || !user.passwordHash || user.role === "WR_ADMIN") {
+  if (
+    !user ||
+    !user.isActive ||
+    !user.passwordHash ||
+    !CUSTOMER_LOGIN_ROLES.includes(user.role)
+  ) {
     return "Usuario nao encontrado ou e-mail incorreto.";
   }
 
@@ -62,10 +67,6 @@ async function getLoginFailureMessage(shopId: string, email: string, password: s
 }
 
 export async function POST(request: NextRequest) {
-  if (await isWrTechAppRequest()) {
-    return NextResponse.redirect(new URL("/wr/login", request.url), 303);
-  }
-
   const formData = await request.formData();
   const shopId = await getCurrentShopId();
   const email = normalizeIdentityEmail(formData.get("email")?.toString());
@@ -112,8 +113,8 @@ export async function POST(request: NextRequest) {
     where: {
       shopId,
       email,
-      NOT: {
-        role: "WR_ADMIN",
+      role: {
+        in: CUSTOMER_LOGIN_ROLES,
       },
     },
     select: {

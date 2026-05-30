@@ -29,15 +29,6 @@ import {
   JAKBARBER_STARTUP_IMAGES,
   JAKBARBER_THEME_COLOR,
 } from "@/lib/pwaAssets";
-import {
-  WR_TECH_APP_URL,
-  WR_TECH_LOGO_PATH,
-  WR_TECH_SITE_URL,
-} from "@/lib/wrTechInstitutional";
-import {
-  isWrTechAppRequest,
-  isWrTechInstitutionalRequest,
-} from "@/lib/wrTechInstitutionalServer";
 
 const bodyFont = Manrope({
   subsets: ["latin"],
@@ -52,75 +43,6 @@ const headingFont = Space_Grotesk({
 type TenantBrandStyle = CSSProperties & Record<`--${string}`, string>;
 
 export async function generateMetadata(): Promise<Metadata> {
-  if (await isWrTechAppRequest()) {
-    const title = "WR Tech Solutions | Plataforma";
-    const description =
-      "Dominio reservado para a plataforma da WR Tech Solutions.";
-
-    return {
-      metadataBase: new URL(WR_TECH_APP_URL),
-      applicationName: "WR Tech Solutions",
-      title: {
-        default: title,
-        template: "%s",
-      },
-      description,
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
-
-  if (await isWrTechInstitutionalRequest()) {
-    const title = "WR Tech Solutions | Sistema para barbearias";
-    const description =
-      "Sistema SaaS para barbearias com agendamento online, painel do barbeiro, painel administrativo, financeiro e gestao profissional.";
-
-    return {
-      metadataBase: new URL(WR_TECH_SITE_URL),
-      applicationName: "WR Tech Solutions",
-      manifest: "/manifest.webmanifest",
-      title: {
-        default: title,
-        template: "%s",
-      },
-      description,
-      icons: {
-        icon: [
-          {
-            url: WR_TECH_LOGO_PATH,
-            sizes: "512x512",
-            type: "image/png",
-          },
-        ],
-        apple: [
-          {
-            url: WR_TECH_LOGO_PATH,
-            sizes: "180x180",
-            type: "image/png",
-          },
-        ],
-      },
-      openGraph: {
-        title,
-        description,
-        url: "/",
-        siteName: "WR Tech Solutions",
-        images: [
-          {
-            url: WR_TECH_LOGO_PATH,
-            width: 1200,
-            height: 630,
-            alt: "WR Tech Solutions",
-          },
-        ],
-        locale: "pt_BR",
-        type: "website",
-      },
-    };
-  }
-
   const shop = await getCurrentShop();
   const brandName = shop.name || "Barbearia";
   const isJakBarber = shop.id === DEFAULT_SHOP_ID;
@@ -231,26 +153,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
-  if (await isWrTechAppRequest()) {
-    return {
-      width: "device-width",
-      initialScale: 1,
-      viewportFit: "cover",
-      themeColor: "#05070b",
-      colorScheme: "dark",
-    };
-  }
-
-  if (await isWrTechInstitutionalRequest()) {
-    return {
-      width: "device-width",
-      initialScale: 1,
-      viewportFit: "cover",
-      themeColor: "#05070b",
-      colorScheme: "dark",
-    };
-  }
-
   const shop = await getCurrentShop();
   const isJakBarber = shop.id === DEFAULT_SHOP_ID;
 
@@ -270,36 +172,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  if (await isWrTechAppRequest()) {
-    return (
-      <html lang="pt-BR">
-        <body
-          className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[#05070b] text-white`}
-          data-site="wr-tech-app"
-        >
-          <ClientRuntimeGuard />
-          <AppVersionRefresh />
-          {children}
-        </body>
-      </html>
-    );
-  }
-
-  if (await isWrTechInstitutionalRequest()) {
-    return (
-      <html lang="pt-BR">
-        <body
-          className={`${bodyFont.variable} ${headingFont.variable} min-h-screen bg-[#05070b] text-white`}
-          data-site="wr-tech-solutions"
-        >
-          <ClientRuntimeGuard />
-          <AppVersionRefresh />
-          {children}
-        </body>
-      </html>
-    );
-  }
-
   const session = await auth();
   const shop = await getCurrentShop();
   const role =

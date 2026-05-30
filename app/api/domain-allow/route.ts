@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDomainCandidates } from "@/lib/shop";
 import { normalizeDomainInput, isLocalOrReservedDomain } from "@/lib/domainReadiness";
 import { basePrisma } from "@/lib/prisma-core";
-import {
-  isWrTechAppHost,
-  isWrTechInstitutionalHost,
-} from "@/lib/wrTechInstitutional";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +28,6 @@ export async function GET(request: NextRequest) {
 
   if (!domain || isLocalOrReservedDomain(domain)) {
     return jsonResponse({ ok: false, reason: "invalid_or_reserved_domain" }, 404);
-  }
-
-  if (isWrTechAppHost(domain) || isWrTechInstitutionalHost(domain)) {
-    return jsonResponse({ ok: true, type: "wr", domain }, 200);
   }
 
   const shop = await basePrisma.shop.findFirst({

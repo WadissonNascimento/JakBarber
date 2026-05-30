@@ -3,7 +3,6 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { basePrisma } from "@/lib/prisma-core";
 import authConfig from "@/auth.config";
 import { enforceRateLimit, logSecurityEvent } from "@/lib/security";
 import {
@@ -24,9 +23,9 @@ import {
   isUniqueConstraintError,
   normalizeIdentityEmail,
 } from "@/lib/userIdentity";
-import { isWrTechAppHost } from "@/lib/wrTechInstitutional";
 
 const googleSignInConfigured = isGoogleSignInConfigured();
+const CREDENTIAL_LOGIN_ROLES = ["ADMIN", "SHOP_ADMIN", "BARBER", "CUSTOMER"];
 
 async function getAuthShopIdWithFallback(fallbackReason: string) {
   return getCurrentShopId().catch(async (error) => {
@@ -74,75 +73,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "E-mail", type: "email" },
         password: { label: "Senha", type: "password" },
-        wrLogin: { label: "WR Login", type: "text" },
       },
 
       async authorize(credentials) {
         const email = normalizeIdentityEmail(String(credentials?.email || ""));
         const password = String(credentials?.password || "");
-        const isExplicitWrCredentials =
-          String(
-            (credentials as { wrLogin?: unknown } | undefined)?.wrLogin || ""
-          ) === "1";
 
         if (!email || !password) return null;
-
-        const [host, path] = await Promise.all([
-          getRequestHost().catch(() => null),
-          getRequestPath().catch(() => null),
-        ]);
-        const isWrCredentialsAttempt =
-          isExplicitWrCredentials ||
-          isWrTechAppHost(host) ||
-          path === "/wr/login/submit" ||
-          path === "/wr/login";
-
-        if (isWrCredentialsAttempt) {
-          const rateLimit = await enforceRateLimit({
-            scope: "wr_auth:credentials",
-            identifier: `wr:${email}`,
-            limit: 8,
-            windowMs: 15 * 60 * 1000,
-          });
-
-          if (!rateLimit.allowed) {
-            return null;
-          }
-
-          const user = await basePrisma.user.findFirst({
-            where: {
-              email,
-              role: "WR_ADMIN",
-            },
-          });
-
-          if (!user || !user.isActive || !user.passwordHash) {
-            logSecurityEvent("wr_login_failed", {
-              reason: "user_not_found_or_inactive",
-              email,
-            });
-            return null;
-          }
-
-          const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-
-          if (!passwordMatch) {
-            logSecurityEvent("wr_login_failed", {
-              reason: "bad_password",
-              userId: user.id,
-            });
-            return null;
-          }
-
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            active: user.isActive,
-            shopId: user.shopId,
-          };
-        }
 
         const shopId = await getAuthShopIdWithFallback(
           "credentials_getCurrentShopId_failed"
@@ -166,7 +103,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           !user ||
           !user.isActive ||
           !user.passwordHash ||
-          user.role === "WR_ADMIN"
+          !CREDENTIAL_LOGIN_ROLES.includes(user.role)
         ) {
           logSecurityEvent("login_failed", {
             reason: "user_not_found_or_inactive",

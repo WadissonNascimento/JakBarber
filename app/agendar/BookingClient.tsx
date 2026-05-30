@@ -17,6 +17,7 @@ type BarberOption = {
   id: string;
   name: string | null;
   image: string | null;
+  phone: string | null;
 };
 
 type ServiceOption = {
@@ -83,6 +84,7 @@ type BookingDetails = {
   date: string;
   time: string;
   barberName: string;
+  barberPhone: string | null;
   serviceNames: string[];
   extras: Array<{
     name: string;
@@ -465,6 +467,7 @@ export default function BookingClient({
         date: selectedDate,
         time,
         barberName: selectedBarber?.name || "Barbeiro",
+        barberPhone: selectedBarber?.phone || null,
         serviceNames: selectedServices.map((service) => service.name),
         extras: selectedExtras.map((product) => ({
           name: product.name,
@@ -1313,7 +1316,8 @@ function BookingSuccessDialog({
   const whatsappMessage =
     `Ola! Acabei de ${isRescheduled ? "remarcar" : "agendar"} meu horário para ${formattedDate} as ${details.time} com ${details.barberName}.`
   ;
-  const whatsappHref = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
+  const contactNumber = details.barberPhone || whatsappNumber;
+  const whatsappHref = buildWhatsAppUrl(contactNumber, whatsappMessage);
 
   useEffect(() => {
     setIsMounted(true);

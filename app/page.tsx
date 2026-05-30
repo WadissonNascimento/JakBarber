@@ -2,12 +2,6 @@ import { unstable_cache } from "next/cache";
 import { basePrisma } from "@/lib/prisma-core";
 import { toMoneyNumber } from "@/lib/money";
 import { getCurrentShop } from "@/lib/shop";
-import {
-  isWrTechAppRequest,
-  isWrTechInstitutionalRequest,
-} from "@/lib/wrTechInstitutionalServer";
-import WrTechAppPlaceholder from "./WrTechAppPlaceholder";
-import WrTechSolutionsLanding from "./WrTechSolutionsLanding";
 import HomeClient, {
   type HomeBarber,
   type HomeProduct,
@@ -145,14 +139,6 @@ const getHomePublicData = unstable_cache(
 );
 
 export default async function HomePage() {
-  if (await isWrTechAppRequest()) {
-    return <WrTechAppPlaceholder />;
-  }
-
-  if (await isWrTechInstitutionalRequest()) {
-    return <WrTechSolutionsLanding />;
-  }
-
   const shop = await getCurrentShop();
   const shopId = shop.id;
   const [reviews, images, publicData] = await Promise.all([

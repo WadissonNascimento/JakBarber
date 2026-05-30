@@ -140,7 +140,7 @@ async function assertCanAddActiveBarber(shopId: string | null | undefined) {
   const capacity = await getBarberCapacity(shopId);
 
   if (capacity.limit !== null && capacity.used >= capacity.limit) {
-    return `Limite de barbeiros atingido (${capacity.used}/${capacity.limit}). Fale com a WR Tech para aumentar o plano.`;
+    return `Limite de barbeiros atingido (${capacity.used}/${capacity.limit}). Fale com o suporte para aumentar o plano.`;
   }
 
   return null;

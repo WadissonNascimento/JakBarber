@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -109,70 +109,11 @@ test("admin-only pages and export routes enforce admin role", () => {
   assert.doesNotMatch(payoutReport, /\{ label: "Servicos", value: formatCurrency\(totalServices\) \}/);
 });
 
-test("wr platform pages require WR_ADMIN and keep tenant controls gated", () => {
-  const auth = read("auth.ts");
-  const proxy = read("proxy.ts");
-  const redirect = read("lib/authRedirect.ts");
-  const wrSession = read("lib/wrSession.ts");
-  const wrDashboardPage = read("app/wr/page.tsx");
-  const tenantsPage = read("app/wr/tenants/page.tsx");
-  const tenantActions = read("app/wr/tenants/actions.ts");
-  const tenantDetailPage = read("app/wr/tenants/[shopId]/page.tsx");
-  const homeClient = read("app/HomeClient.tsx");
-  const appChrome = read("components/AppChrome.tsx");
-  const loginSubmit = read("app/login/submit/route.ts");
-  const adminLoginSubmit = read("app/admin/login/submit/route.ts");
-
-  assert.match(auth, /isWrTechAppHost\(host\)/);
-  assert.match(auth, /isExplicitWrCredentials/);
-  assert.match(auth, /basePrisma\.user\.findFirst/);
-  assert.match(auth, /path === "\/wr\/login\/submit"/);
-  assert.match(auth, /role:\s*"WR_ADMIN"/);
-  assert.match(auth, /scope:\s*"wr_auth:credentials"/);
-  assert.match(auth, /user\.role === "WR_ADMIN"/);
-  assert.match(proxy, /isWrTechAppHostRequest && !pathname\.startsWith\("\/wr"\)/);
-  assert.match(proxy, /pathname\.startsWith\("\/wr"\).*role !== "WR_ADMIN"/s);
-  assert.match(proxy, /"\/wr\/:path\*"/);
-  assert.match(redirect, /role === "WR_ADMIN"[\s\S]*return "\/wr"/);
-  assert.match(wrSession, /WR_ADMIN_ROLES = \["WR_ADMIN"\]/);
-  assert.doesNotMatch(wrSession, /WR_TENANT_CREATION_ENABLED|isWrTenantCreationEnabled/);
-  assert.doesNotMatch(wrDashboardPage, /\/wr\/tenants\/novo|Criar barbearia/);
-  assert.doesNotMatch(tenantsPage, /\/wr\/tenants\/novo|Nova barbearia/);
-  assert.equal(existsSync(join(process.cwd(), "app/wr/tenants/novo/page.tsx")), false);
-  assert.equal(existsSync(join(process.cwd(), "app/wr/tenants/novo/submit/route.ts")), false);
-  assert.equal(existsSync(join(process.cwd(), "app/wr/tenants/novo/NewTenantForm.tsx")), false);
-  assert.match(tenantActions, /updateTenantDesignAction/);
-  assert.match(tenantActions, /updateTenantHomeContentAction/);
-  assert.match(tenantActions, /deleteTenantAction/);
-  assert.match(tenantActions, /bcrypt\.compare\(password, wrUser\.passwordHash\)/);
-  assert.match(tenantActions, /confirmDelete/);
-  assert.match(tenantActions, /wrPassword/);
-  assert.match(tenantActions, /shop\.isDefault/);
-  assert.match(tenantDetailPage, /Senha do painel WR/);
-  assert.match(tenantDetailPage, /Plano e limite/);
-  assert.match(tenantDetailPage, /Design/);
-  assert.match(tenantDetailPage, /Conteudo da home/);
-  assert.match(tenantDetailPage, /Salvar design/);
-  assert.match(homeClient, /jakBarberShopId = "shop_jak_barber"/);
-  assert.match(homeClient, /props\.shopId === jakBarberShopId[\s\S]*<DefaultHomeClient/);
-
-  const wrLoginSubmit = read("app/wr/login/submit/route.ts");
-  assert.match(wrLoginSubmit, /wrLogin:\s*"1"/);
-  assert.match(wrLoginSubmit, /NextResponse\.json\(\{ ok: true, redirectTo: "\/wr" \}/);
-  assert.match(appChrome, /pathname === "\/wr" \|\| pathname\.startsWith\("\/wr\/"\)/);
-  assert.match(loginSubmit, /isWrTechAppRequest\(\)/);
-  assert.match(loginSubmit, /role:\s*"WR_ADMIN"/);
-  assert.match(adminLoginSubmit, /isWrTechAppRequest\(\)/);
-});
-
-test("custom domain readiness is read-only and visible only in WR tenant tooling", () => {
+test("custom domain readiness remains read-only for shop domains", () => {
   const domainReadiness = read("lib/domainReadiness.ts");
-  const tenantsPage = read("app/wr/tenants/page.tsx");
   const domainAllow = read("app/api/domain-allow/route.ts");
   const domainScript = read("scripts/check-domain-readiness.ts");
   const domainActivateScript = read("scripts/activate-custom-domain.ts");
-  const domainActivation = read("lib/domainActivation.ts");
-  const domainActivationRoute = read("app/wr/tenants/[shopId]/domain/activate/route.ts");
   const customDomainDocs = read("docs/custom-domains.md");
   const packageJson = read("package.json");
   const shop = read("lib/shop.ts");
@@ -185,18 +126,11 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   assert.doesNotMatch(domainReadiness, /basePrisma\./);
   assert.doesNotMatch(domainReadiness, /shop\.update|shop\.create|user\.create/);
 
-  assert.match(tenantsPage, /getDomainReadiness/);
-  assert.match(tenantsPage, /getDomainActivationStatus/);
-  assert.match(tenantsPage, /domainReadiness\.label/);
-  assert.match(tenantsPage, /domainActivation\.label/);
-  assert.match(tenantsPage, /Ativar SSL/);
-
   assert.match(shop, /export function getDomainCandidates/);
   assert.match(domainAllow, /basePrisma\.shop\.findFirst/);
   assert.match(domainAllow, /isActive:\s*true/);
   assert.match(domainAllow, /getDomainCandidates\(domain\)/);
   assert.match(domainAllow, /isLocalOrReservedDomain\(domain\)/);
-  assert.match(domainAllow, /isWrTechAppHost\(domain\)/);
   assert.doesNotMatch(domainAllow, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
 
   assert.match(domainScript, /mode:\s*"read_only"/);
@@ -212,24 +146,10 @@ test("custom domain readiness is read-only and visible only in WR tenant tooling
   assert.match(domainActivateScript, /nginx/);
   assert.match(domainActivateScript, /systemctl/);
   assert.doesNotMatch(domainActivateScript, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
-  assert.match(domainActivation, /import "server-only"/);
-  assert.match(domainActivation, /WR_DOMAIN_ACTIVATION_ENABLED === "1"/);
-  assert.match(domainActivation, /DOMAIN_ACTIVATION_ENABLED: "1"/);
-  assert.match(domainActivation, /npm/);
-  assert.match(domainActivation, /domain:activate/);
-  assert.match(domainActivation, /getDomainReadiness\(normalizedDomain\)/);
-  assert.match(domainActivation, /findExistingNginxConfigForDomain/);
-  assert.doesNotMatch(domainActivation, /basePrisma\./);
-  assert.match(domainActivationRoute, /requireWrAdminSession\(\)/);
-  assert.match(domainActivationRoute, /basePrisma\.shop\.findFirst/);
-  assert.match(domainActivationRoute, /isActive:\s*true/);
-  assert.match(domainActivationRoute, /activateCustomDomainFromPanel\(shop\.primaryDomain\)/);
-  assert.doesNotMatch(domainActivationRoute, /basePrisma\.[a-zA-Z]+\.(create|update|delete|upsert)/);
   assert.match(customDomainDocs, /\/api\/domain-allow/);
   assert.match(customDomainDocs, /server_name _/);
   assert.match(customDomainDocs, /proxy_set_header Host \$host/);
   assert.match(customDomainDocs, /domain:activate/);
-  assert.match(customDomainDocs, /WR_DOMAIN_ACTIVATION_ENABLED=1/);
   assert.match(packageJson, /"domain:check"/);
   assert.match(packageJson, /"domain:activate"/);
 });

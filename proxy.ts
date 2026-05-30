@@ -2,10 +2,6 @@ import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { NextResponse } from "next/server";
 import { getPostLoginRedirect } from "@/lib/authRedirect";
-import {
-  isWrTechAppHost,
-  isWrTechInstitutionalHost,
-} from "@/lib/wrTechInstitutional";
 
 const { auth } = NextAuth(authConfig);
 const SHOP_ADMIN_ROLES = ["ADMIN", "SHOP_ADMIN"];
@@ -18,21 +14,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const pathname = req.nextUrl.pathname;
   const role = req.auth?.user?.role;
-  const requestHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
   const isHomePage = pathname === "/";
-  const isWrTechAppHostRequest = isWrTechAppHost(requestHost);
-  const isWrTechInstitutionalHome =
-    isHomePage && isWrTechInstitutionalHost(requestHost);
-
-  if (isWrTechInstitutionalHome) {
-    return NextResponse.next();
-  }
-
-  if (isWrTechAppHostRequest && !pathname.startsWith("/wr")) {
-    return NextResponse.redirect(
-      new URL(isLoggedIn && role === "WR_ADMIN" ? "/wr" : "/wr/login", req.url)
-    );
-  }
 
   if (
     pathname === "/admin/produtos" ||
@@ -46,8 +28,6 @@ export default auth((req) => {
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/login/submit" ||
-    pathname === "/wr/login" ||
-    pathname === "/wr/login/submit" ||
     pathname === "/admin/login" ||
     pathname === "/admin/login/submit" ||
     pathname === "/cadastro" ||
@@ -61,18 +41,6 @@ export default auth((req) => {
     pathname.startsWith("/agendar") ||
     pathname.startsWith("/meu-perfil") ||
     pathname.startsWith("/meus-pedidos");
-
-  if (!isLoggedIn && pathname.startsWith("/wr") && !isAuthPage) {
-    return NextResponse.redirect(new URL("/wr/login", req.url));
-  }
-
-  if (isLoggedIn && pathname.startsWith("/wr") && role !== "WR_ADMIN") {
-    return NextResponse.redirect(new URL("/logout", req.url));
-  }
-
-  if (isLoggedIn && isAuthPage && pathname.startsWith("/wr")) {
-    return NextResponse.redirect(new URL("/wr", req.url));
-  }
 
   if (
     !isLoggedIn &&
@@ -130,7 +98,6 @@ export const config = {
     "/",
     "/login",
     "/login/:path*",
-    "/wr/:path*",
     "/cadastro",
     "/register",
     "/register/:path*",
