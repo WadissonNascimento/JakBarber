@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sendDailyBarberAgendaEmails } from "@/lib/barberEmails";
+import { sendDailyBarberAgendaNotifications } from "@/lib/barberEmails";
 import { logSecurityEvent } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -40,15 +40,15 @@ async function handleBarberDailyAgendaCron(request: Request) {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || undefined;
   const includeEmptyAgenda = url.searchParams.get("includeEmpty") === "1";
-  const result = await sendDailyBarberAgendaEmails({
+  const result = await sendDailyBarberAgendaNotifications({
     date,
     includeEmptyAgenda,
   });
 
   return NextResponse.json({
-    message: "Agenda diaria dos barbeiros processada.",
+    message: "Notificacoes da agenda diaria dos barbeiros processadas.",
     checked: result.checked,
-    sent: result.sent,
+    notified: result.notified,
     failed: result.failed,
     skipped: result.skipped,
   });

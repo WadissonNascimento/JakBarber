@@ -1,23 +1,10 @@
 import "server-only";
 
-import {
-  renderBarberAppointmentCancelledEmail,
-  renderBarberAppointmentRescheduledEmail,
-  renderBarberDailyAgendaEmail,
-  renderBarberNewAppointmentEmail,
-  renderBarberNewReviewEmail,
-  renderBarberNoShowEmail,
-  type BarberAppointmentEmailData,
-  type BarberDailyAgendaItem,
-  type BarberEmailTheme,
-} from "@/lib/email/barberTemplates";
 import { getAppointmentDisplayName } from "@/lib/appointmentServices";
 import { formatAppointmentPublicId } from "@/lib/appointmentPublicId";
 import { createAppNotificationSafely } from "@/lib/appNotifications";
 import { getShopAppUrl } from "@/lib/appUrl";
-import { sendEmailMessage } from "@/lib/mail";
 import { basePrisma } from "@/lib/prisma-core";
-import { getShopEmailIdentity } from "@/lib/shopEmailIdentity";
 import {
   formatScheduleDate,
   formatScheduleTime,
@@ -28,6 +15,24 @@ import {
 const BARBER_PANEL_PATH = "/barber/agenda";
 const DEFAULT_BRAND_COLOR = "#0ea5e9";
 const TRANSPARENT_LOGO_DATA_URI = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+
+type BarberNotificationTheme = {
+  nomeBarbearia: string;
+  logoBarbearia: string;
+  corPrimaria: string;
+  enderecoBarbearia: string | null;
+  linkPainel: string;
+};
+
+type BarberAppointmentNotificationData = BarberNotificationTheme & {
+  nomeBarbeiro: string;
+  nomeCliente: string;
+  servico: string;
+  dataAgendamento: string;
+  horarioAgendamento: string;
+  telefoneCliente: string | null;
+  observacoes: string | null;
+};
 
 const appointmentEmailInclude = {
   shop: {
@@ -44,7 +49,6 @@ const appointmentEmailInclude = {
     select: {
       id: true,
       name: true,
-      email: true,
     },
   },
   customer: {
@@ -97,7 +101,7 @@ function buildTheme(shop: {
   addressLine: string | null;
   logoPath: string | null;
   brandColor: string | null;
-}): BarberEmailTheme {
+}): BarberNotificationTheme {
   return {
     nomeBarbearia: shop.name,
     logoBarbearia: resolveLogoUrl(shop.logoPath, shop),
@@ -129,19 +133,6 @@ function serviceLabel(
   return getAppointmentDisplayName(services) || "Servico agendado";
 }
 
-function getCancellationReason(notes: string | null | undefined, fallback?: string | null) {
-  if (fallback?.trim()) {
-    return fallback.trim();
-  }
-
-  if (!notes?.trim()) {
-    return null;
-  }
-
-  const parts = notes.split("|").map((part) => part.trim()).filter(Boolean);
-  return parts[parts.length - 1] || null;
-}
-
 async function loadAppointmentForBarberEmail(appointmentId: string) {
   return basePrisma.appointment.findUnique({
     where: {
@@ -153,13 +144,7 @@ async function loadAppointmentForBarberEmail(appointmentId: string) {
 
 function buildAppointmentData(
   appointment: NonNullable<Awaited<ReturnType<typeof loadAppointmentForBarberEmail>>>
-): BarberAppointmentEmailData | null {
-  const barberEmail = appointment.barber.email?.trim();
-
-  if (!barberEmail) {
-    return null;
-  }
-
+): BarberAppointmentNotificationData {
   return {
     ...buildTheme(appointment.shop),
     nomeBarbeiro: normalizeName(appointment.barber.name, "Barbeiro"),
@@ -172,36 +157,26 @@ function buildAppointmentData(
   };
 }
 
-async function sendBarberAppointmentEmail({
+async function notifyBarberAppointment({
   appointmentId,
   template,
   eventKey,
   notificationMetadata,
-  render,
 }: {
   appointmentId: string;
   template: string;
   eventKey: string;
   notificationMetadata?: Record<string, string | number | null | undefined>;
-  render: (
-    appointment: NonNullable<Awaited<ReturnType<typeof loadAppointmentForBarberEmail>>>,
-    data: BarberAppointmentEmailData
-  ) => {
-    subject: string;
-    html: string;
-    text: string;
-  };
 }) {
   try {
     const appointment = await loadAppointmentForBarberEmail(appointmentId);
-    const data = appointment ? buildAppointmentData(appointment) : null;
 
-    if (!appointment || !data || !appointment.barber.email) {
+    if (!appointment) {
       return false;
     }
 
-    const rendered = render(appointment, data);
-    await createAppNotificationSafely({
+    const data = buildAppointmentData(appointment);
+    const notification = await createAppNotificationSafely({
       shopId: appointment.shop.id,
       recipientUserId: appointment.barber.id,
       type: template,
@@ -221,30 +196,11 @@ async function sendBarberAppointmentEmail({
         ...notificationMetadata,
       },
     });
-    const emailIdentity = await getShopEmailIdentity(appointment.shop.id);
 
-    await sendEmailMessage({
-      to: appointment.barber.email,
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-      template,
-      eventKey,
-      shopId: appointment.shop.id,
-      recipientUserId: appointment.barber.id,
-      metadata: {
-        appointmentId: appointment.id,
-        barberId: appointment.barber.id,
-        customerId: appointment.customerId,
-      },
-      fromName: emailIdentity.fromName,
-      replyTo: emailIdentity.replyTo,
-    });
-
-    return true;
+    return Boolean(notification);
   } catch (error) {
     console.warn(
-      `[email] Falha ao preparar email do barbeiro (${template}) para ${appointmentId}: ${
+      `[notification] Falha ao preparar notificacao do barbeiro (${template}) para ${appointmentId}: ${
         error instanceof Error ? error.message : "erro desconhecido"
       }`
     );
@@ -275,7 +231,7 @@ function getBarberNotificationTitle(template: string) {
 
 function getBarberNotificationBody(
   template: string,
-  data: BarberAppointmentEmailData
+  data: BarberAppointmentNotificationData
 ) {
   switch (template) {
     case "barber.new_appointment":
@@ -292,11 +248,10 @@ function getBarberNotificationBody(
 }
 
 export async function notifyBarberNewAppointment(appointmentId: string) {
-  return sendBarberAppointmentEmail({
+  return notifyBarberAppointment({
     appointmentId,
     template: "barber.new_appointment",
     eventKey: `barber:new_appointment:${appointmentId}`,
-    render: (_appointment, data) => renderBarberNewAppointmentEmail(data),
   });
 }
 
@@ -304,15 +259,15 @@ export async function notifyBarberAppointmentCancelled(
   appointmentId: string,
   cancellationReason?: string | null
 ) {
-  return sendBarberAppointmentEmail({
+  const notificationMetadata = {
+    cancellationReason,
+  };
+
+  return notifyBarberAppointment({
     appointmentId,
     template: "barber.appointment_cancelled",
     eventKey: `barber:appointment_cancelled:${appointmentId}`,
-    render: (appointment, data) =>
-      renderBarberAppointmentCancelledEmail({
-        ...data,
-        motivoCancelamento: getCancellationReason(appointment.notes, cancellationReason),
-      }),
+    notificationMetadata,
   });
 }
 
@@ -325,7 +280,7 @@ export async function notifyBarberAppointmentRescheduled({
   previousDate: Date;
   nextDate?: Date;
 }) {
-  return sendBarberAppointmentEmail({
+  return notifyBarberAppointment({
     appointmentId,
     template: "barber.appointment_rescheduled",
     eventKey: `barber:appointment_rescheduled:${appointmentId}:${previousDate.toISOString()}`,
@@ -333,21 +288,14 @@ export async function notifyBarberAppointmentRescheduled({
       previousDateTime: formatDateTimeLabel(previousDate),
       nextDateTime: formatDateTimeLabel(nextDate || new Date()),
     },
-    render: (appointment, data) =>
-      renderBarberAppointmentRescheduledEmail({
-        ...data,
-        horarioAntigo: formatDateTimeLabel(previousDate),
-        novoHorario: formatDateTimeLabel(nextDate || appointment.date),
-      }),
   });
 }
 
 export async function notifyBarberNoShow(appointmentId: string) {
-  return sendBarberAppointmentEmail({
+  return notifyBarberAppointment({
     appointmentId,
     template: "barber.no_show",
     eventKey: `barber:no_show:${appointmentId}`,
-    render: (_appointment, data) => renderBarberNoShowEmail(data),
   });
 }
 
@@ -372,7 +320,6 @@ export async function notifyBarberNewReview(reviewId: string) {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
         customer: {
@@ -397,26 +344,11 @@ export async function notifyBarberNewReview(reviewId: string) {
       },
     });
 
-    if (!review?.barber.email) {
+    if (!review) {
       return false;
     }
 
-    const rendered = renderBarberNewReviewEmail({
-      ...buildTheme(review.shop),
-      linkPainel: absoluteAppUrl("/barber", review.shop),
-      nomeBarbeiro: normalizeName(review.barber.name, "Barbeiro"),
-      nomeCliente: normalizeName(review.customer.name, "Cliente"),
-      servico: serviceLabel(review.appointment.services),
-      dataAgendamento: formatDateLabel(review.appointment.date),
-      horarioAgendamento: formatScheduleTime(review.appointment.date),
-      telefoneCliente: review.customer.phone,
-      observacoes: null,
-      nota: review.rating,
-      comentario: review.comment,
-    });
-
-    const emailIdentity = await getShopEmailIdentity(review.shop.id);
-    await createAppNotificationSafely({
+    const notification = await createAppNotificationSafely({
       shopId: review.shop.id,
       recipientUserId: review.barber.id,
       type: "barber.new_review",
@@ -438,30 +370,10 @@ export async function notifyBarberNewReview(reviewId: string) {
       },
     });
 
-    await sendEmailMessage({
-      to: review.barber.email,
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-      template: "barber.new_review",
-      eventKey: `barber:new_review:${review.id}`,
-      shopId: review.shop.id,
-      recipientUserId: review.barber.id,
-      metadata: {
-        reviewId: review.id,
-        appointmentId: review.appointmentId,
-        barberId: review.barberId,
-        customerId: review.customerId,
-        rating: review.rating,
-      },
-      fromName: emailIdentity.fromName,
-      replyTo: emailIdentity.replyTo,
-    });
-
-    return true;
+    return Boolean(notification);
   } catch (error) {
     console.warn(
-      `[email] Falha ao preparar email de avaliacao do barbeiro ${reviewId}: ${
+      `[notification] Falha ao preparar notificacao de avaliacao do barbeiro ${reviewId}: ${
         error instanceof Error ? error.message : "erro desconhecido"
       }`
     );
@@ -469,30 +381,7 @@ export async function notifyBarberNewReview(reviewId: string) {
   }
 }
 
-function toAgendaItem(
-  appointment: {
-    date: Date;
-    notes: string | null;
-    customer: {
-      name: string | null;
-      phone: string | null;
-    };
-    services: Array<{
-      nameSnapshot: string;
-      orderIndex: number;
-    }>;
-  }
-): BarberDailyAgendaItem {
-  return {
-    horario: formatScheduleTime(appointment.date),
-    cliente: normalizeName(appointment.customer.name, "Cliente"),
-    servico: serviceLabel(appointment.services),
-    telefoneCliente: appointment.customer.phone,
-    observacoes: appointment.notes,
-  };
-}
-
-export async function sendDailyBarberAgendaEmails({
+export async function sendDailyBarberAgendaNotifications({
   date = getCurrentScheduleDateValue(),
   includeEmptyAgenda = false,
   take = 100,
@@ -516,9 +405,6 @@ export async function sendDailyBarberAgendaEmails({
     where: {
       role: "BARBER",
       isActive: true,
-      email: {
-        not: null,
-      },
     },
     include: {
       shop: {
@@ -566,7 +452,7 @@ export async function sendDailyBarberAgendaEmails({
     take,
   });
 
-  let sent = 0;
+  let notified = 0;
   let skipped = 0;
   let failed = 0;
 
@@ -578,21 +464,7 @@ export async function sendDailyBarberAgendaEmails({
       continue;
     }
 
-    const rendered = renderBarberDailyAgendaEmail({
-      ...buildTheme(barber.shop),
-      nomeBarbeiro: normalizeName(barber.name, "Barbeiro"),
-      dataAgendamento: formatScheduleDate(range.start, {
-        weekday: "long",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-      quantidadeAtendimentos: appointments.length,
-      atendimentos: appointments.map(toAgendaItem),
-    });
-
-    const emailIdentity = await getShopEmailIdentity(barber.shop.id);
-    await createAppNotificationSafely({
+    const notification = await createAppNotificationSafely({
       shopId: barber.shop.id,
       recipientUserId: barber.id,
       type: "barber.daily_agenda",
@@ -618,28 +490,9 @@ export async function sendDailyBarberAgendaEmails({
         })),
       },
     });
-    const result = await sendEmailMessage({
-      to: barber.email || "",
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-      template: "barber.daily_agenda",
-      eventKey: `barber:daily_agenda:${barber.id}:${date}`,
-      shopId: barber.shop.id,
-      recipientUserId: barber.id,
-      metadata: {
-        barberId: barber.id,
-        date,
-        appointmentCount: appointments.length,
-      },
-      fromName: emailIdentity.fromName,
-      replyTo: emailIdentity.replyTo,
-    });
 
-    if (result.sent) {
-      sent += 1;
-    } else if (result.skipped) {
-      skipped += 1;
+    if (notification) {
+      notified += 1;
     } else {
       failed += 1;
     }
@@ -647,7 +500,8 @@ export async function sendDailyBarberAgendaEmails({
 
   return {
     checked: barbers.length,
-    sent,
+    sent: notified,
+    notified,
     skipped,
     failed,
   };
