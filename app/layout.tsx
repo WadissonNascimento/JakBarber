@@ -54,6 +54,9 @@ export async function generateMetadata(): Promise<Metadata> {
     ? JAKBARBER_FAVICON_32_PATH
     : shop.faviconPath || "";
   const title = shop.metadataTitle || brandName;
+  const socialImage = isJakBarber
+    ? "/og-jakbarber.png"
+    : shop.logoPath || undefined;
 
   return {
     metadataBase: new URL(getConfiguredAppUrl()),
@@ -136,10 +139,10 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: "/",
       siteName: brandName,
-      images: shop.logoPath
+      images: socialImage
         ? [
             {
-              url: shop.logoPath,
+              url: socialImage,
               width: 1200,
               height: 630,
               alt: brandName,
@@ -148,6 +151,12 @@ export async function generateMetadata(): Promise<Metadata> {
         : undefined,
       locale: "pt_BR",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: brandName,
+      description,
+      images: socialImage ? [socialImage] : undefined,
     },
   };
 }
