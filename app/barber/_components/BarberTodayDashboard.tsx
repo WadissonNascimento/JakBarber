@@ -22,6 +22,7 @@ import {
   Settings,
   UserRound,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -236,6 +237,9 @@ export default function BarberTodayDashboard({
           </QuickLink>
           <QuickLink href="/barber/caixinhas" icon={<PiggyBank />}>
             Anotar caixinha
+          </QuickLink>
+          <QuickLink href="/barber/vales" icon={<Wallet />}>
+            Anotar vale
           </QuickLink>
           <WalkInAppointmentCard
             services={walkInServices}

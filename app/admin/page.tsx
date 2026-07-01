@@ -10,6 +10,7 @@ import {
   Store,
   UserRound,
   UsersRound,
+  Wallet,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import DashboardEntryCard from "@/components/ui/DashboardEntryCard";
@@ -268,6 +269,12 @@ export default async function AdminPage() {
       description: "Resumo e detalhes das caixinhas registradas.",
     },
     {
+      href: "/admin/vales",
+      icon: Wallet,
+      title: "Vales dos barbeiros",
+      description: "Consulta de vales, motivos e descontos no repasse.",
+    },
+    {
       href: "/admin/perfil",
       icon: UserRound,
       title: "Configurar perfil",
@@ -283,6 +290,7 @@ export default async function AdminPage() {
     "/admin/extras",
     "/admin/maquinas",
     "/admin/caixinhas",
+    "/admin/vales",
     "/admin/configuracoes",
     "/admin/avaliacoes",
     "/admin/perfil",

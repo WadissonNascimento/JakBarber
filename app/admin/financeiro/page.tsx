@@ -254,7 +254,7 @@ export default async function AdminFinanceiroPage({
   searchParams,
 }: {
   searchParams?: Promise<{
-    period?: "week" | "month" | "custom";
+    period?: "fortnight" | "week" | "month" | "custom";
     start?: string;
     end?: string;
     historyStart?: string;
@@ -341,8 +341,14 @@ export default async function AdminFinanceiroPage({
             <FinanceStat
               label="A pagar"
               value={formatCurrency(data.summary.commissionTotal)}
-              helper="repasses + caixinhas"
+              helper="repasses + caixinhas - vales"
               tone="warning"
+              details={[
+                {
+                  label: "Vales",
+                  value: `- ${formatCurrency(data.summary.advancesTotal)}`,
+                },
+              ]}
             />
             <FinanceStat
               label="Barbearia"
@@ -478,6 +484,12 @@ export default async function AdminFinanceiroPage({
                         maxValue={maxBarberRevenue}
                       />
                       <MetricBar
+                        label="Vales"
+                        value={barber.advancesTotal}
+                        color="bg-rose-300"
+                        maxValue={maxBarberRevenue}
+                      />
+                      <MetricBar
                         label="Casa"
                         value={barber.shopNetRevenue}
                         color="bg-emerald-400"
@@ -569,7 +581,7 @@ export default async function AdminFinanceiroPage({
                           <PayoutStatusBadge status={item.savedStatus || "OPEN"} />
                         </div>
                         <p className="mt-1 truncate text-xs text-zinc-400">
-                          {item.appointmentsCount} atendimentos · Repasse:{" "}
+                          {item.appointmentsCount} atendimentos - Repasse final:{" "}
                           {formatCurrency(item.commissionTotal)}
                         </p>
                       </div>
@@ -579,7 +591,7 @@ export default async function AdminFinanceiroPage({
                     </summary>
 
                     <div className="border-t border-white/10 px-3.5 pb-3.5 pt-3">
-                      <div className="grid gap-2 sm:grid-cols-4">
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                         <PayoutValueTile
                           label="Servicos"
                           value={formatCurrency(item.serviceRevenue)}
@@ -594,12 +606,22 @@ export default async function AdminFinanceiroPage({
                           tone="warning"
                         />
                         <PayoutValueTile
+                          label="Vales"
+                          value={`- ${formatCurrency(item.advancesTotal)}`}
+                          tone="danger"
+                        />
+                        <PayoutValueTile
                           label="Total vendido"
                           value={formatCurrency(item.grossRevenue)}
                         />
                       </div>
 
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                        <PayoutValueTile
+                          label="Repasse bruto"
+                          value={formatCurrency(item.payoutBeforeAdvances)}
+                          tone="warning"
+                        />
                         <PayoutValueTile
                           label="Repasse final"
                           value={formatCurrency(item.commissionTotal)}
@@ -874,13 +896,15 @@ function PayoutValueTile({
 }: {
   label: string;
   value: string;
-  tone?: "neutral" | "success" | "warning";
+  tone?: "neutral" | "success" | "warning" | "danger";
 }) {
   const toneClass =
     tone === "success"
       ? "text-emerald-300"
       : tone === "warning"
       ? "text-amber-300"
+      : tone === "danger"
+      ? "text-rose-300"
       : "text-white";
 
   return (

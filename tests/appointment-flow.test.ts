@@ -595,6 +595,207 @@ test("booking availability respects recurring blocks and ignores cancelled appoi
   }
 });
 
+test("customer cannot book any slot when barber has a full-day block", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte } = await createFixture(db, runId);
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+
+    await db.barberBlock.create({
+      data: {
+        barberId: barber.id,
+        startDateTime: createScheduleDate(date, "00:00")!,
+        endDateTime: createScheduleDate(date, "23:59")!,
+        reason: "Folga do dia inteiro",
+      },
+    });
+
+    const availability = await getBookingAvailability(
+      {
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        now: createScheduleDate(date, "08:00")!,
+      },
+      db
+    );
+
+    assert.equal(
+      [
+        ...availability.periodSlots.morning,
+        ...availability.periodSlots.afternoon,
+        ...availability.periodSlots.night,
+      ].length,
+      0
+    );
+
+    for (const time of ["09:00", "10:30", "14:00", "19:10"]) {
+      await assert.rejects(
+        () =>
+          createCustomerAppointment(
+            {
+              customerId: customer.id,
+              barberId: barber.id,
+              serviceIds: [corte.id],
+              date,
+              time,
+              now: createScheduleDate(date, "08:00")!,
+            },
+            db
+          ),
+        (error: unknown) =>
+          error instanceof AppointmentMutationError &&
+          error.message === "O horario escolhido esta bloqueado pelo barbeiro."
+      );
+    }
+
+    const appointmentCount = await db.appointment.count({
+      where: {
+        barberId: barber.id,
+        date: {
+          gte: createScheduleDate(date, "00:00")!,
+          lte: createScheduleDate(date, "23:59")!,
+        },
+      },
+    });
+
+    assert.equal(appointmentCount, 0);
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("customer cannot reschedule an appointment into a full-day barber block", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte } = await createFixture(db, runId);
+    const originalDay = getNextBusinessDay();
+    const blockedDay = getNextBusinessDay(originalDay);
+    const originalDate = originalDay.toISOString().slice(0, 10);
+    const blockedDate = blockedDay.toISOString().slice(0, 10);
+    const testNow = createScheduleDate(originalDate, "08:00")!;
+
+    const appointment = await createCustomerAppointment(
+      {
+        customerId: customer.id,
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date: originalDate,
+        time: "10:00",
+        now: testNow,
+      },
+      db
+    );
+
+    await db.barberBlock.create({
+      data: {
+        barberId: barber.id,
+        startDateTime: createScheduleDate(blockedDate, "00:00")!,
+        endDateTime: createScheduleDate(blockedDate, "23:59")!,
+        reason: "Folga do dia inteiro",
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        rescheduleCustomerAppointment(
+          {
+            appointmentId: appointment.id,
+            customerId: customer.id,
+            barberId: barber.id,
+            serviceIds: [corte.id],
+            date: blockedDate,
+            time: "10:00",
+            now: testNow,
+          },
+          db
+        ),
+      (error: unknown) =>
+        error instanceof AppointmentMutationError &&
+        error.message === "O horario escolhido esta bloqueado pelo barbeiro."
+    );
+
+    const unchangedAppointment = await db.appointment.findUniqueOrThrow({
+      where: {
+        id: appointment.id,
+      },
+    });
+
+    assert.equal(unchangedAppointment.date.getTime(), appointment.date.getTime());
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
+test("customer cannot book when barber has a recurring full-day block", async () => {
+  const { db, runId, cleanup } = await setupDatabase();
+
+  try {
+    const { barber, customer, corte } = await createFixture(db, runId);
+    const nextDay = getNextBusinessDay();
+    const date = nextDay.toISOString().slice(0, 10);
+
+    await db.recurringBarberBlock.create({
+      data: {
+        barberId: barber.id,
+        weekDay: nextDay.getDay(),
+        startTime: "00:00",
+        endTime: "23:59",
+        reason: "Folga recorrente",
+        isActive: true,
+      },
+    });
+
+    const availability = await getBookingAvailability(
+      {
+        barberId: barber.id,
+        serviceIds: [corte.id],
+        date,
+        now: createScheduleDate(date, "08:00")!,
+      },
+      db
+    );
+
+    assert.equal(
+      [
+        ...availability.periodSlots.morning,
+        ...availability.periodSlots.afternoon,
+        ...availability.periodSlots.night,
+      ].length,
+      0
+    );
+
+    for (const time of ["09:00", "12:00", "16:40"]) {
+      await assert.rejects(
+        () =>
+          createCustomerAppointment(
+            {
+              customerId: customer.id,
+              barberId: barber.id,
+              serviceIds: [corte.id],
+              date,
+              time,
+              now: createScheduleDate(date, "08:00")!,
+            },
+            db
+          ),
+        (error: unknown) =>
+          error instanceof AppointmentMutationError &&
+          error.message ===
+            "O horario escolhido entra em um bloqueio recorrente do barbeiro."
+      );
+    }
+  } finally {
+    await cleanup();
+    await db.$disconnect();
+  }
+});
+
 test("customer can reschedule and old slot becomes available", async () => {
   const { db, runId, cleanup } = await setupDatabase();
 

@@ -43,7 +43,7 @@ export default async function FinanceComparePage({
   searchParams,
 }: {
   searchParams?: Promise<{
-    period?: "week" | "month" | "custom";
+    period?: "fortnight" | "week" | "month" | "custom";
     start?: string;
     end?: string;
     historyStart?: string;

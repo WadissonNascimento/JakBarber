@@ -101,3 +101,16 @@ export function getMonthRange(baseDate = new Date()) {
 
   return { start, end };
 }
+
+export function getFortnightRange(baseDate = new Date()) {
+  const day = baseDate.getDate();
+  const startDay = day <= 15 ? 1 : 16;
+  const endDay = day <= 15 ? 15 : new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+  const start = new Date(baseDate.getFullYear(), baseDate.getMonth(), startDay);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(baseDate.getFullYear(), baseDate.getMonth(), endDay);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}

@@ -44,7 +44,11 @@ export async function generateBarberPayoutsAction(
   }
 
   const range = resolveFinanceRange({
-    period: String(formData.get("period") || "week") as "week" | "month" | "custom",
+    period: String(formData.get("period") || "fortnight") as
+      | "fortnight"
+      | "week"
+      | "month"
+      | "custom",
     start: String(formData.get("start") || ""),
     end: String(formData.get("end") || ""),
   });

@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { PremiumDatePicker, PremiumSelect } from "@/components/ui/PremiumFilters";
 
-type Period = "week" | "month" | "custom";
+type Period = "fortnight" | "week" | "month" | "custom";
 
 export default function FinancePeriodFilters({
   period,
@@ -28,7 +28,7 @@ export default function FinancePeriodFilters({
   function applyFilters(next: typeof filters) {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
 
-    if (next.period === "week") {
+    if (next.period === "fortnight") {
       params.delete("period");
       params.delete("start");
       params.delete("end");
@@ -65,6 +65,7 @@ export default function FinancePeriodFilters({
           name="period"
           value={filters.period}
           options={[
+            { value: "fortnight", label: "Quinzena atual" },
             { value: "week", label: "Esta semana" },
             { value: "month", label: "Este mês" },
             { value: "custom", label: "Escolher datas" },
