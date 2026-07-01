@@ -8,7 +8,6 @@ import {
   type MutationResult,
 } from "@/lib/mutationResult";
 import { prisma } from "@/lib/prisma";
-import { createScheduleDayStart } from "@/lib/scheduleTime";
 import { sanitizeTextareaInput } from "@/lib/inputSanitization";
 import { enforceRateLimit } from "@/lib/security";
 
@@ -48,15 +47,9 @@ export async function createBarberAdvanceAction(
 
   const amount = parseAdvanceAmount(formData.get("amount"));
   const reason = sanitizeTextareaInput(String(formData.get("reason") || ""), 500);
-  const dateValue = String(formData.get("advanceDate") || "").trim();
-  const advanceDate = createScheduleDayStart(dateValue);
 
   if (!amount) {
     return mutationError("Informe um valor positivo e valido para o vale.");
-  }
-
-  if (!advanceDate) {
-    return mutationError("Informe a data do vale.");
   }
 
   if (!reason) {
@@ -69,7 +62,7 @@ export async function createBarberAdvanceAction(
       barberId: barber.id,
       amount,
       reason,
-      advanceDate,
+      advanceDate: new Date(),
     },
   });
 

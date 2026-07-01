@@ -4,13 +4,12 @@ import { useEffect, useRef } from "react";
 import { useFormState } from "react-dom";
 import FeedbackMessage from "@/components/FeedbackMessage";
 import SubmitButton from "@/components/SubmitButton";
-import { PremiumDatePicker } from "@/components/ui/PremiumFilters";
 import type { MutationResult } from "@/lib/mutationResult";
 import { createBarberAdvanceAction } from "./actions";
 
 const initialState: MutationResult | null = null;
 
-export default function BarberAdvanceForm({ defaultDate }: { defaultDate: string }) {
+export default function BarberAdvanceForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction] = useFormState(createBarberAdvanceAction, initialState);
 
@@ -23,13 +22,6 @@ export default function BarberAdvanceForm({ defaultDate }: { defaultDate: string
   return (
     <form ref={formRef} action={formAction} className="grid gap-4">
       {state ? <FeedbackMessage message={state.message} tone={state.tone} /> : null}
-
-      <PremiumDatePicker
-        name="advanceDate"
-        label="Data do vale"
-        defaultValue={defaultDate}
-        required
-      />
 
       <label className="grid gap-2">
         <span className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">

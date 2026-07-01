@@ -5,7 +5,6 @@ import DashboardShell from "@/components/ui/DashboardShell";
 import EmptyState from "@/components/ui/EmptyState";
 import { getBarberAdvanceRows } from "@/lib/barberAdvances";
 import { getFortnightRange } from "@/lib/financials";
-import { getCurrentScheduleDateValue } from "@/lib/scheduleTime";
 import { formatCurrency } from "@/lib/utils";
 import { requireActiveBarber } from "../guard";
 import BarberAdvanceForm from "./BarberAdvanceForm";
@@ -55,7 +54,7 @@ export default async function BarberAdvancesPage() {
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
-          <BarberAdvanceForm defaultDate={getCurrentScheduleDateValue()} />
+          <BarberAdvanceForm />
         </div>
 
         <section className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
