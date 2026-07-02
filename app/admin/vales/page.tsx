@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import { requireTenantSession, SHOP_ADMIN_ROLES } from "@/lib/tenantSession";
 import FinancePeriodFilters from "../financeiro/FinancePeriodFilters";
+import AdminAdvanceForm from "./AdminAdvanceForm";
 
 type SearchParams = {
   period?: FinancePeriod;
@@ -39,27 +40,47 @@ export default async function AdminAdvancesPage({
     roles: SHOP_ADMIN_ROLES,
   });
   const range = resolveFinanceRange(filters);
-  const advances = await prisma.barberAdvance.findMany({
-    where: {
-      shopId,
-      advanceDate: {
-        gte: range.start,
-        lte: range.end,
+  const [barbers, advances] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        shopId,
+        role: "BARBER",
+        isActive: true,
       },
-    },
-    include: {
-      barber: {
-        select: {
-          name: true,
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
+    prisma.barberAdvance.findMany({
+      where: {
+        shopId,
+        advanceDate: {
+          gte: range.start,
+          lte: range.end,
         },
       },
-    },
-    orderBy: {
-      advanceDate: "desc",
-    },
-  });
+      include: {
+        barber: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        advanceDate: "desc",
+      },
+    }),
+  ]);
   const total = advances.reduce((sum, item) => sum + toMoneyNumber(item.amount), 0);
   const barberCount = new Set(advances.map((item) => item.barberId)).size;
+  const barberOptions = barbers.map((barber) => ({
+    id: barber.id,
+    name: barber.name || "Barbeiro",
+  }));
 
   return (
     <DashboardShell size="wide" className="min-w-0 max-w-full overflow-hidden">
@@ -80,8 +101,8 @@ export default async function AdminAdvancesPage({
               Vales dos barbeiros
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Consulte os vales lancados pelos barbeiros, com data, motivo e
-              desconto aplicado nos repasses.
+              Lance vales para a equipe e consulte datas, motivos e descontos
+              aplicados nos repasses.
             </p>
           </div>
         </div>
@@ -91,6 +112,22 @@ export default async function AdminAdvancesPage({
           <AdminAdvanceMetric label="Registros" value={`${advances.length}`} />
           <AdminAdvanceMetric label="Barbeiros" value={`${barberCount}`} />
         </div>
+
+        <section className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="mb-4">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-strong)]">
+              Novo vale
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-white">
+              Lancar para barbeiro
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-zinc-400">
+              Escolha o barbeiro e o valor. A data e automatica e entra na
+              quinzena atual.
+            </p>
+          </div>
+          <AdminAdvanceForm barbers={barberOptions} />
+        </section>
 
         <section className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="mb-4">
@@ -122,7 +159,7 @@ export default async function AdminAdvancesPage({
           {advances.length === 0 ? (
             <EmptyState
               title="Nenhum vale no periodo"
-              description="Quando os barbeiros lancarem vales, eles aparecem aqui."
+              description="Quando o admin lancar vales, eles aparecem aqui."
             />
           ) : (
             <div className="max-w-full overflow-x-auto">

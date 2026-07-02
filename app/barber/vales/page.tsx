@@ -7,7 +7,6 @@ import { getBarberAdvanceRows } from "@/lib/barberAdvances";
 import { getFortnightRange } from "@/lib/financials";
 import { formatCurrency } from "@/lib/utils";
 import { requireActiveBarber } from "../guard";
-import BarberAdvanceForm from "./BarberAdvanceForm";
 
 function formatDateTime(value: Date) {
   return value.toLocaleString("pt-BR", {
@@ -44,17 +43,13 @@ export default async function BarberAdvancesPage() {
               Painel do barbeiro
             </p>
             <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">
-              Anotar vale
+              Meus vales
             </h1>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Registre vales de {barberName}. O valor entra como desconto no
-              repasse da quinzena.
+              Consulte os vales lancados pelo admin para {barberName}. O valor
+              entra como desconto no repasse da quinzena.
             </p>
           </div>
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
-          <BarberAdvanceForm />
         </div>
 
         <section className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -74,7 +69,7 @@ export default async function BarberAdvancesPage() {
             {advances.length === 0 ? (
               <EmptyState
                 title="Nenhum vale na quinzena"
-                description="Quando voce anotar um vale, ele aparece aqui e no financeiro."
+                description="Quando o admin lancar um vale para voce, ele aparece aqui e no financeiro."
               />
             ) : (
               advances.map((advance) => (
