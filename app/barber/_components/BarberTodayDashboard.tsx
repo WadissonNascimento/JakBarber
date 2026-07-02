@@ -242,11 +242,7 @@ export default function BarberTodayDashboard({
             extras={walkInExtras}
             clients={clients}
           />
-          <QuickLink
-            href="/barber/financeiro"
-            icon={<DollarSign />}
-            className="col-span-2"
-          >
+          <QuickLink href="/barber/financeiro" icon={<DollarSign />}>
             Meu financeiro
           </QuickLink>
           <QuickLink
