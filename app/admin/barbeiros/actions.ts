@@ -188,17 +188,54 @@ export async function createBarberAction(
   ]);
 
   if (existingUser) {
-    return mutationError(
-      existingUser.isActive
-        ? "Ja existe uma conta ativa com esse e-mail."
-        : "Ja existe um barbeiro desligado com esse e-mail. Reative a conta existente em vez de criar outra.",
-    );
+    if (existingUser.isActive) {
+      return mutationError("Ja existe uma conta ativa com esse e-mail.");
+    }
+
+    if (existingUser.role === "BARBER" || existingUser.role === "BARBER_ARCHIVED") {
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await prisma.$transaction([
+        prisma.pendingRegistration.deleteMany({
+          where: { shopId: admin.shopId || undefined, email },
+        }),
+        prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name,
+            phone: phone || existingUser.phone,
+            passwordHash: hashedPassword,
+            role: "BARBER",
+            isActive: true,
+            emailVerified: existingUser.emailVerified || new Date(),
+          },
+        }),
+      ]);
+
+      revalidatePath("/admin/barbeiros");
+      revalidatePath(`/admin/barbeiros/${existingUser.id}`);
+      revalidatePath("/admin");
+      revalidatePath("/admin/agenda");
+      revalidatePath("/agendar");
+
+      return mutationSuccess(
+        "Barbeiro reativado com sucesso. Foto e historico foram preservados.",
+      );
+    }
+
+    return mutationError("Ja existe uma conta inativa com esse e-mail.");
   }
 
   if (existingPendingRegistration) {
-    return mutationError(
-      "Ja existe um cadastro pendente com esse e-mail. O barbeiro precisa concluir a verificacao antes de um novo convite.",
-    );
+    if (existingPendingRegistration.expiresAt.getTime() < Date.now()) {
+      await prisma.pendingRegistration.deleteMany({
+        where: { shopId: admin.shopId || undefined, email },
+      });
+    } else {
+      return mutationError(
+        "Ja existe um cadastro pendente com esse e-mail. O barbeiro precisa concluir a verificacao antes de um novo convite.",
+      );
+    }
   }
 
   const code = generateVerificationCode();
